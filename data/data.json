@@ -1,0 +1,884 @@
+{
+  "committee": "Intelligence",
+  "chamber": "senate",
+  "url": "http://www.intelligence.senate.gov",
+  "hearingIndex": "http://www.intelligence.senate.gov/hearings/open",
+  "shortname": "intel",
+  "hearings": [
+    {
+      "dcDate": "2015-07-08T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/counterterrorism-counterintelligence-and-challenges-going-dark",
+      "title": "Counterterrorism, Counterintelligence, and the Challenges of \"Going Dark\"",
+      "date": "07/08/2015",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "James B.",
+          "lastName": "Comey",
+          "org": "FBI"
+        }
+      ]
+    },
+    {
+      "dcDate": "2015-02-12T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-intelligence-matters",
+      "title": "Open Hearing: Intelligence Matters",
+      "date": "02/12/2015",
+      "time": "2:30pm",
+      "witnesses": []
+    },
+    {
+      "dcDate": "2014-11-20T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-nicholas-j-rasmussen-be-director-national-counterterrorism-center",
+      "title": "Open Hearing: Nomination of Nicholas J. Rasmussen to be the Director of the National Counterterrorism Center",
+      "date": "11/20/2014",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Nicholas J.",
+          "lastName": "Rasmussen",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/rasmussen.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%286%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%286%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2014-06-05T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-usa-freedom-act-hr-3361",
+      "title": "Open Hearing: USA FREEDOM Act (H.R. 3361)",
+      "date": "06/05/2014",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "James M.",
+          "lastName": "Cole",
+          "title": "Deputy Attorney General",
+          "org": "U.S. Department of Justice",
+          "group": "First Panel (Government)"
+        },
+        {
+          "firstName": "Richard H.",
+          "lastName": "Ledgett",
+          "title": "Deputy Director",
+          "org": "National Security Agency",
+          "group": "First Panel (Government)"
+        },
+        {
+          "firstName": "Mark F.",
+          "lastName": "Giuliano",
+          "title": "Deputy Director",
+          "org": "Federal Bureau of Investigation",
+          "group": "First Panel (Government)"
+        },
+        {
+          "firstName": "Robert S.",
+          "lastName": "Litt",
+          "title": "General Counsel",
+          "org": "Office of the Director of National Intelligence",
+          "group": "First Panel (Government)"
+        },
+        {
+          "firstName": "Stephanie",
+          "lastName": "O'Sullivan",
+          "title": "Deputy Director",
+          "org": "Office of the Director of National Intelligence",
+          "group": "First Panel (Government)"
+        },
+        {
+          "firstName": "Harley",
+          "lastName": "Geiger",
+          "title": "Senior Counsel",
+          "org": "Center for Democracy & Technology",
+          "group": "Second Panel (Non-Government)",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/geiger.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Dean",
+          "lastName": "Garfield",
+          "title": "President/CEO",
+          "org": "Information Technology Industry Council",
+          "group": "Second Panel (Non-Government)",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/garfield.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Michael",
+          "lastName": "Woods",
+          "title": "Vice President and Assistant General Counsel",
+          "org": "Verizon",
+          "group": "Second Panel (Non-Government)",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/woods.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Stewart",
+          "lastName": "Baker",
+          "title": "Partner",
+          "org": "Steptoe & Johnson LLP",
+          "group": "Second Panel (Non-Government)",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/baker.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2014-02-25T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-john-p-carlin-be-assistant-attorney-general-national-security",
+      "title": "Open Hearing: Nomination of John P. Carlin to be Assistant Attorney General for National Security at the Department of Justice, and Nomination of Francis X. Taylor to be the Under Secretary for Intelligence and Analysis at the Department of Homeland...",
+      "date": "02/25/2014",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "John P.",
+          "lastName": "Carlin",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/carlin.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/carlinquestionnaire.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/carlinprehearing.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Francis X.",
+          "lastName": "Taylor",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/taylor.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/taylorquestionnaire.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/taylorprehearing.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2014-02-13T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/undefined",
+      "title": "Open Hearing: Nomination of John Carlin to be Assistant Attorney General for National Security -- Postponed",
+      "date": "02/13/2014",
+      "time": "2:30pm",
+      "witnesses": []
+    },
+    {
+      "dcDate": "2014-01-29T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-against-united-states",
+      "title": "Open Hearing: Current and Projected National Security Threats Against the United States",
+      "date": "01/29/2014",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper",
+          "title": "Director of National Intelligence",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapper_0.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2013-12-17T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-daniel-bennett-smith-be-assistant-secretary-state-intelligence-and",
+      "title": "Open Hearing: Nomination of Daniel Bennett Smith to be an Assistant Secretary of State (Intelligence and Research) and Caroline Diane Krass to be General Counsel of the Central Intelligence Agency",
+      "date": "12/17/2013",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Daniel Bennett",
+          "lastName": "Smith",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/smith.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/smithquestionnaire.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/smithprehearing.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Caroline Diane",
+          "lastName": "Krass",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/krass.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/krassquestionnaire.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/krassprehearing.pdf"
+            },
+            {
+              "name": "Responses to Posthearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/krasspost.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2013-09-26T14:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-fisa-legislation",
+      "title": "Open Hearing: FISA Legislation",
+      "date": "09/26/2013",
+      "time": "2:00pm",
+      "witnesses": []
+    },
+    {
+      "dcDate": "2013-03-12T10:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states-1",
+      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
+      "date": "03/12/2013",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapper%20%283%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2013-02-07T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-john-o-brennan-be-director-central-intelligence-agency",
+      "title": "Open Hearing: Nomination of John O. Brennan to be the Director of the Central Intelligence Agency",
+      "date": "02/07/2013",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "John O.",
+          "lastName": "Brennan",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/brennan.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%285%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%285%29.pdf"
+            },
+            {
+              "name": "Responses to Posthearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/posthearing%20%281%29.pdf"
+            },
+            {
+              "name": "Transcript",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/transcript.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2012-01-31T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states-0",
+      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
+      "date": "01/31/2012",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper",
+          "title": "Director of National Intelligence",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapper%20%282%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-09-22T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-irvin-charles-mccullough-be-inspector-general-intelligence",
+      "title": "Open Hearing: Nomination of Irvin Charles McCullough to be Inspector General for the Intelligence Community",
+      "date": "09/22/2011",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Irvin Charles",
+          "lastName": "McCullough",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/mccullough.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%284%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%284%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-09-13T09:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-house-permanent-select-committee-intelligence-regarding-anniversary-911",
+      "title": "Open Hearing with the House Permanent Select Committee on Intelligence regarding the Anniversary of the 9/11 Attacks",
+      "date": "09/13/2011",
+      "time": "9:30am",
+      "witnesses": [
+        {
+          "firstName": "Dianne",
+          "lastName": "Feinstein",
+          "title": "Chairman",
+          "org": "U.S. Senate Select Committee on Intelligence",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/feinstein.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Saxby",
+          "lastName": "Chambliss",
+          "title": "Vice Chairman",
+          "org": "U.S. Senate Select Committee on Intelligence",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/chambliss.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper",
+          "title": "Director of National Intelligence",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapper%20%281%29.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "David P.",
+          "lastName": "Petraeus",
+          "title": "Director",
+          "org": "Central Intelligence Agency",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/petraeus.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-07-26T10:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-matthew-olsen-be-director-national-counterterrorism-center",
+      "title": "Open Hearing: Nomination of Matthew Olsen to be Director of the National Counterterrorism Center",
+      "date": "07/26/2011",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "Matthew",
+          "lastName": "Olsen",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/statement%20%284%29.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%283%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%283%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-06-23T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-general-david-h-petraeus-be-director-central-intelligence-agency",
+      "title": "Open Hearing: Nomination of General David H. Petraeus to be the Director of the Central Intelligence Agency",
+      "date": "06/23/2011",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "David H.",
+          "lastName": "Petraeus",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/statement%20%283%29.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%282%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%282%29.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/responses%20%281%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-05-17T15:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-lisa-monaco-be-assistant-attorney-general-national-security",
+      "title": "Open Hearing: Nomination of Lisa Monaco to be Assistant Attorney General for National Security",
+      "date": "05/17/2011",
+      "time": "3:30pm",
+      "witnesses": [
+        {
+          "firstName": "Lisa O.",
+          "lastName": "Monaco",
+          "pdfs": [
+            {
+              "name": "Opening Statement ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/statement%20%282%29.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire%20%281%29.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing%20%281%29.pdf"
+            },
+            {
+              "name": "Responses to Post-Hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/posthearing.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-02-16T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-worldwide-threat",
+      "title": "Open Hearing: Worldwide Threat",
+      "date": "02/16/2011",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper",
+          "title": "Director of National Intelligence",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/dni.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2011-02-03T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-stephanie-osullivan-be-principal-deputy-director-national",
+      "title": "Open Hearing: Nomination of Stephanie O'Sullivan to be the Principal Deputy Director of National Intelligence",
+      "date": "02/03/2011",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Stephanie L.",
+          "lastName": "O'Sullivan",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/osullivan.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/osullivanqfrs.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/osullivanqfrs.pdf"
+            },
+            {
+              "name": "Nominee 2008 Speech",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/attach1.pdf"
+            },
+            {
+              "name": "Nominee 2009 Speech",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/attach2%20%281%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2010-09-21T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-buckley-be-inspector-general-central-intelligence-agency",
+      "title": "Open Hearing: Nomination of David Buckley to be Inspector General of the Central Intelligence Agency",
+      "date": "09/21/2010",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "David B.",
+          "lastName": "Buckley",
+          "pdfs": [
+            {
+              "name": "Opening Statement ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/statement%20%281%29.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/questionnaire.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prehearing.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2010-07-20T14:45:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-james-r-clapper-jr-be-director-national-intelligence",
+      "title": "Open Hearing: Nomination of James R. Clapper, Jr., to be Director of National Intelligence",
+      "date": "07/20/2010",
+      "time": "2:45pm",
+      "witnesses": [
+        {
+          "firstName": "James R.",
+          "lastName": "Clapper, Jr.",
+          "pdfs": [
+            {
+              "name": "Opening Statement ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapper.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapperqfrs.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapperpre.pdf"
+            },
+            {
+              "name": "Attachments to Responses to Questionnaire for Completion by Presidential Nominees ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/attach.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/clapperpost.pdf"
+            },
+            {
+              "name": "Attachments to Responses to Post-Hearing Questions ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/attach2.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2010-02-02T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-threats-united-states",
+      "title": "Open Hearing: Current and Projected Threats to the United States",
+      "date": "02/02/2010",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Dennis C.",
+          "lastName": "Blair",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/blair%20%282%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-12-01T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-philip-s-goldberg-be-assistant-secretary-state-intelligence-and",
+      "title": "Open Hearing: Nomination of Philip S. Goldberg to be Assistant Secretary of State for Intelligence and Research and Caryn A. Wagner to be Under Secretary for Intelligence and Analysis, Department of Homeland Security",
+      "date": "12/01/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Philip S.",
+          "lastName": "Goldberg"
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-10-13T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-gompert-be-principal-deputy-director-national-intelligence",
+      "title": "Open Hearing: Nomination of David Gompert to be Principal Deputy Director of National Intelligence",
+      "date": "10/13/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "David C.",
+          "lastName": "Gompert",
+          "pdfs": [
+            {
+              "name": "Opening Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/statement.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/gompert1.pdf"
+            },
+            {
+              "name": "Responses to Additional Prehearing Questions ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/gompert2.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions ",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/postqfrs.pdf"
+            },
+            {
+              "name": "Confirmation by Senate",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/gompert3.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-05-21T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-stephen-w-preston-be-general-counsel-central-intelligence-agency",
+      "title": "Open Hearing: Nomination of Stephen W. Preston to be General Counsel of the Central Intelligence Agency and Robert S. Litt to be General Counsel of the Office of the Director of National Intelligence",
+      "date": "05/21/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Robert S.",
+          "lastName": "Litt",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/litt.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/littresponses.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/littquestions.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/littpostqfrs.pdf"
+            }
+          ]
+        },
+        {
+          "firstName": "Stephen W.",
+          "lastName": "Preston",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/preston.pdf"
+            },
+            {
+              "name": "Responses to Questionnaire for Completion by Presidential Nominees",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prestonquestions.pdf"
+            },
+            {
+              "name": "Responses to Additional Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prestonresponses.pdf"
+            },
+            {
+              "name": "Published Writings Submitted to the Committee",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prestonwritings.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/prestonpostqfrs.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-03-10T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-s-kris-be-assistant-attorney-general-national-security",
+      "title": "Open Hearing: Nomination of David S. Kris to be Assistant Attorney General for National Security",
+      "date": "03/10/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "David S.",
+          "lastName": "Kris",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/kris.pdf"
+            },
+            {
+              "name": "Responses to Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/responses.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-02-12T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states",
+      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
+      "date": "02/12/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Dennis C.",
+          "lastName": "Blair",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/blair%20%281%29.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-02-06T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-leon-panetta-be-director-central-intelligence-agency-0",
+      "title": "Open Hearing: Nomination of Leon Panetta to be Director of Central Intelligence Agency",
+      "date": "02/06/2009",
+      "time": "10:00am",
+      "witnesses": []
+    },
+    {
+      "dcDate": "2009-02-05T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-leon-panetta-be-director-central-intelligence-agency",
+      "title": "Open Hearing: Nomination of Leon Panetta to be Director of Central Intelligence Agency",
+      "date": "02/05/2009",
+      "time": "2:30pm",
+      "witnesses": [
+        {
+          "firstName": "Leon",
+          "lastName": "Panetta",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/panetta.pdf"
+            },
+            {
+              "name": "Responses to Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/answers.pdf"
+            },
+            {
+              "name": "Responses to Vice Chairman Bond Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/panetta_bond.pdf"
+            },
+            {
+              "name": "Responses to Post-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/panetta_post.pdf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "dcDate": "2009-01-22T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-admiral-dennis-blair-be-director-national-intelligence",
+      "title": "Open Hearing: Nomination of Admiral Dennis Blair to be Director of National Intelligence",
+      "date": "01/22/2009",
+      "time": "10:00am",
+      "witnesses": [
+        {
+          "firstName": "Dennis C.",
+          "lastName": "Blair",
+          "pdfs": [
+            {
+              "name": "Statement",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/blair.pdf"
+            },
+            {
+              "name": "Responses to Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/blairresponses.pdf"
+            },
+            {
+              "name": "Responses to Pre-hearing Questions",
+              "url": "http://www.intelligence.senate.gov/sites/default/files/hearings/blairresponses2.pdf"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "meta": []
+}
