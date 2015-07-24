@@ -2,13 +2,23 @@ var request = require('request');
 var cheerio = require('cheerio');
 //var moment = require('moment');
 var Url = require('url');
-var fs = require('fs');
+var fs = require('graceful-fs');
+var pfs = require('fs-promise');
+var path = require('path');
+var exif = require('exiftool');
+var pdftotext = require('pdftotextjs')
+var http = require('http');
 
+//paths should have trailing slash 
 var scraper = {
   dataPath: 'data',
-  hearingPath: 'data/hearings',
+  hearingPath: 'data/hearings/',
+  pdfPath: 'media/text/',
+  videoPath: 'media/video/',
+  sockets: 5,
+  current: 0,
+  queue: []
 };
-
 
 
 var Committee = function (options) {
@@ -35,25 +45,33 @@ Committee.prototype.init = function () {
         console.log(pages);
       }
     }
+
   }).then(function () {
     return comm.getPages(pages);
   }).then(function () {
     return comm.fetchAll();
   }).then(function () {
     return comm.write();
+  }).then(function () {
+    console.log("PDF time");
+    return Promise.all(comm.hearings.map(function (a) {
+      return a.queuePdfs();
+    }))
+  }).then(function () {
+    return scraper.workQueue();
+  }).catch(function (err) {
+    console.dir(err);
   });
 
 };
+
 
 Committee.prototype.write = function () {
   var comm = this;
   return new Promise(function (fulfill, reject) {
     var json = JSON.stringify(comm, undefined, 2);
-    fs.writeFile((scraper.dataPath + "/data.json"), json, function (err) {
-      if (err) {
-        return console.log(err);
-        reject();
-      }
+    pfs.writeFile((scraper.dataPath + "/data.json"), json).then(function (err) {
+      if (err) reject(err);
       console.log("><><><><><><><><>The file was saved!");
       fulfill();
     });
@@ -67,6 +85,150 @@ var Hearing = function (options) {
     }
   }
   this.witnesses = [];
+};
+
+scraper.getFile = function (url, dest) {
+  return new Promise(function (fulfill, reject) {
+    pfs.access(dest).then(function () {
+      //file exists
+      var size = fs.statSync(dest).size;
+      console.log(dest + " exists (" + size + ")");
+      if (size) {
+        fulfill();
+      } else {
+        //validate media here?
+        console.log('exists but zero bytes, refetching');
+        fs.unlinkSync(dest);
+        var file = fs.createWriteStream(dest);
+        http.get(url, function (response) {
+          console.log("fetching " + url);
+          response.pipe(file);
+          file.on('finish', function () {
+            file.close();
+            fulfill();
+          });
+        });
+
+
+      }
+    }, function (reject) {
+      console.log("reject");
+      //file does not exist, well we should parse err but nope
+      var file = fs.createWriteStream(dest);
+      http.get(url, function (response) {
+        console.log("fetching " + url);
+        response.pipe(file);
+        file.on('finish', function () {
+          file.close();
+          fulfill();
+        });
+      });
+
+    });
+
+  });
+};
+
+
+scraper.getMeta = function (dest) {
+  return new Promise(function (fulfill, reject) {
+    jsonpath = dest + ".json";
+    if (pfs.accessSync(jsonpath)) {
+      var msize = fs.statSync.size;
+      console.log(jsonpath + " exists! (" + msize + ")");
+      if (msize) {
+        fulfill();
+      } else {
+        console.log("Deleting zero size item");
+        fs.unlinkSync(dest);
+      }
+    }
+    fs.readFile(dest, function (err, data) {
+      if (err)
+        reject(err);
+
+      exif.metadata(data, function (err, metadata) {
+        if (err) {
+          throw "metadata error: " + err;
+        } else {
+          //var json = JSON.stringify(metadata, undefined, 2);
+          fs.writeFile((dest + ".json"), JSON.stringify(metadata), function (err) {
+            if (err) throw err;
+            fulfill();
+
+
+          });
+
+        }
+      });
+
+    });
+
+  });
+
+};
+
+scraper.textify = function (dest) {
+  return new Promise(function (reject, fulfill) {
+    var pdf = new pdftotext(dest);
+    pdf.getText(function (err, data, cmd) {
+      if (err || !data) {
+        console.error(err);
+        reject();
+      } else {
+        console.log("DATA");
+        fs.writeFile((dest + ".txt"), data, function (err) {
+          if (err) throw err;
+          fulfill();
+        });
+        // additionally you can also access cmd array
+        // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
+        //console.log(cmd.join(' '));
+      }
+    });
+  });
+};
+
+Hearing.prototype.queuePdfs = function () {
+
+  console.log(this.title + " pdffff");
+  var pdfs = [];
+  for (var wit of this.witnesses) {
+    if (wit.pdfs) {
+      for (var pdf of wit.pdfs) {
+        scraper.queue.push(pdf);
+      }
+    }
+  }
+
+};
+
+scraper.workQueue = function () {
+  console.log(">>>>>>>>>>>>>>>>>" + scraper.sockets + "<<<<<<<<<<<<<<<<<");
+  if (scraper.queue.length >= scraper.sockets) {
+    setTimeout(function () {
+      scraper.workQueue();
+    }, 5000);
+  } else {
+    scraper.sockets++;
+    var pdf = scraper.queue.pop();
+    var dest = scraper.pdfPath + path.basename(Url.parse(pdf.url).pathname);
+    scraper.getFile(pdf.url, dest).then(function () {
+      return scraper.getMeta(dest);
+    }).then(function () {
+      return scraper.textify(dest);
+    }).then(function () {
+      console.log('done with ' + pdf.title);
+      scraper.sockets--;
+
+      if (!scraper.queue.length) {
+        console.log("donezor!");
+      }
+
+    });
+
+
+  }
 };
 
 
@@ -106,6 +268,8 @@ Committee.prototype.getHearingIndex = function (url) {
 
     console.log("trying " + url);
     request(url, function (error, response, html) {
+      if (error) throw error;
+
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(html);
         var pagerLast = $('.pager-last a').attr('href');
@@ -155,8 +319,11 @@ Hearing.prototype.fetch = function () {
     console.log("getting info for: " + hear.date);
     console.log(hear.hearingPage);
     request(hear.hearingPage, function (error, response, html) {
-
-      if (!error && response.statusCode === 200) {
+      if (error) {
+        console.log(hear.hearingPage + " is throwing an error: " + error);
+        reject(error);
+      }
+      if (response.statusCode === 200) {
         var $ = cheerio.load(html);
         var wits = $('.pane-node-field-hearing-witness');
         if (wits.find('.pane-title').text().trim() === "Witnesses") {
@@ -195,7 +362,7 @@ Hearing.prototype.fetch = function () {
         console.log("done with " + hear.title);
 
       } else {
-        console.log("BAD STATUS " + hear.hearingPage);
+        console.log("bad request on " + hear.hearingPage);
       } // end status
 
       fulfill();
@@ -207,11 +374,10 @@ Hearing.prototype.fetch = function () {
 
 
 
-process.on('unhandledRejection', function (err) {
-  console.log('------------------------');
-  console.error(err.stack);
+process.on('unhandledRejection', function (reason, p) {
+  console.log("Unhandled Rejection at: Promise ", p, " reason: ", reason);
+  // application specific logging, throwing an error, or other logic here
 });
-
 
 
 var intel = new Committee({
