@@ -11,10 +11,10 @@ var http = require('http');
 
 //paths should have trailing slash 
 var scraper = {
-  dataPath: 'data',
-  hearingPath: 'data/hearings/',
-  pdfPath: 'media/text/',
-  videoPath: 'media/video/',
+  dataPath: './data/',
+  hearingPath: './data/hearings/',
+  pdfPath: './media/text/',
+  videoPath: './media/video/',
   sockets: 5,
   current: 0,
   queue: []
@@ -58,10 +58,15 @@ Committee.prototype.init = function () {
       return a.queuePdfs();
     }))
   }).then(function () {
-    return scraper.workQueue();
-  }).catch(function (err) {
-    console.dir(err);
+    console.log("we have all the text... now video!!");
+  }).catch(function () {
+    console.log("something terrible happened");
   });
+
+};
+
+Committee.prototype.readLocal = function () {
+
 
 };
 
@@ -70,7 +75,7 @@ Committee.prototype.write = function () {
   var comm = this;
   return new Promise(function (fulfill, reject) {
     var json = JSON.stringify(comm, undefined, 2);
-    pfs.writeFile((scraper.dataPath + "/data.json"), json).then(function (err) {
+    pfs.writeFile((scraper.dataPath + "data.json"), json).then(function (err) {
       if (err) reject(err);
       console.log("><><><><><><><><>The file was saved!");
       fulfill();
@@ -94,6 +99,7 @@ scraper.getFile = function (url, dest) {
       var size = fs.statSync(dest).size;
       console.log(dest + " exists (" + size + ")");
       if (size) {
+        console.log("file's okay");
         fulfill();
       } else {
         //validate media here?
@@ -111,8 +117,8 @@ scraper.getFile = function (url, dest) {
 
 
       }
-    }, function (reject) {
-      console.log("reject");
+    }).catch(function () {
+      console.log("reject - file doesn't exist");
       //file does not exist, well we should parse err but nope
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
@@ -120,6 +126,7 @@ scraper.getFile = function (url, dest) {
         response.pipe(file);
         file.on('finish', function () {
           file.close();
+          console.log("done writing " + fs.statSync(dest).size);
           fulfill();
         });
       });
@@ -131,104 +138,141 @@ scraper.getFile = function (url, dest) {
 
 
 scraper.getMeta = function (dest) {
+  console.log("Getting meta");
   return new Promise(function (fulfill, reject) {
-    jsonpath = dest + ".json";
-    if (pfs.accessSync(jsonpath)) {
-      var msize = fs.statSync.size;
+    var jsonpath = dest + ".json";
+    pfs.access(jsonpath).then(function () {
+      var msize = fs.statSync(jsonpath).size;
       console.log(jsonpath + " exists! (" + msize + ")");
       if (msize) {
+        console.log("meta's already here, moving on");
         fulfill();
       } else {
         console.log("Deleting zero size item");
-        fs.unlinkSync(dest);
+        fs.unlinkSync(jsonpath);
       }
-    }
-    fs.readFile(dest, function (err, data) {
-      if (err)
-        reject(err);
+    }).catch(function () {
+      console.log("meta aint there");
 
-      exif.metadata(data, function (err, metadata) {
+      fs.readFile(dest, function (err, data) {
         if (err) {
-          throw "metadata error: " + err;
-        } else {
-          //var json = JSON.stringify(metadata, undefined, 2);
-          fs.writeFile((dest + ".json"), JSON.stringify(metadata), function (err) {
-            if (err) throw err;
-            fulfill();
-
-
-          });
-
+          console.log("error reading metadata");
+          reject(err);
         }
-      });
+        exif.metadata(data, function (err, metadata) {
+          if (err) {
+            throw "exiftool error: " + err;
+          } else {
+            //var json = JSON.stringify(metadata, undefined, 2);
+            pfs.writeFile(jsonpath, JSON.stringify(metadata, undefined, 2)).then(function () {
+              fulfill();
+            });
 
+          }
+        }); //end metadata
+
+      }); //end readfile
     });
-
-  });
+  }); //end promise
 
 };
 
 scraper.textify = function (dest) {
   return new Promise(function (reject, fulfill) {
-    var pdf = new pdftotext(dest);
-    pdf.getText(function (err, data, cmd) {
-      if (err || !data) {
-        console.error(err);
-        reject();
+    var txtpath = dest + ".txt";
+
+    pfs.access(txtpath).then(function (stuff) {
+      var msize = fs.statSync(txtpath).size;
+      console.log(txtpath + " exists! (" + msize + ")");
+      if (msize) {
+        console.log("txt's already here, moving on");
+        fulfill();
       } else {
-        console.log("DATA");
-        fs.writeFile((dest + ".txt"), data, function (err) {
-          if (err) throw err;
-          fulfill();
-        });
-        // additionally you can also access cmd array
-        // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
-        //console.log(cmd.join(' '));
+        console.log("Deleting zero size item");
+        fs.unlinkSync(txtpath);
       }
+    }).catch(function () {
+      var pdf = new pdftotext(dest);
+      pdf.getText(function (err, data, cmd) {
+        console.log("TEXTIFYING: " + dest);
+        if (err) throw err;
+        if (!data) {
+          console.error("NO DATA");
+          fulfill();
+        } else {
+          console.log("DATA");
+          fs.writeFile((dest + ".txt"), data, function (err) {
+            console.log('writing file');
+            if (err) {
+              throw err;
+            }
+            console.log('fulfilling textify');
+            fulfill();
+          });
+          // additionally you can also access cmd array
+          // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
+          //console.log(cmd.join(' '));
+        }
+      });
     });
   });
 };
 
 Hearing.prototype.queuePdfs = function () {
-
-  console.log(this.title + " pdffff");
-  var pdfs = [];
-  for (var wit of this.witnesses) {
-    if (wit.pdfs) {
-      for (var pdf of wit.pdfs) {
-        scraper.queue.push(pdf);
+  var hear = this;
+  return new Promise(function (fulfill, reject) {
+    console.log(hear.title + " pdffff");
+    var pdfs = [];
+    for (var wit of hear.witnesses) {
+      if (wit.pdfs) {
+        for (var pdf of wit.pdfs) {
+          pdfs.push(pdf);
+        }
       }
     }
-  }
-
+    return Promise.all(pdfs.map(function (a) {
+      return scraper.processPDF(pdf);
+    }));
+  });
 };
 
-scraper.workQueue = function () {
-  console.log(">>>>>>>>>>>>>>>>>" + scraper.sockets + "<<<<<<<<<<<<<<<<<");
-  if (scraper.queue.length >= scraper.sockets) {
-    setTimeout(function () {
-      scraper.workQueue();
-    }, 5000);
-  } else {
-    scraper.sockets++;
-    var pdf = scraper.queue.pop();
-    var dest = scraper.pdfPath + path.basename(Url.parse(pdf.url).pathname);
+scraper.processPDF = function (pdf) {
+  return new Promise(function (fulfill, reject) {
+    /*
+    if (!scraper.queue.length) {
+      console.log("donezor!");
+    }
+    console.log(">>>>>>>>>>>>>>>>>" + scraper.current + "<<<<<<<<<<<<<<<<<");
+    console.log(">>>>>>" + scraper.queue.length + " to go ");
+
+    if (scraper.current >= scraper.sockets) {
+      setTimeout(function () {
+        scraper.workQueue();
+      }, 5000);
+    } else {
+      scraper.current++;
+      var pdf = scraper.queue.pop();
+      */
+    var dest = decodeURIComponent(scraper.pdfPath + path.basename(Url.parse(pdf.url).pathname));
+    console.log(dest);
     scraper.getFile(pdf.url, dest).then(function () {
       return scraper.getMeta(dest);
     }).then(function () {
+      console.log("textifying");
       return scraper.textify(dest);
     }).then(function () {
-      console.log('done with ' + pdf.title);
-      scraper.sockets--;
+      console.log('done with ' + dest);
+      //scraper.workQueue();
+      fulfill();
 
-      if (!scraper.queue.length) {
-        console.log("donezor!");
-      }
-
+    }).catch(function () {
+      console.log("it's okay");
+      fulfill();
+      //scraper.workQueue();
     });
+  });
 
 
-  }
 };
 
 
