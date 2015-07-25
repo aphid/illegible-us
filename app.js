@@ -56,7 +56,7 @@ Committee.prototype.init = function () {
     console.log("PDF time");
     return Promise.all(comm.hearings.map(function (a) {
       return a.queuePdfs();
-    }))
+    }));
   }).then(function () {
     console.log("we have all the text... now video!!");
   }).catch(function () {
@@ -220,20 +220,18 @@ scraper.textify = function (dest) {
 
 Hearing.prototype.queuePdfs = function () {
   var hear = this;
-  return new Promise(function (fulfill, reject) {
-    console.log(hear.title + " pdffff");
-    var pdfs = [];
-    for (var wit of hear.witnesses) {
-      if (wit.pdfs) {
-        for (var pdf of wit.pdfs) {
-          pdfs.push(pdf);
-        }
+  console.log(hear.title + " pdffff");
+  var pdfs = [];
+  for (var wit of hear.witnesses) {
+    if (wit.pdfs) {
+      for (var pdf of wit.pdfs) {
+        pdfs.push(pdf);
       }
     }
-    return Promise.all(pdfs.map(function (a) {
-      return scraper.processPDF(pdf);
-    }));
-  });
+  }
+  return Promise.all(pdfs.map(function (a) {
+    return scraper.processPDF(pdf);
+  }));
 };
 
 scraper.processPDF = function (pdf) {
