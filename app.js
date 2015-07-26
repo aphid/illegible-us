@@ -75,7 +75,7 @@ Committee.prototype.write = function () {
   var comm = this;
   return new Promise(function (fulfill, reject) {
     var json = JSON.stringify(comm, undefined, 2);
-    pfs.writeFile((scraper.dataPath + "data.json"), json).then(function (err) {
+    pfs.writeFile((scraper.dataDir + "data.json"), json).then(function (err) {
       if (err) reject(err);
       console.log("><><><><><><><><>The file was saved!");
       fulfill();
@@ -90,15 +90,15 @@ var Hearing = function (options) {
     }
   }
   this.witnesses = [];
-  this.shortdate = moment(this.date).format("YYMMDD");
+  this.shortdate = moment(new Date(this.date)).format("YYMMDD");
 };
 
 var Pdf = function (hear, url) {
   this.remoteUrl = url;
-  this.remotefileName = decodeURIComponent(scraper.pdfPath + path.basename(Url.parse(url).pathname)).split('/').pop();
+  this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
   this.pdfpath = scraper.textDir + hear.shortdate + "_" + this.remotefileName;
-  this.txtpath = this.pdfpath + ".txt";
-  this.metapath = this.localpath + ".json";
+  this.txtpath = this.pdfpath.replace(".pdf", ".txt");
+  this.metapath = this.pdfpath.replace(".pdf", ".json");
 }
 
 
@@ -233,16 +233,20 @@ Pdf.prototype.checkTxt = function () {
 };
 
 Hearing.prototype.queuePdfs = function () {
-  var hear = this;
-  console.log(hear.title + " pdffff");
+  console.log(this.title + "pdfs: ");
   var pdfs = [];
-  for (var wit of hear.witnesses) {
+  for (var wit of this.witnesses) {
     if (wit.pdfs) {
       for (var pdf of wit.pdfs) {
+        console.log(" " + pdf.remotefileName);
         pdfs.push(pdf);
       }
     }
   }
+  console.log("*****************************************");
+  console.dir(pdfs);
+  console.log("*******************************************");
+
   return Promise.all(pdfs.map(function (a) {
     return (pdf.process());
   }));
@@ -251,23 +255,8 @@ Hearing.prototype.queuePdfs = function () {
 Pdf.prototype.process = function () {
   var pdf = this;
   return new Promise(function (fulfill, reject) {
-    /*
-    if (!scraper.queue.length) {
-      console.log("donezor!");
-    }
-    console.log(">>>>>>>>>>>>>>>>>" + scraper.current + "<<<<<<<<<<<<<<<<<");
-    console.log(">>>>>>" + scraper.queue.length + " to go ");
-
-    if (scraper.current >= scraper.sockets) {
-      setTimeout(function () {
-        scraper.workQueue();
-      }, 5000);
-    } else {
-      scraper.current++;
-      var pdf = scraper.queue.pop();
-      */
-    var dest = this.pdfpath;
-    console.log(dest);
+    var dest = pdf.pdfpath;
+    console.log("saving " + pdf.remotefileName + " to " + dest);
     scraper.getFile(pdf.remoteUrl, dest).then(function () {
       return scraper.getMeta(dest);
     }).then(function () {
@@ -301,7 +290,21 @@ var Witness = function (options) {
       this[fld] = options[fld];
     }
   }
+  this.pdfs = [];
 };
+
+Witness.prototype.addPdf = function (hear, url) {
+  for (var pdf of this.pdfs) {
+    if (url === pdf.remoteUrl) {
+      console.log('blocking duplicate');
+      return false;
+    }
+  }
+  this.pdfs.push(new Pdf(hear, url));
+
+};
+
+
 
 Committee.prototype.getPages = function (pages) {
   var comm = this;
@@ -396,9 +399,8 @@ Hearing.prototype.fetch = function () {
             witness.title = $(v).find('.field-name-field-witness-job').text().trim();
             witness.org = $(v).find('.field-name-field-witness-organization').text().trim();
             witness.group = panel;
-
+            var wit = new Witness(witness);
             if ($(v).find('li').length) {
-              witness.pdfs = [];
               $(v).find('a').each(function (key, val) {
                 var pdf = {};
                 pdf.name = $(val).text();
@@ -406,12 +408,12 @@ Hearing.prototype.fetch = function () {
                 if (!pdf.url.includes('http://')) {
                   pdf.url = intel.url + pdf.url;
                 }
-                witness.pdfs.push(new Pdf(hear, pdf.url));
+                wit.addPdf(hear, pdf.url);
               });
             }
             if (witness.firstName) {
               console.log("adding witness");
-              hear.addWitness(new Witness(witness));
+              hear.addWitness(wit);
             }
           }); //end each
 
