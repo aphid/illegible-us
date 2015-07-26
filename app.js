@@ -1,6 +1,6 @@
 var request = require('request');
 var cheerio = require('cheerio');
-//var moment = require('moment');
+var moment = require('moment');
 var Url = require('url');
 var fs = require('graceful-fs');
 var pfs = require('fs-promise');
@@ -11,10 +11,10 @@ var http = require('http');
 
 //paths should have trailing slash 
 var scraper = {
-  dataPath: './data/',
-  hearingPath: './data/hearings/',
-  pdfPath: './media/text/',
-  videoPath: './media/video/',
+  dataDir: './data/',
+  hearingDir: './data/hearings/',
+  textDir: './media/text/',
+  videoDir: './media/video/',
   sockets: 5,
   current: 0,
   queue: []
@@ -90,7 +90,17 @@ var Hearing = function (options) {
     }
   }
   this.witnesses = [];
+  this.shortdate = moment(this.date).format("YYMMDD");
 };
+
+var Pdf = function (hear, url) {
+  this.remoteUrl = url;
+  this.remotefileName = decodeURIComponent(scraper.pdfPath + path.basename(Url.parse(url).pathname)).split('/').pop();
+  this.pdfpath = scraper.textDir + hear.shortdate + "_" + this.remotefileName;
+  this.txtpath = this.pdfpath + ".txt";
+  this.metapath = this.localpath + ".json";
+}
+
 
 scraper.getFile = function (url, dest) {
   return new Promise(function (fulfill, reject) {
@@ -118,7 +128,7 @@ scraper.getFile = function (url, dest) {
 
       }
     }).catch(function () {
-      console.log("reject - file doesn't exist");
+      console.log("reject - file " + dest + " doesn't exist");
       //file does not exist, well we should parse err but nope
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
@@ -177,9 +187,12 @@ scraper.getMeta = function (dest) {
 
 };
 
-scraper.textify = function (dest) {
+Pdf.prototype.checkTxt = function () {
+  var pdf = this;
+  var dest = this.pdfpath;
+  var txtpath = this.txtpath;
+
   return new Promise(function (reject, fulfill) {
-    var txtpath = dest + ".txt";
 
     pfs.access(txtpath).then(function (stuff) {
       var msize = fs.statSync(txtpath).size;
@@ -192,12 +205,13 @@ scraper.textify = function (dest) {
         fs.unlinkSync(txtpath);
       }
     }).catch(function () {
-      var pdf = new pdftotext(dest);
-      pdf.getText(function (err, data, cmd) {
+      var pdftxt = new pdftotext(dest);
+      pdftxt.getText(function (err, data, cmd) {
         console.log("TEXTIFYING: " + dest);
         if (err) throw err;
         if (!data) {
           console.error("NO DATA");
+          pdf.needsScan = true;
           fulfill();
         } else {
           console.log("DATA");
@@ -230,11 +244,12 @@ Hearing.prototype.queuePdfs = function () {
     }
   }
   return Promise.all(pdfs.map(function (a) {
-    return scraper.processPDF(pdf);
+    return (pdf.process());
   }));
 };
 
-scraper.processPDF = function (pdf) {
+Pdf.prototype.process = function () {
+  var pdf = this;
   return new Promise(function (fulfill, reject) {
     /*
     if (!scraper.queue.length) {
@@ -251,13 +266,13 @@ scraper.processPDF = function (pdf) {
       scraper.current++;
       var pdf = scraper.queue.pop();
       */
-    var dest = decodeURIComponent(scraper.pdfPath + path.basename(Url.parse(pdf.url).pathname));
+    var dest = this.pdfpath;
     console.log(dest);
-    scraper.getFile(pdf.url, dest).then(function () {
+    scraper.getFile(pdf.remoteUrl, dest).then(function () {
       return scraper.getMeta(dest);
     }).then(function () {
       console.log("textifying");
-      return scraper.textify(dest);
+      return pdf.textify(dest);
     }).then(function () {
       console.log('done with ' + dest);
       //scraper.workQueue();
@@ -391,7 +406,7 @@ Hearing.prototype.fetch = function () {
                 if (!pdf.url.includes('http://')) {
                   pdf.url = intel.url + pdf.url;
                 }
-                witness.pdfs.push(pdf);
+                witness.pdfs.push(new Pdf(hear, pdf.url));
               });
             }
             if (witness.firstName) {
