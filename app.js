@@ -136,7 +136,7 @@ scraper.getFile = function (url, dest) {
         response.pipe(file);
         file.on('finish', function () {
           file.close();
-          console.log("done writing " + fs.statSync(dest).size);
+          console.log("done writing " + fs.statSync(dest).size + "bytes");
           fulfill();
         });
       });
@@ -148,7 +148,6 @@ scraper.getFile = function (url, dest) {
 
 
 scraper.getMeta = function (dest) {
-  console.log("Getting meta");
   return new Promise(function (fulfill, reject) {
     var jsonpath = dest + ".json";
     pfs.access(jsonpath).then(function () {
@@ -162,7 +161,7 @@ scraper.getMeta = function (dest) {
         fs.unlinkSync(jsonpath);
       }
     }).catch(function () {
-      console.log("meta aint there");
+      console.log("creating metadata...");
 
       fs.readFile(dest, function (err, data) {
         if (err) {
@@ -243,12 +242,9 @@ Hearing.prototype.queuePdfs = function () {
       }
     }
   }
-  console.log("*****************************************");
-  console.dir(pdfs);
-  console.log("*******************************************");
 
   return Promise.all(pdfs.map(function (a) {
-    return (pdf.process());
+    return a.process();
   }));
 };
 
@@ -256,7 +252,6 @@ Pdf.prototype.process = function () {
   var pdf = this;
   return new Promise(function (fulfill, reject) {
     var dest = pdf.pdfpath;
-    console.log("saving " + pdf.remotefileName + " to " + dest);
     scraper.getFile(pdf.remoteUrl, dest).then(function () {
       return scraper.getMeta(dest);
     }).then(function () {
