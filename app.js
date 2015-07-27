@@ -8,6 +8,9 @@ var path = require('path');
 var exif = require('exiftool');
 var pdftotext = require('pdftotextjs')
 var http = require('http');
+var exec = require('child-process-promise').execFile;
+var slimerjs = require('slimerjs')
+var binPath = slimerjs.path;
 
 //paths should have trailing slash 
 var scraper = {
@@ -17,9 +20,44 @@ var scraper = {
   videoDir: './media/video/',
   sockets: 5,
   current: 0,
-  queue: []
+  queue: [],
+  busy: false
 };
 
+
+var Video = function (options) {
+  for (var fld in options) {
+    if (options[fld]) {
+      this[fld] = options[fld];
+    }
+  }
+
+  return this;
+};
+
+
+Video.prototype.getManifest = function () {
+  var vid = this;
+  console.log("getting manifest!");
+  return new Promise(function (fulfill, reject) {
+
+    var childArgs = [path.join(__dirname, 'slimertest.js'), vid.url];
+    console.log(childArgs);
+    exec(binPath, childArgs).then(function (result) {
+        console.log(result.stdout);
+        console.log(JSON.parse(result.stdout));
+        fulfill(JSON.parse(result.stdout));
+      })
+      .fail(function (err) {
+        reject(err);
+      });
+
+  });
+};
+
+Video.getHDS = function (auth) {
+
+};
 
 var Committee = function (options) {
   for (var fld in options) {
@@ -33,54 +71,146 @@ var Committee = function (options) {
 };
 
 
-Committee.prototype.init = function () {
+var Witness = function (options) {
+  for (var fld in options) {
+    if (options[fld]) {
+      this[fld] = options[fld];
+    }
+  }
+  if (!options.pdfs) {
+    this.pdfs = [];
+  }
+};
+
+
+Committee.prototype.addHearing = function (options) {
+  var hearing = new Hearing(options);
+  for (var hear of this.hearings) {
+    if (hear.date === options.date) {
+      console.log("likely dupe");
+      return false;
+    }
+  }
+  this.hearings.push(hearing);
+  return hearing;
+};
+
+
+Committee.prototype.scrapeRemote = function () {
   var comm = this;
   var pages = [];
 
-  comm.getHearingIndex(comm.hearingIndex).then(function (resolve) {
-    if (resolve) {
-      for (var i = 1; i <= resolve.lastPage; i++) {
-        var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
-        pages.push(page);
-        console.log(pages);
+  return new Promise(function (fulfill, reject) {
+    comm.getHearingIndex(comm.hearingIndex).then(function (resolve) {
+      if (resolve) {
+        for (var i = 1; i <= resolve.lastPage; i++) {
+          var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
+          pages.push(page);
+          console.log(pages);
+        }
       }
-    }
 
-  }).then(function () {
-    return comm.getPages(pages);
-  }).then(function () {
-    return comm.fetchAll();
-  }).then(function () {
-    return comm.write();
-  }).then(function () {
-    console.log("PDF time");
-    return Promise.all(comm.hearings.map(function (a) {
-      return a.queuePdfs();
-    }));
-  }).then(function () {
-    console.log("we have all the text... now video!!");
-  }).catch(function () {
-    console.log("something terrible happened");
+    }).then(function () {
+      return comm.getPages(pages);
+    }).then(function () {
+      return comm.fetchAll();
+    }).then(function () {
+      fulfill();
+    });
   });
+};
+
+Committee.prototype.init = function () {
+  var comm = this;
+
+  /*
+  //gets from local file
+  (function () {
+    return comm.write('test.json');
+  }); */
+
+  comm.readLocal().
+    //this.scrapeRemote().
+  then(function () {
+      return comm.write();
+    }).then(function () {
+      console.log("PDF time");
+      return Promise.all(comm.hearings.map(function (a) {
+        return a.queuePdfs();
+      }));
+    }).then(function () {
+      console.log("we have all the text... now video!!");
+      return comm.hearings[0].video.getManifest();
+    }).then(function (result) {
+      console.log(result);
+    })
+    .catch(function () {
+      console.log("something terrible happened");
+
+    });
 
 };
 
 Committee.prototype.readLocal = function () {
+  var comm = this;
+  return new Promise(function (fulfill, reject) {
 
+    var json = scraper.dataDir + "data.json";
+    pfs.readFile(json, 'utf-8').then(function (data) {
+      data = JSON.parse(data);
+      for (var hear of data.hearings) {
+        var theHearing = new Hearing(hear);
+        theHearing.witnesses = [];
+        if (hear.video) {
+          theHearing.addVideo(JSON.parse(JSON.stringify(hear.video)));
+        }
+        for (var wit of hear.witnesses) {
+          var theWit = new Witness(JSON.parse(JSON.stringify(wit)));
+          theWit.pdfs = [];
+          if (wit.pdfs) {
+            console.log("adding PDFS");
 
+            for (var pdf of wit.pdfs) {
+              console.log(wit.pdfs.length);
+              theWit.readPdf(pdf);
+            }
+            theHearing.addWitness(theWit);
+          }
+        }
+        comm.addHearing(theHearing);
+
+      }
+      fulfill();
+    });
+  });
 };
 
 
-Committee.prototype.write = function () {
+Committee.prototype.write = function (filename) {
+  if (!filename) {
+    filename = "data.json";
+  }
   var comm = this;
   return new Promise(function (fulfill, reject) {
     var json = JSON.stringify(comm, undefined, 2);
-    pfs.writeFile((scraper.dataDir + "data.json"), json).then(function (err) {
+    pfs.writeFile((scraper.dataDir + filename), json).then(function (err) {
       if (err) reject(err);
       console.log("><><><><><><><><>The file was saved!");
       fulfill();
     });
   });
+};
+
+
+var Witness = function (options) {
+  for (var fld in options) {
+    if (options[fld]) {
+      this[fld] = options[fld];
+    }
+  }
+  if (!options.pdfs) {
+    this.pdfs = [];
+  }
 };
 
 var Hearing = function (options) {
@@ -89,16 +219,37 @@ var Hearing = function (options) {
       this[fld] = options[fld];
     }
   }
-  this.witnesses = [];
+
+  if (!options.vidUrl) {
+    this.witnesses = "";
+  }
+  if (!options.witnesses) {
+    this.witnesses = [];
+  }
+
   this.shortdate = moment(new Date(this.date)).format("YYMMDD");
 };
 
-var Pdf = function (hear, url) {
-  this.remoteUrl = url;
-  this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
-  this.pdfpath = scraper.textDir + hear.shortdate + "_" + this.remotefileName;
-  this.txtpath = this.pdfpath.replace(".pdf", ".txt");
-  this.metapath = this.pdfpath.replace(".pdf", ".json");
+Hearing.prototype.addVideo = function (video) {
+  this.video = new Video(JSON.parse(JSON.stringify(video)));
+};
+
+var Pdf = function (options) {
+  if (options.hear && options.url) {
+    var hear = options.hear;
+    var url = options.url;
+    this.remoteUrl = url;
+    this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
+    this.pdfpath = scraper.textDir + hear.shortdate + "_" + this.remotefileName;
+    this.txtpath = this.pdfpath.replace(".pdf", ".txt");
+    this.metapath = this.pdfpath.replace(".pdf", ".json");
+  } else {
+    for (var fld in options) {
+      if (options[fld]) {
+        this[fld] = options[fld];
+      }
+    }
+  }
 }
 
 
@@ -274,20 +425,21 @@ Pdf.prototype.process = function () {
 
 
 Hearing.prototype.addWitness = function (witness) {
-  console.log("adding " + witness.lastName)
-  this.witnesses.push(witness);
-  console.log(this.witnesses.length);
-};
+  console.log("adding " + witness.lastName);
+  if (!witness.isPrototypeOf(Witness)) {
+    var wit = new Witness(witness);
+    this.witnesses.push(wit);
+    return wit;
+  } else {
 
-var Witness = function (options) {
-  for (var fld in options) {
-    if (options[fld]) {
-      this[fld] = options[fld];
-    }
+    this.witnesses.push(witness);
+    return witness;
   }
-  this.pdfs = [];
+
 };
 
+
+//from scrape
 Witness.prototype.addPdf = function (hear, url) {
   for (var pdf of this.pdfs) {
     if (url === pdf.remoteUrl) {
@@ -295,8 +447,20 @@ Witness.prototype.addPdf = function (hear, url) {
       return false;
     }
   }
-  this.pdfs.push(new Pdf(hear, url));
+  var thepdf = new Pdf({
+    "hear": hear,
+    "url": url
+  });
+  this.pdfs.push(thepdf);
 
+
+};
+
+//from file
+Witness.prototype.readPdf = function (options) {
+  var pdf = new Pdf(options);
+  this.pdfs.push(pdf);
+  return pdf;
 };
 
 
@@ -380,6 +544,9 @@ Hearing.prototype.fetch = function () {
       }
       if (response.statusCode === 200) {
         var $ = cheerio.load(html);
+        hear.addVideo({
+          url: decodeURIComponent($('.pane-node-field-hearing-video').find('iframe').attr('src'))
+        });
         var wits = $('.pane-node-field-hearing-witness');
         if (wits.find('.pane-title').text().trim() === "Witnesses") {
           wits.find('.content').each(function (k, v) {
@@ -388,7 +555,6 @@ Hearing.prototype.fetch = function () {
             }
 
             var witness = {};
-
             witness.firstName = $(v).find('.field-name-field-witness-firstname').text().trim();
             witness.lastName = $(v).find('.field-name-field-witness-lastname').text().trim();
             witness.title = $(v).find('.field-name-field-witness-job').text().trim();
