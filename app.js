@@ -41,7 +41,7 @@ Video.prototype.getManifest = function () {
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
 
-    var childArgs = [path.join(__dirname, 'slimertest.js'), vid.url];
+    var childArgs = [path.join(__dirname, 'getManifest.js'), vid.url];
     console.log(childArgs);
     exec(binPath, childArgs).then(function (result) {
         console.log(result.stdout);
