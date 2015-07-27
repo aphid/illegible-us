@@ -8,8 +8,8 @@ var path = require('path');
 var exif = require('exiftool');
 var pdftotext = require('pdftotextjs')
 var http = require('http');
-var exec = require('child-process-promise').execFile;
-var slimerjs = require('slimerjs')
+var cpp = require('child-process-promise').cpp;
+var slimerjs = require('slimerjs');
 var binPath = slimerjs.path;
 
 //paths should have trailing slash 
@@ -41,11 +41,12 @@ Video.prototype.getManifest = function () {
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
 
-    var childArgs = [path.join(__dirname, 'getManifest.js'), vid.url];
-    console.log(childArgs);
-    exec(binPath, childArgs).then(function (result) {
-        console.log(result.stdout);
-        console.log(JSON.parse(result.stdout));
+    var childArgs = [binPath, path.join(__dirname, 'getManifest.js'), vid.url];
+    cpp.exec('/usr/bin/xvfb-run', childArgs).then(function (result) {
+        var response = JSON.parse(result.stdout);
+        if (response.type) {
+          vid.type = response.type
+        }
         fulfill(JSON.parse(result.stdout));
       })
       .fail(function (err) {
@@ -55,8 +56,13 @@ Video.prototype.getManifest = function () {
   });
 };
 
-Video.getHDS = function (auth) {
+Video.getHDS = function (data) {
 
+  return new Promise(function (fulfill, reject) {
+
+    var manifest = data.manifest;
+    var auth = data.auth;
+  });
 };
 
 var Committee = function (options) {
@@ -142,7 +148,8 @@ Committee.prototype.init = function () {
       console.log("we have all the text... now video!!");
       return comm.hearings[0].video.getManifest();
     }).then(function (result) {
-      console.log(result);
+      return comm.hearings[0].video.getHDS(result);
+      return comm.write();
     })
     .catch(function () {
       console.log("something terrible happened");
