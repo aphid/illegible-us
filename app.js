@@ -247,8 +247,7 @@ var Hearing = function (options) {
 };
 
 Hearing.prototype.addVideo = function (video) {
-  video.basename = this.shortdate + "_"
-  this.title.replace(" ", "_");
+  video.basename = this.shortdate;
   this.video = new Video(JSON.parse(JSON.stringify(video)));
 };
 
