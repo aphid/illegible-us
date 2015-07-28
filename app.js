@@ -65,8 +65,9 @@ Video.prototype.getHDS = function (data) {
     //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
     console.log(command);
     cpp.exec(command).then(function (data, err) {
-      return cpp.exec('ls *Frag* | xargs rm');
 
+      vid.flv = "./media/video/" + vid.basename + ".flv";
+      return cpp.exec('ls *Frag* | xargs rm');
     }).then(function () {
       fulfill();
     });
