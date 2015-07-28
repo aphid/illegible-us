@@ -8,7 +8,7 @@ var path = require('path');
 var exif = require('exiftool');
 var pdftotext = require('pdftotextjs')
 var http = require('http');
-var cpp = require('child-process-promise').cpp;
+var cpp = require('child-process-promise');
 var slimerjs = require('slimerjs');
 var binPath = slimerjs.path;
 
@@ -42,7 +42,8 @@ Video.prototype.getManifest = function () {
   return new Promise(function (fulfill, reject) {
 
     var childArgs = [binPath, path.join(__dirname, 'getManifest.js'), vid.url];
-    cpp.exec('/usr/bin/xvfb-run', childArgs).then(function (result) {
+    cpp.execFile('/usr/bin/xvfb-run', childArgs).then(function (result) {
+        console.log(result.stdout);
         var response = JSON.parse(result.stdout);
         if (response.type) {
           vid.type = response.type
@@ -56,12 +57,19 @@ Video.prototype.getManifest = function () {
   });
 };
 
-Video.getHDS = function (data) {
-
+Video.prototype.getHDS = function (data) {
+  var vid = this;
+  var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
+  console.log('getting HDS!');
   return new Promise(function (fulfill, reject) {
+    //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
+    console.log(command);
+    cpp.exec(command).then(function (data, err) {
+      return cpp.exec('ls *Frag* | xargs rm');
 
-    var manifest = data.manifest;
-    var auth = data.auth;
+    }).then(function () {
+      fulfill();
+    });
   });
 };
 
@@ -238,6 +246,8 @@ var Hearing = function (options) {
 };
 
 Hearing.prototype.addVideo = function (video) {
+  video.basename = this.shortdate + "_"
+  this.title.replace(" ", "_");
   this.video = new Video(JSON.parse(JSON.stringify(video)));
 };
 

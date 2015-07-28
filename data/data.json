@@ -13,7 +13,8 @@
       "time": "2:30pm",
       "shortdate": "150708",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel070815&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel070815&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "150708"
       },
       "witnesses": ""
     },
@@ -25,7 +26,8 @@
       "time": "2:30pm",
       "shortdate": "150212",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021215&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021215&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "150212"
       },
       "witnesses": ""
     },
@@ -37,7 +39,8 @@
       "time": "2:30pm",
       "shortdate": "141120",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel112014&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel112014&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "141120"
       },
       "witnesses": ""
     },
@@ -49,7 +52,8 @@
       "time": "2:30pm",
       "shortdate": "140605",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel060514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel060514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "140605"
       },
       "witnesses": ""
     },
@@ -61,7 +65,8 @@
       "time": "2:30pm",
       "shortdate": "140225",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel022514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel022514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "140225"
       },
       "witnesses": ""
     },
@@ -82,7 +87,8 @@
       "time": "10:00am",
       "shortdate": "140129",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012914&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012914&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "140129"
       },
       "witnesses": ""
     },
@@ -94,7 +100,8 @@
       "time": "2:30pm",
       "shortdate": "131217",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel121713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel121713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "131217"
       },
       "witnesses": ""
     },
@@ -106,7 +113,8 @@
       "time": "2:00pm",
       "shortdate": "130926",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092613&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092613&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "130926"
       },
       "witnesses": ""
     },
@@ -118,7 +126,8 @@
       "time": "10:00am",
       "shortdate": "130312",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031213&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031213&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "130312"
       },
       "witnesses": ""
     },
@@ -130,7 +139,8 @@
       "time": "2:30pm",
       "shortdate": "130207",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "130207"
       },
       "witnesses": ""
     },
@@ -142,7 +152,8 @@
       "time": "10:00am",
       "shortdate": "120131",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel013112&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel013112&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "120131"
       },
       "witnesses": ""
     },
@@ -154,7 +165,8 @@
       "time": "2:30pm",
       "shortdate": "110922",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092211&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092211&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110922"
       },
       "witnesses": ""
     },
@@ -166,7 +178,8 @@
       "time": "9:30am",
       "shortdate": "110913",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel091311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel091311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110913"
       },
       "witnesses": ""
     },
@@ -178,7 +191,8 @@
       "time": "10:00am",
       "shortdate": "110726",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel072611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel072611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110726"
       },
       "witnesses": ""
     },
@@ -190,7 +204,8 @@
       "time": "2:30pm",
       "shortdate": "110623",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel062311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel062311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110623"
       },
       "witnesses": ""
     },
@@ -202,7 +217,8 @@
       "time": "3:30pm",
       "shortdate": "110517",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051711&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051711&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110517"
       },
       "witnesses": ""
     },
@@ -214,7 +230,8 @@
       "time": "10:00am",
       "shortdate": "110216",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110216"
       },
       "witnesses": ""
     },
@@ -226,7 +243,8 @@
       "time": "2:30pm",
       "shortdate": "110203",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "110203"
       },
       "witnesses": ""
     },
@@ -238,7 +256,8 @@
       "time": "2:30pm",
       "shortdate": "100921",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092110&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092110&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "100921"
       },
       "witnesses": ""
     },
@@ -250,7 +269,8 @@
       "time": "2:45pm",
       "shortdate": "100720",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel72010&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel72010&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "100720"
       },
       "witnesses": ""
     },
@@ -262,7 +282,8 @@
       "time": "2:30pm",
       "shortdate": "100202",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020210&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020210&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "100202"
       },
       "witnesses": ""
     },
@@ -274,7 +295,8 @@
       "time": "2:30pm",
       "shortdate": "091201",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel120109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel120109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "091201"
       },
       "witnesses": ""
     },
@@ -286,7 +308,8 @@
       "time": "2:30pm",
       "shortdate": "091013",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel101309&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel101309&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "091013"
       },
       "witnesses": ""
     },
@@ -298,7 +321,8 @@
       "time": "2:30pm",
       "shortdate": "090521",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel052109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel052109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090521"
       },
       "witnesses": ""
     },
@@ -310,7 +334,8 @@
       "time": "2:30pm",
       "shortdate": "090310",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031009&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031009&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090310"
       },
       "witnesses": ""
     },
@@ -322,7 +347,8 @@
       "time": "2:30pm",
       "shortdate": "090212",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090212"
       },
       "witnesses": ""
     },
@@ -334,7 +360,8 @@
       "time": "10:00am",
       "shortdate": "090206",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020609&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020609&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090206"
       },
       "witnesses": ""
     },
@@ -346,7 +373,8 @@
       "time": "2:30pm",
       "shortdate": "090205",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020509&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020509&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090205"
       },
       "witnesses": ""
     },
@@ -358,7 +386,8 @@
       "time": "10:00am",
       "shortdate": "090122",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg"
+        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "090122"
       },
       "witnesses": ""
     }
