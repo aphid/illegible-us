@@ -46,7 +46,7 @@ Video.prototype.getManifest = function () {
         console.log(result.stdout);
         var response = JSON.parse(result.stdout);
         if (response.type) {
-          vid.type = response.type
+          vid.type = response.type;
         }
         fulfill(JSON.parse(result.stdout));
       })
@@ -66,13 +66,43 @@ Video.prototype.getHDS = function (data) {
     console.log(command);
     cpp.exec(command).then(function (data, err) {
 
-      vid.flv = "./media/video/" + vid.basename + ".flv";
+      vid.flv = scraper.videoDir + vid.basename + ".flv";
       return cpp.exec('ls *Frag* | xargs rm');
     }).then(function () {
       fulfill();
     });
   });
 };
+
+Video.prototype.transcode = function () {
+  console.log('transcode time');
+  var vid = this;
+  console.log(this);
+  return new Promimse(function (fulfill, reject) {
+
+    if (vid.type === 'hds') {
+      console.log("HDS");
+      var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+      console.log(command);
+      /*
+      cpp.exec(command).then(function (result) {
+
+        console.log(result.stdout);
+      }).then(function () {
+        var command = 'ffmpeg -i ' + vid.flv + '-f webm ' + vid.flv.replace('flv', 'webm');
+        console.log(command);
+
+        cpp.exec(command).then(function (result) {
+          console.log(result.stdout);
+          fulfill();
+        });
+      });
+      */
+    }
+  });
+
+};
+
 
 var Committee = function (options) {
   for (var fld in options) {
@@ -154,11 +184,15 @@ Committee.prototype.init = function () {
         return a.queuePdfs();
       }));
     }).then(function () {
-      console.log("we have all the text... now video!!");
-      return comm.hearings[0].video.getManifest();
+      //console.log("we have all the text... now video!!");
+      //return comm.hearings[1].video.getManifest();
     }).then(function (result) {
-      return comm.hearings[0].video.getHDS(result);
-      return comm.write();
+      //return comm.hearings[1].video.getHDS(result);
+    }).then(function () {
+      //return comm.write();
+
+    }).then(function () {
+      return comm.hearings[1].video.transcode();
     })
     .catch(function () {
       console.log("something terrible happened");
@@ -400,7 +434,7 @@ Pdf.prototype.checkTxt = function () {
 };
 
 Hearing.prototype.queuePdfs = function () {
-  console.log(this.title + "pdfs: ");
+  console.log(this.title + ": ");
   var pdfs = [];
   for (var wit of this.witnesses) {
     if (wit.pdfs) {

@@ -27,7 +27,9 @@
       "shortdate": "150212",
       "video": {
         "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021215&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "150212"
+        "basename": "150212",
+        "type": "hds",
+        "flv": "./media/video/150212.flv"
       },
       "witnesses": ""
     },
