@@ -77,19 +77,15 @@ Video.prototype.getHDS = function (data) {
 Video.prototype.transcode = function () {
   console.log('transcode time');
   var vid = this;
-  console.log(this);
-  return new Promimse(function (fulfill, reject) {
-
+  return new Promise(function (fulfill, reject) {
     if (vid.type === 'hds') {
       console.log("HDS");
       var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
       console.log(command);
-      /*
       cpp.exec(command).then(function (result) {
-
         console.log(result.stdout);
       }).then(function () {
-        var command = 'ffmpeg -i ' + vid.flv + '-f webm ' + vid.flv.replace('flv', 'webm');
+        var command = 'ffmpeg -i ' + vid.flv + ' -f webm ' + vid.flv.replace('flv', 'webm');
         console.log(command);
 
         cpp.exec(command).then(function (result) {
@@ -97,7 +93,10 @@ Video.prototype.transcode = function () {
           fulfill();
         });
       });
-      */
+
+    } else if (vid.type === 'flv') {
+      //do stuff;
+
     }
   });
 
