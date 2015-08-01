@@ -11,6 +11,8 @@ var http = require('http');
 var cpp = require('child-process-promise');
 var slimerjs = require('slimerjs');
 var binPath = slimerjs.path;
+var ffmpeg = require('fluent-ffmpeg');
+var fileExists = require('file-exists');
 
 //paths should have trailing slash 
 var scraper = {
@@ -74,34 +76,91 @@ Video.prototype.getHDS = function (data) {
   });
 };
 
-Video.prototype.transcode = function () {
-  console.log('transcode time');
+Video.prototype.transcodeToMP4 = function () {
+  console.log('mp4 time');
   var vid = this;
   return new Promise(function (fulfill, reject) {
     if (vid.type === 'hds') {
       console.log("HDS");
-      var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
-      console.log(command);
-      cpp.exec(command).then(function (result) {
-        console.log(result.stdout);
-      }).then(function () {
-        var command = 'ffmpeg -i ' + vid.flv + ' -f webm ' + vid.flv.replace('flv', 'webm');
-        console.log(command);
-
-        cpp.exec(command).then(function (result) {
-          console.log(result.stdout);
-          fulfill();
-        });
-      });
-
+      var input = vid.flv;
+      var output = vid.flv.replace('flv', 'mp4');
+      if (fileExists(output)) {
+        console.log("MP4 already exists " + output);
+        fulfill();
+      } else {
+        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+        ffmpeg(input)
+          .output(output)
+          .audioCodec('copy')
+          .videoCodec('copy')
+          .on('end', function () {
+            console.log('Processing Finished');
+            fulfill();
+          })
+          .on('error', function (err, stdout, stderr) {
+            console.log(err);
+            console.log(stderr);
+          })
+          .run();
+      }
     } else if (vid.type === 'flv') {
-      //do stuff;
-
+      console.log("Ack, flv!");
+      //real transcode, not remux
+    } else if (vid.type === 'rm') {
+      //ugh :[
     }
-  });
 
+  });
 };
 
+
+Video.prototype.transcodeToWebm = function () {
+  console.log('webm time');
+  var vid = this;
+  var lpct = 0;
+
+  return new Promise(function (fulfill, reject) {
+    if (vid.type === 'hds') {
+      var input = vid.flv;
+      var output = vid.flv.replace('flv', "webm");
+      if (fileExists(output)) {
+        console.log("webm already der! " + output);
+        fulfill();
+      }
+      ffmpeg(input)
+        .output(output)
+        .on('progress', function (progress) {
+          var mf = Math.floor(progress.percent);
+          interval = progress.percent;
+
+          if (mf > lpct) {
+            console.log('Processing: ' + mf + '% done');
+            lpct = mf;
+
+          }
+        })
+        .audioCodec('libvorbis')
+        .videoCodec('libvpx')
+        .on('end', function () {
+          console.log('webm end fired?');
+          console.log('Processing Finished');
+          fulfill();
+        })
+        .on('error', function (err, stdout, stderr) {
+          console.log(err.message);
+          console.log(stderr);
+        })
+        .run();
+      /* cpp.exec(command).then(function (result) {
+        console.log(result.stdout);
+        fulfill();
+      });*/
+    } else if (vid.type === 'flv') {
+      // or rm, whatever 
+    }
+
+  });
+};
 
 var Committee = function (options) {
   for (var fld in options) {
@@ -191,7 +250,9 @@ Committee.prototype.init = function () {
       //return comm.write();
 
     }).then(function () {
-      return comm.hearings[1].video.transcode();
+      return comm.hearings[1].video.transcodeToMP4();
+    }).then(function () {
+      return comm.hearings[1].video.transcodeToWebm();
     })
     .catch(function () {
       console.log("something terrible happened");
@@ -305,7 +366,7 @@ var Pdf = function (options) {
 
 scraper.getFile = function (url, dest) {
   return new Promise(function (fulfill, reject) {
-    pfs.access(dest).then(function () {
+    if (fileExists(dest)) {
       //file exists
       var size = fs.statSync(dest).size;
       console.log(dest + " exists (" + size + ")");
@@ -328,9 +389,9 @@ scraper.getFile = function (url, dest) {
 
 
       }
-    }).catch(function () {
+      //file does not exist
+    } else {
       console.log("reject - file " + dest + " doesn't exist");
-      //file does not exist, well we should parse err but nope
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
         console.log("fetching " + url);
@@ -341,17 +402,16 @@ scraper.getFile = function (url, dest) {
           fulfill();
         });
       });
-
-    });
-
+    }
   });
+
 };
 
 
 scraper.getMeta = function (dest) {
   return new Promise(function (fulfill, reject) {
     var jsonpath = dest + ".json";
-    pfs.access(jsonpath).then(function () {
+    if (fileExists(jsonpath)) {
       var msize = fs.statSync(jsonpath).size;
       console.log(jsonpath + " exists! (" + msize + ")");
       if (msize) {
@@ -361,7 +421,7 @@ scraper.getMeta = function (dest) {
         console.log("Deleting zero size item");
         fs.unlinkSync(jsonpath);
       }
-    }).catch(function () {
+    } else {
       console.log("creating metadata...");
 
       fs.readFile(dest, function (err, data) {
@@ -382,7 +442,7 @@ scraper.getMeta = function (dest) {
         }); //end metadata
 
       }); //end readfile
-    });
+    }
   }); //end promise
 
 };
