@@ -15,7 +15,7 @@ var HDS = function (url) {
         data.type = "flv";
         data.src = response.url
         page.close();
-        reject('flv');
+        resolve(data);
       }
       if (response.status === 200 && (response.url.contains('manifest')) && (!response.url.contains('gif'))) {
         //console.log(">>>>>>>>>>  " + response.status);

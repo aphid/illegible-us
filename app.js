@@ -60,19 +60,35 @@ Video.prototype.getManifest = function () {
 };
 
 Video.prototype.getHDS = function (data) {
-  var vid = this;
-  var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
-  console.log('getting HDS!');
+  var vid = this,
+    output;
   return new Promise(function (fulfill, reject) {
-    //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
-    console.log(command);
-    cpp.exec(command).then(function (data, err) {
 
-      vid.flv = scraper.videoDir + vid.basename + ".flv";
-      return cpp.exec('ls *Frag* | xargs rm');
-    }).then(function () {
-      fulfill();
-    });
+    if (data.type === 'flv') {
+      console.log("ok, it's a flv!");
+      output = scraper.videoDir + vid.basename + ".flv";
+      console.log("Will save to " + output);
+      scraper.getFile(data.src, output).then(function () {
+        return scraper.getMeta(output);
+      }).then(function () {
+        fulfill();
+      });
+    } else if (data.type === 'HDS') {
+      output = scraper.videoDir + vid.basename + ".flv";
+      var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
+      console.log('getting HDS!');
+      //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
+      console.log(command);
+      cpp.exec(command).then(function (data, err) {
+
+        vid.flv = scraper.videoDir + vid.basename + ".flv";
+        return cpp.exec('ls *Frag* | xargs rm');
+      }).then(function () {
+        scraper.getMeta(vid.flv);
+      }).then(function () {
+        fulfill();
+      });
+    }
   });
 };
 
@@ -124,37 +140,38 @@ Video.prototype.transcodeToWebm = function () {
       var input = vid.flv;
       var output = vid.flv.replace('flv', "webm");
       if (fileExists(output)) {
-        console.log("webm already der! " + output);
-        fulfill();
-      }
-      ffmpeg(input)
-        .output(output)
-        .on('progress', function (progress) {
-          var mf = Math.floor(progress.percent);
-          interval = progress.percent;
+        console.log("webm already exists! " + output);
 
-          if (mf > lpct) {
-            console.log('Processing: ' + mf + '% done');
-            lpct = mf;
+      } else {
 
-          }
-        })
-        .audioCodec('libvorbis')
-        .videoCodec('libvpx')
-        .on('end', function () {
-          console.log('webm end fired?');
-          console.log('Processing Finished');
+        ffmpeg(input)
+          .output(output)
+          .on('progress', function (progress) {
+            var mf = Math.floor(progress.percent);
+            interval = progress.percent;
+
+            if (mf > lpct) {
+              console.log('Processing: ' + mf + '% done');
+              lpct = mf;
+
+            }
+          })
+          .audioCodec('libvorbis')
+          .videoCodec('libvpx')
+          .on('end', function () {
+            console.log('webm end fired?');
+            console.log('Processing Finished');
+          })
+          .on('error', function (err, stdout, stderr) {
+            console.log(err.message);
+            console.log(stderr);
+          })
+          .run();
+        /* cpp.exec(command).then(function (result) {
+          console.log(result.stdout);
           fulfill();
-        })
-        .on('error', function (err, stdout, stderr) {
-          console.log(err.message);
-          console.log(stderr);
-        })
-        .run();
-      /* cpp.exec(command).then(function (result) {
-        console.log(result.stdout);
-        fulfill();
-      });*/
+        });*/
+      }
     } else if (vid.type === 'flv') {
       // or rm, whatever 
     }
@@ -242,10 +259,7 @@ Committee.prototype.init = function () {
         return a.queuePdfs();
       }));
     }).then(function () {
-      //console.log("we have all the text... now video!!");
-      //return comm.hearings[1].video.getManifest();
-    }).then(function (result) {
-      //return comm.hearings[1].video.getHDS(result);
+      return comm.getVideos(true);
     }).then(function () {
       //return comm.write();
 
@@ -260,6 +274,42 @@ Committee.prototype.init = function () {
     });
 
 };
+
+
+Committee.prototype.getVideos = function (init) {
+  var comm = this;
+  if (init) {
+    console.log('initializing queue');
+    scraper.hearQueue = [];
+    for (var hear of comm.hearings) {
+      if (hear.video) {
+
+        if (!hear.video.flv) {
+          console.dir(hear.video);
+          scraper.hearQueue.push(hear);
+        }
+      }
+    }
+  }
+  console.log(scraper.hearQueue.length);
+
+  return new Promise(function (fulfill, reject) {
+    if (!scraper.hearQueue.length) {
+      console.log("QUEUE EMPTY");
+      fulfill();
+    } else {
+      var hear = scraper.hearQueue.pop();
+
+      hear.video.getManifest().then(function (result) {
+        return hear.video.getHDS(result);
+      }).then(function () {
+        fulfill();
+      });
+    }
+  });
+};
+
+
 
 Committee.prototype.readLocal = function () {
   var comm = this;
@@ -377,25 +427,39 @@ scraper.getFile = function (url, dest) {
         //validate media here?
         console.log('exists but zero bytes, refetching');
         fs.unlinkSync(dest);
-        var file = fs.createWriteStream(dest);
-        http.get(url, function (response) {
-          console.log("fetching " + url);
-          response.pipe(file);
-          file.on('finish', function () {
-            file.close();
-            fulfill();
-          });
-        });
+        scraper.getFile(url, dest);
 
 
       }
       //file does not exist
     } else {
-      console.log("reject - file " + dest + " doesn't exist");
+      console.log("file " + dest + " doesn't exist yet...");
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
+        var cur = 0;
+        var pct = 0;
+        var len = parseInt(response.headers['content-length'], 10);
+        var total = len / 1048576; //1048576 - bytes in  1Megabyte
         console.log("fetching " + url);
         response.pipe(file);
+        response.on("data", function (chunk) {
+          cur += chunk.length;
+          var newPct = (100.0 * cur / len).toFixed(2);
+          if (pct !== newPct) {
+            pct = newPct;
+            console.log("Downloading " + (100.0 * cur / len).toFixed(2) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
+          }
+        });
+        file.on('data', function (progress) {
+          var mf = Math.floor(progress.percent);
+          interval = progress.percent;
+
+          if (mf > lpct) {
+            console.log('Processing: ' + mf + '% done');
+            lpct = mf;
+
+          }
+        });
         file.on('finish', function () {
           file.close();
           console.log("done writing " + fs.statSync(dest).size + "bytes");
