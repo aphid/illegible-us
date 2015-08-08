@@ -285,7 +285,7 @@ Committee.prototype.init = function () {
 
 };
 
-Committee.prototype.transcode = function (init) {
+Committee.prototype.transcodeVideos = function (init) {
   var comm = this;
   if (init) {
     console.log('initializing transcode queue');
@@ -307,6 +307,25 @@ Committee.prototype.transcode = function (init) {
         console.log("transcoding finished");
         fulfill();
       });
+    }
+  });
+};
+
+Video.transcode = function () {
+  var vid = this;
+  return new Promise(function (fulfill, reject) {
+    if (fileExists(this.mp4) && fileExists(this.webm)) {
+      fulfill();
+    } else {
+      if (!fileExists(this.mp4)) {
+        vid.transcodeToMP4.then(function () {
+          vid.transcode();
+        });
+      } else if (!fileExists(this.webm)) {
+        vid.transcodeToWebm().then(function () {
+          vid.transcode();
+        });
+      }
     }
   });
 };
