@@ -6,13 +6,14 @@ var fs = require('graceful-fs');
 var pfs = require('fs-promise');
 var path = require('path');
 var exif = require('exiftool');
-var pdftotext = require('pdftotextjs')
+var pdftotext = require('pdftotextjs');
 var http = require('http');
 var cpp = require('child-process-promise');
 var slimerjs = require('slimerjs');
 var binPath = slimerjs.path;
 var ffmpeg = require('fluent-ffmpeg');
 var fileExists = require('file-exists');
+var mimovie = require("mimovie");
 
 //paths should have trailing slash 
 var scraper = {
@@ -33,15 +34,6 @@ var Video = function (options) {
       this[fld] = options[fld];
     }
   }
-  if (!this.flv) {
-    this.flv = "";
-  }
-  if (!this.webm) {
-    this.webm = "";
-  }
-  if (!this.mp4) {
-    this.mp4 = "";
-  }
 
   return this;
 };
@@ -49,7 +41,7 @@ var Video = function (options) {
 
 Video.prototype.getManifest = function () {
   var vid = this;
-  console.log("Getting remote info about " + vid.basename)
+  console.log("Getting remote info about " + vid.basename);
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
     var url = "'" + vid.url + "'";
@@ -92,7 +84,9 @@ Video.prototype.fetch = function (data) {
       //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
       console.log(command);
       cpp.exec(command).then(function (data, err) {
-
+        if (err) {
+          reject(err);
+        }
         vid.flv = scraper.videoDir + vid.basename + ".flv";
         return cpp.exec('ls *Frag* | xargs rm');
       }).then(function () {
@@ -106,12 +100,13 @@ Video.prototype.fetch = function (data) {
 
 Video.prototype.transcodeToMP4 = function () {
   console.log('mp4 time');
-  var vid = this;
+  var vid = this,
+    input, output;
   return new Promise(function (fulfill, reject) {
     if (vid.type === 'hds') {
       console.log("HDS");
-      var input = vid.flv;
-      var output = vid.flv.replace('flv', 'mp4');
+      input = vid.flv;
+      output = vid.flv.replace('flv', 'mp4');
       if (fileExists(output)) {
         console.log("MP4 already exists " + output);
         fulfill();
@@ -128,13 +123,39 @@ Video.prototype.transcodeToMP4 = function () {
           .on('error', function (err, stdout, stderr) {
             console.log(err);
             console.log(stderr);
+            reject(err);
+
           })
           .run();
       }
     } else if (vid.type === 'flv') {
       console.log("Ack, flv!");
       //real transcode, not remux
+      input = vid.flv;
+      output = vid.flv.replace('flv', 'mp4');
+      if (fileExists(output)) {
+        console.log("MP4 already exists " + output);
+        fulfill();
+      } else {
+        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+        ffmpeg(input)
+          .output(output)
+          .audioCodec('libfaac')
+          .videoCodec('libx264')
+          .on('end', function () {
+            console.log('Processing Finished');
+            fulfill();
+          })
+          .on('error', function (err, stdout, stderr) {
+            console.log(err);
+            console.log(stderr);
+            reject(err);
+
+          })
+          .run();
+      }
     } else if (vid.type === 'rm') {
+      console.log("sadtrombone");
       //ugh :[
     }
 
@@ -148,7 +169,7 @@ Video.prototype.transcodeToWebm = function () {
   var lpct = 0;
 
   return new Promise(function (fulfill, reject) {
-    if (vid.type === 'hds') {
+    if (vid.type === 'hds' || vid.type === 'flv') {
       var input = vid.flv;
       var output = vid.flv.replace('flv', "webm");
       if (fileExists(output)) {
@@ -177,6 +198,7 @@ Video.prototype.transcodeToWebm = function () {
           .on('error', function (err, stdout, stderr) {
             console.log(err.message);
             console.log(stderr);
+            reject(err);
           })
           .run();
         /* cpp.exec(command).then(function (result) {
@@ -184,8 +206,6 @@ Video.prototype.transcodeToWebm = function () {
           fulfill();
         });*/
       }
-    } else if (vid.type === 'flv') {
-      // or rm, whatever 
     }
 
   });
@@ -538,16 +558,12 @@ scraper.getMeta = function (dest) {
       } else {
         console.log("Deleting zero size item");
         fs.unlinkSync(jsonpath);
+        scraper.getMeta(dest);
       }
     } else {
       console.log("creating metadata...");
-
-      fs.readFile(dest, function (err, data) {
-        if (err) {
-          console.log("error reading metadata");
-          reject(err);
-        }
-        exif.metadata(data, function (err, metadata) {
+      if (dest.includes('pdf')) {
+        exif.metadata(dest, function (err, metadata) {
           if (err) {
             throw "exiftool error: " + err;
           } else {
@@ -558,8 +574,17 @@ scraper.getMeta = function (dest) {
 
           }
         }); //end metadata
+      } else {
+        mimovie(dest, function (err, res) {
+          if (err) {
+            reject(console.log(err));
+          }
+          pfs.writeFile(jsonpath, JSON.stringify(res, undefined, 2)).then(function () {
+            fulfill();
+          });
+        });
 
-      }); //end readfile
+      }
     }
   }); //end promise
 
@@ -572,7 +597,7 @@ Pdf.prototype.checkTxt = function () {
 
   return new Promise(function (reject, fulfill) {
 
-    pfs.access(txtpath).then(function (stuff) {
+    if (fileExists(txtpath)) {
       var msize = fs.statSync(txtpath).size;
       console.log(txtpath + " exists! (" + msize + ")");
       if (msize) {
@@ -581,12 +606,15 @@ Pdf.prototype.checkTxt = function () {
       } else {
         console.log("Deleting zero size item");
         fs.unlinkSync(txtpath);
+        pdf.checkTxt();
       }
-    }).catch(function () {
+    } else {
       var pdftxt = new pdftotext(dest);
       pdftxt.getText(function (err, data, cmd) {
         console.log("TEXTIFYING: " + dest);
-        if (err) throw err;
+        if (err) {
+          throw cmd + " " + err;
+        }
         if (!data) {
           console.error("NO DATA");
           pdf.needsScan = true;
@@ -606,7 +634,7 @@ Pdf.prototype.checkTxt = function () {
           //console.log(cmd.join(' '));
         }
       });
-    });
+    }
   });
 };
 
@@ -642,8 +670,8 @@ Pdf.prototype.process = function () {
       fulfill();
 
     }).catch(function () {
-      console.log("it's okay");
-      fulfill();
+      console.log("rejecting");
+      reject();
       //scraper.workQueue();
     });
   });
@@ -715,9 +743,11 @@ Committee.prototype.getHearingIndex = function (url) {
 
     console.log("trying " + url);
     request(url, function (error, response, html) {
-      if (error) throw error;
+      if (error) {
+        reject(error);
+      }
 
-      if (!error && response.statusCode == 200) {
+      if (!error && response.statusCode === 200) {
         var $ = cheerio.load(html);
         var pagerLast = $('.pager-last a').attr('href');
         if (pagerLast) {
