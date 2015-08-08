@@ -33,6 +33,15 @@ var Video = function (options) {
       this[fld] = options[fld];
     }
   }
+  if (!this.flv) {
+    this.flv = "";
+  }
+  if (!this.webm) {
+    this.webm = "";
+  }
+  if (!this.mp4) {
+    this.mp4 = "";
+  }
 
   return this;
 };
@@ -40,6 +49,7 @@ var Video = function (options) {
 
 Video.prototype.getManifest = function () {
   var vid = this;
+  console.log("Getting remote info about " + vid.basename)
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
 
@@ -59,7 +69,7 @@ Video.prototype.getManifest = function () {
   });
 };
 
-Video.prototype.getHDS = function (data) {
+Video.prototype.fetch = function (data) {
   var vid = this,
     output;
   return new Promise(function (fulfill, reject) {
@@ -250,7 +260,7 @@ Committee.prototype.init = function () {
   }); */
 
   comm.readLocal().
-    //this.scrapeRemote().
+    //this.scrapeRemote().de
   then(function () {
       return comm.write();
     }).then(function () {
@@ -275,6 +285,31 @@ Committee.prototype.init = function () {
 
 };
 
+Committee.prototype.transcode = function (init) {
+  var comm = this;
+  if (init) {
+    console.log('initializing transcode queue');
+    scraper.tQueue = [];
+    for (var hear of comm.hearings) {
+      if (hear.video) {
+        if (!fileExists(hear.video.webm) || !fileExists(hear.video.mp4))
+          scraper.tQueue.push(hearing);
+      }
+    }
+  }
+  return new Promise(function (fulfill, reject) {
+    if (!scraper.tQueue.length) {
+      console.log("transcode queue empty");
+      fulfill();
+    } else {
+      var hear = scraper.tQueue.pop();
+      hear.video.transcode().then(function () {
+        console.log("transcoding finished");
+        fulfill();
+      });
+    }
+  });
+};
 
 Committee.prototype.getVideos = function (init) {
   var comm = this;
@@ -301,7 +336,7 @@ Committee.prototype.getVideos = function (init) {
       var hear = scraper.hearQueue.pop();
 
       hear.video.getManifest().then(function (result) {
-        return hear.video.getHDS(result);
+        return hear.video.fetch(result);
       }).then(function () {
         fulfill();
       });
@@ -705,7 +740,6 @@ Committee.prototype.getHearingIndex = function (url) {
 
 Hearing.prototype.fetch = function () {
   var hear = this;
-
   return new Promise(function (fulfill, reject) {
     console.log('starting a fetch');
     var panel;
