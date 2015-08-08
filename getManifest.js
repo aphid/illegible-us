@@ -1,6 +1,7 @@
 var url = phantom.args[0];
 
 var HDS = function (url) {
+  url = url.replace("'", "");
   var url = url.replace("false", "true");
   return new Promise(function (resolve, reject) {
     var data = {};

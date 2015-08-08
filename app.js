@@ -52,10 +52,12 @@ Video.prototype.getManifest = function () {
   console.log("Getting remote info about " + vid.basename)
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
-
-    var childArgs = [binPath, path.join(__dirname, 'getManifest.js'), vid.url];
+    var url = "'" + vid.url + "'";
+    url = url.replace('false', 'true');
+    console.log(url);
+    var childArgs = [binPath, path.join(__dirname, 'getManifest.js'), url];
     cpp.execFile('/usr/bin/xvfb-run', childArgs).then(function (result) {
-        console.log(result.stdout);
+        console.log("stdout" + result.stdout);
         var response = JSON.parse(result.stdout);
         if (response.type) {
           vid.type = response.type;
@@ -274,9 +276,7 @@ Committee.prototype.init = function () {
       //return comm.write();
 
     }).then(function () {
-      return comm.hearings[1].video.transcodeToMP4();
-    }).then(function () {
-      return comm.hearings[1].video.transcodeToWebm();
+      return comm.hearings.transcode();
     })
     .catch(function () {
       console.log("something terrible happened");
@@ -357,7 +357,7 @@ Committee.prototype.getVideos = function (init) {
       hear.video.getManifest().then(function (result) {
         return hear.video.fetch(result);
       }).then(function () {
-        fulfill();
+        comm.getVideos();
       });
     }
   });
