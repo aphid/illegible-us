@@ -46,9 +46,15 @@ Video.prototype.getManifest = function () {
   return new Promise(function (fulfill, reject) {
     var url = "'" + vid.url + "'";
     url = url.replace('false', 'true');
-    console.log(url);
-    var childArgs = [binPath, path.join(__dirname, 'getManifest.js'), url];
-    cpp.execFile('/usr/bin/xvfb-run', childArgs).then(function (result) {
+
+
+    var childArgs = [binPath, , url];
+    var command = 'xvfb-run -a -e "xvfbfail.log" slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+
+    console.log(">>>> " + command);
+    cpp.exec(command).then(function (result) {
+
         console.log("stdout" + result.stdout);
         var response = JSON.parse(result.stdout);
         if (response.type) {
@@ -57,8 +63,12 @@ Video.prototype.getManifest = function () {
         fulfill(JSON.parse(result.stdout));
       })
       .fail(function (err) {
-        reject(err);
-      });
+        console.error('ERROR: ', (err.stack || err));
+      })
+      .progress(function (childProcess) {
+        console.log('[exec] childProcess.pid: ', childProcess.pid);
+      });;
+
 
   });
 };
@@ -73,11 +83,23 @@ Video.prototype.fetch = function (data) {
       output = scraper.videoDir + vid.basename + ".flv";
       console.log("Will save to " + output);
       scraper.getFile(data.src, output).then(function () {
+        vid.raw = output;
         return scraper.getMeta(output);
       }).then(function () {
         fulfill();
       });
-    } else if (data.type === 'HDS') {
+    } else if (data.type === 'mp4') {
+      console.log("ok, it's a mp4!");
+      output = scraper.videoDir + vid.basename + ".mp4";
+      console.log("Will save to " + output);
+      scraper.getFile(data.src, output).then(function () {
+        vid.raw = output;
+        return scraper.getMeta(output);
+      }).then(function () {
+        fulfill();
+      });
+
+    } else if (data.type === 'hds') {
       output = scraper.videoDir + vid.basename + ".flv";
       var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
       console.log('getting HDS!');
@@ -87,7 +109,7 @@ Video.prototype.fetch = function (data) {
         if (err) {
           reject(err);
         }
-        vid.flv = scraper.videoDir + vid.basename + ".flv";
+        vid.raw = output;
         return cpp.exec('ls *Frag* | xargs rm');
       }).then(function () {
         scraper.getMeta(vid.flv);
@@ -103,10 +125,10 @@ Video.prototype.transcodeToMP4 = function () {
   var vid = this,
     input, output;
   return new Promise(function (fulfill, reject) {
-    if (vid.type === 'hds') {
+    if (vid.type === 'hds' || vid.type == 'mp4') {
       console.log("HDS");
-      input = vid.flv;
-      output = vid.flv.replace('flv', 'mp4');
+      input = vid.raw;
+      output = scraper.videoDir + vid.basename + '.mp4';
       if (fileExists(output)) {
         console.log("MP4 already exists " + output);
         fulfill();
@@ -170,8 +192,8 @@ Video.prototype.transcodeToWebm = function () {
 
   return new Promise(function (fulfill, reject) {
     if (vid.type === 'hds' || vid.type === 'flv') {
-      var input = vid.flv;
-      var output = vid.flv.replace('flv', "webm");
+      var input = vid.raw;
+      var output = scraper.videoDir + vid.basename + "webm";
       if (fileExists(output)) {
         console.log("webm already exists! " + output);
 
@@ -358,7 +380,7 @@ Committee.prototype.getVideos = function (init) {
     for (var hear of comm.hearings) {
       if (hear.video) {
 
-        if (!hear.video.flv) {
+        if (!hear.video.raw) {
           console.dir(hear.video);
           scraper.hearQueue.push(hear);
         }
@@ -376,6 +398,8 @@ Committee.prototype.getVideos = function (init) {
 
       hear.video.getManifest().then(function (result) {
         return hear.video.fetch(result);
+      }).then(function () {
+        return comm.write();
       }).then(function () {
         comm.getVideos();
       });
