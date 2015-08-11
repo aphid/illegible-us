@@ -10,6 +10,7 @@
     "file-exists": "^0.1.1",
     "fluent-ffmpeg": "^2.0.1",
     "fs-promise": "^0.3.1",
+    "glob": "^5.0.14",
     "graceful-fs": "^4.1.2",
     "mimovie": "^1.0.0",
     "moment": "^2.10.3",

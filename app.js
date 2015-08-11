@@ -14,6 +14,7 @@ var binPath = slimerjs.path;
 var ffmpeg = require('fluent-ffmpeg');
 var fileExists = require('file-exists');
 var mimovie = require("mimovie");
+var glob = require("glob");
 
 //paths should have trailing slash 
 var scraper = {
@@ -49,8 +50,8 @@ Video.prototype.getManifest = function () {
 
 
     var childArgs = [binPath, , url];
-    var command = 'xvfb-run -a -e "xvfbfail.log" slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-    var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
     console.log(">>>> " + command);
     cpp.exec(command).then(function (result) {
