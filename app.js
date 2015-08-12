@@ -50,25 +50,28 @@ Video.prototype.getManifest = function () {
 
 
     var childArgs = [binPath, , url];
-    var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-    //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
+    //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
     console.log(">>>> " + command);
     cpp.exec(command).then(function (result) {
 
-        console.log("stdout" + result.stdout);
-        var response = JSON.parse(result.stdout);
+        //WHAT THE ACTUAL FUCK
+        var response = result.stdout.replace("Vector smash protection is enabled.", "");
+        console.log(response);
+        response = JSON.parse(response);
         if (response.type) {
           vid.type = response.type;
         }
-        fulfill(JSON.parse(result.stdout));
+        fulfill(response);
       })
       .fail(function (err) {
         console.error('ERROR: ', (err.stack || err));
       })
       .progress(function (childProcess) {
         console.log('[exec] childProcess.pid: ', childProcess.pid);
-      });;
+      });
 
 
   });
@@ -106,17 +109,26 @@ Video.prototype.fetch = function (data) {
       console.log('getting HDS!');
       //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
       console.log(command);
-      cpp.exec(command).then(function (data, err) {
-        if (err) {
-          reject(err);
-        }
-        vid.raw = output;
-        return cpp.exec('ls *Frag* | xargs rm');
-      }).then(function () {
-        scraper.getMeta(vid.flv);
-      }).then(function () {
-        fulfill();
-      });
+      cpp.exec(command, {
+          maxBuffer: 1024 * 750
+        }).fail(function (err) {
+          console.error('ERROR: ', (err.stack || err));
+        })
+        .progress(function (childProcess) {
+          console.log('[exec] childProcess.pid: ', childProcess.pid);
+        }).then(function (result) {
+
+          vid.raw = output;
+          glob("*Frag*", function (er, files) {
+            for (var file of files) {
+              fs.unlinkSync(file);
+            }
+          });
+        }).then(function () {
+          scraper.getMeta(vid.raw);
+        }).then(function () {
+          fulfill();
+        });
     }
   });
 };
@@ -124,66 +136,55 @@ Video.prototype.fetch = function (data) {
 Video.prototype.transcodeToMP4 = function () {
   console.log('mp4 time');
   var vid = this,
-    input, output;
+    input, output, acodec, vcodec;
+
+
   return new Promise(function (fulfill, reject) {
-    if (vid.type === 'hds' || vid.type == 'mp4') {
+
+    input = vid.raw;
+    output = scraper.videoDir + vid.basename + '.mp4';
+    if (fileExists(output)) {
+      console.log("Video file already exists " + output);
+      fulfill();
+    }
+
+    if (vid.type === 'hds' || vid.type === 'mp4') {
       console.log("HDS");
       input = vid.raw;
-      output = scraper.videoDir + vid.basename + '.mp4';
-      if (fileExists(output)) {
-        console.log("MP4 already exists " + output);
-        fulfill();
-      } else {
-        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
-        ffmpeg(input)
-          .output(output)
-          .audioCodec('copy')
-          .videoCodec('copy')
-          .on('end', function () {
-            console.log('Processing Finished');
-            fulfill();
-          })
-          .on('error', function (err, stdout, stderr) {
-            console.log(err);
-            console.log(stderr);
-            reject(err);
-
-          })
-          .run();
-      }
+      acodec = 'copy';
+      vcodec = 'copy';
     } else if (vid.type === 'flv') {
       console.log("Ack, flv!");
       //real transcode, not remux
-      input = vid.flv;
-      output = vid.flv.replace('flv', 'mp4');
-      if (fileExists(output)) {
-        console.log("MP4 already exists " + output);
-        fulfill();
-      } else {
-        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
-        ffmpeg(input)
-          .output(output)
-          .audioCodec('libfaac')
-          .videoCodec('libx264')
-          .on('end', function () {
-            console.log('Processing Finished');
-            fulfill();
-          })
-          .on('error', function (err, stdout, stderr) {
-            console.log(err);
-            console.log(stderr);
-            reject(err);
-
-          })
-          .run();
-      }
-    } else if (vid.type === 'rm') {
-      console.log("sadtrombone");
-      //ugh :[
+      acodec = 'libfaac';
+      vcodec = 'libx264';
     }
 
+
+
+    //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+    ffmpeg(input)
+      .output(output)
+      .audioCodec(acodec)
+      .videoCodec(vcodec)
+      .on('end', function () {
+        console.log('Processing Finished');
+        fulfill();
+      })
+      .on('error', function (err, stdout, stderr) {
+        console.log(err);
+        console.log(stderr);
+        reject(err);
+
+      })
+      .run();
   });
+
 };
+
+
+
+
 
 
 Video.prototype.transcodeToWebm = function () {
@@ -299,18 +300,21 @@ Committee.prototype.init = function () {
   var comm = this;
 
   /*
+    comm.readLocal().
+
   //gets from local file
   (function () {
     return comm.write('test.json');
   }); */
 
-  comm.readLocal().
-    //this.scrapeRemote().de
+  this.scrapeRemote().
   then(function () {
       return comm.write();
     }).then(function () {
-      console.log("PDF time");
+      console.log("//////////////////////////////////////");
+      console.log("PDFS BEGIN");
       return Promise.all(comm.hearings.map(function (a) {
+        console.log("queueing pdfs");
         return a.queuePdfs();
       }));
     }).then(function () {
@@ -319,10 +323,11 @@ Committee.prototype.init = function () {
       //return comm.write();
 
     }).then(function () {
-      return comm.hearings.transcode();
+      return comm.transcodeVideos(true);
     })
-    .catch(function () {
+    .catch(function (err) {
       console.log("something terrible happened");
+      console.log(err);
 
     });
 
@@ -354,9 +359,10 @@ Committee.prototype.transcodeVideos = function (init) {
   });
 };
 
+
 Video.transcode = function () {
   var vid = this;
-  return new Promise(function (fulfill, reject) {
+  return new Promise(function (fulfill) {
     if (fileExists(this.mp4) && fileExists(this.webm)) {
       fulfill();
     } else {
@@ -403,6 +409,8 @@ Committee.prototype.getVideos = function (init) {
         return comm.write();
       }).then(function () {
         comm.getVideos();
+      }).catch(function (err) {
+        reject(err);
       });
     }
   });
@@ -488,6 +496,22 @@ var Hearing = function (options) {
 
   this.shortdate = moment(new Date(this.date)).format("YYMMDD");
 };
+
+
+Hearing.prototype.textifyPdfs = function () {
+  var hear = this;
+  return new Promise(function (fulfill) {
+    if (!hear.pdfs) {
+      fulfill();
+    }
+
+    return Promise.all(hear.pdfs.map(function (a) {
+      return a.textify();
+    }));
+  });
+
+};
+
 
 Hearing.prototype.addVideo = function (video) {
   video.basename = this.shortdate;
@@ -615,7 +639,8 @@ scraper.getMeta = function (dest) {
 
 };
 
-Pdf.prototype.checkTxt = function () {
+Pdf.prototype.textify = function () {
+  console.log("working on " + this.txtpath)
   var pdf = this;
   var dest = this.pdfpath;
   var txtpath = this.txtpath;
@@ -631,14 +656,16 @@ Pdf.prototype.checkTxt = function () {
       } else {
         console.log("Deleting zero size item");
         fs.unlinkSync(txtpath);
-        pdf.checkTxt();
+        pdf.textify();
       }
     } else {
+      console.log("Attempting to create text: " + txtpath);
       var pdftxt = new pdftotext(dest);
       pdftxt.getText(function (err, data, cmd) {
         console.log("TEXTIFYING: " + dest);
         if (err) {
           throw cmd + " " + err;
+          reject(err);
         }
         if (!data) {
           console.error("NO DATA");
@@ -646,7 +673,7 @@ Pdf.prototype.checkTxt = function () {
           fulfill();
         } else {
           console.log("DATA");
-          fs.writeFile((dest + ".txt"), data, function (err) {
+          fs.writeFile((txtpath), data, function (err) {
             console.log('writing file');
             if (err) {
               throw err;
@@ -664,6 +691,7 @@ Pdf.prototype.checkTxt = function () {
 };
 
 Hearing.prototype.queuePdfs = function () {
+  var hear = this;
   console.log(this.title + ": ");
   var pdfs = [];
   for (var wit of this.witnesses) {
@@ -674,10 +702,23 @@ Hearing.prototype.queuePdfs = function () {
       }
     }
   }
+  return new Promise(function (fulfill, reject) {
 
-  return Promise.all(pdfs.map(function (a) {
-    return a.process();
-  }));
+    Promise.all(pdfs.map(function (a) {
+      console.log('getting meta');
+      return scraper.getMeta(a.pdfpath);
+    })).then(function () {
+      console.log("getting text");
+      return hear.textifyPdfs();
+    }).then(function () {
+      console.log("done with pdfs");
+      fulfill();
+    }).catch(function (err) {
+      console.log("UH OH");
+      reject(err);
+    });
+
+  });
 };
 
 Pdf.prototype.process = function () {
@@ -687,16 +728,16 @@ Pdf.prototype.process = function () {
     scraper.getFile(pdf.remoteUrl, dest).then(function () {
       return scraper.getMeta(dest);
     }).then(function () {
-      console.log("textifying");
+      console.log("textifying " + dest);
       return pdf.textify(dest);
     }).then(function () {
       console.log('done with ' + dest);
       //scraper.workQueue();
       fulfill();
 
-    }).catch(function () {
-      console.log("rejecting");
-      reject();
+    }).catch(function (err) {
+      console.log("rejecting" + this.pdfpath);
+      reject(err);
       //scraper.workQueue();
     });
   });
