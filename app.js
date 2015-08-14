@@ -30,6 +30,7 @@ var scraper = {
 
 
 var Video = function (options) {
+  this.raw = "";
   for (var fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
@@ -48,8 +49,6 @@ Video.prototype.getManifest = function () {
     var url = "'" + vid.url + "'";
     url = url.replace('false', 'true');
 
-
-    var childArgs = [binPath, , url];
     //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
     //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
     var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
@@ -68,6 +67,7 @@ Video.prototype.getManifest = function () {
       })
       .fail(function (err) {
         console.error('ERROR: ', (err.stack || err));
+        reject(err);
       })
       .progress(function (childProcess) {
         console.log('[exec] childProcess.pid: ', childProcess.pid);
@@ -81,10 +81,16 @@ Video.prototype.fetch = function (data) {
   var vid = this,
     output;
   return new Promise(function (fulfill, reject) {
-
+    if (!data.type) {
+      reject("Problem getting filetype");
+    }
     if (data.type === 'flv') {
       console.log("ok, it's a flv!");
       output = scraper.videoDir + vid.basename + ".flv";
+      if (fileExists(output)) {
+        console.log('file already exists');
+        fulfill();
+      }
       console.log("Will save to " + output);
       scraper.getFile(data.src, output).then(function () {
         vid.raw = output;
@@ -95,6 +101,10 @@ Video.prototype.fetch = function (data) {
     } else if (data.type === 'mp4') {
       console.log("ok, it's a mp4!");
       output = scraper.videoDir + vid.basename + ".mp4";
+      if (fileExists(output)) {
+        console.log('file already exists');
+        fulfill();
+      }
       console.log("Will save to " + output);
       scraper.getFile(data.src, output).then(function () {
         vid.raw = output;
@@ -105,30 +115,36 @@ Video.prototype.fetch = function (data) {
 
     } else if (data.type === 'hds') {
       output = scraper.videoDir + vid.basename + ".flv";
-      var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
-      console.log('getting HDS!');
-      //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
-      console.log(command);
-      cpp.exec(command, {
-          maxBuffer: 1024 * 750
-        }).fail(function (err) {
-          console.error('ERROR: ', (err.stack || err));
-        })
-        .progress(function (childProcess) {
-          console.log('[exec] childProcess.pid: ', childProcess.pid);
-        }).then(function (result) {
+      if (fileExists(output)) {
+        console.log('file already exists');
+        fulfill();
+      } else {
+        var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
+        console.log('getting HDS!');
+        //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
+        console.log(command);
+        cpp.exec(command, {
+            maxBuffer: 1024 * 750
+          }).fail(function (err) {
+            console.error('ERROR: ', (err.stack || err));
+          })
+          .progress(function (childProcess) {
+            console.log('[exec] childProcess.pid: ', childProcess.pid);
+          }).then(function (result) {
 
-          vid.raw = output;
-          glob("*Frag*", function (er, files) {
-            for (var file of files) {
-              fs.unlinkSync(file);
-            }
+            vid.raw = output;
+            glob("*Frag*", function (er, files) {
+              console.log('deleting ' + files.length + 'files');
+              for (var file of files) {
+                fs.unlinkSync(file);
+              }
+            });
+          }).then(function () {
+            scraper.getMeta(vid.raw);
+          }).then(function () {
+            fulfill();
           });
-        }).then(function () {
-          scraper.getMeta(vid.raw);
-        }).then(function () {
-          fulfill();
-        });
+      }
     }
   });
 };
@@ -300,14 +316,14 @@ Committee.prototype.init = function () {
   var comm = this;
 
   /*
-    comm.readLocal().
+    //gets from local file
+    (function () {
+      return comm.write('test.json');
+    }); */
 
-  //gets from local file
-  (function () {
-    return comm.write('test.json');
-  }); */
+  //this.scrapeRemote().
+  comm.readLocal().
 
-  this.scrapeRemote().
   then(function () {
       return comm.write();
     }).then(function () {
@@ -320,7 +336,7 @@ Committee.prototype.init = function () {
     }).then(function () {
       return comm.getVideos(true);
     }).then(function () {
-      //return comm.write();
+      return comm.write();
 
     }).then(function () {
       return comm.transcodeVideos(true);
@@ -334,6 +350,7 @@ Committee.prototype.init = function () {
 };
 
 Committee.prototype.transcodeVideos = function (init) {
+  console.log("//////////////////////transcooooode");
   var comm = this;
   if (init) {
     console.log('initializing transcode queue');
@@ -388,7 +405,6 @@ Committee.prototype.getVideos = function (init) {
       if (hear.video) {
 
         if (!hear.video.raw) {
-          console.dir(hear.video);
           scraper.hearQueue.push(hear);
         }
       }
@@ -402,7 +418,10 @@ Committee.prototype.getVideos = function (init) {
       fulfill();
     } else {
       var hear = scraper.hearQueue.pop();
-
+      console.log(">>><><><><> " + " " + hear.video.raw + " " + fileExists(hear.video.raw));
+      if (fileExists(hear.video.raw)) {
+        fulfill();
+      }
       hear.video.getManifest().then(function (result) {
         return hear.video.fetch(result);
       }).then(function () {
@@ -664,8 +683,7 @@ Pdf.prototype.textify = function () {
       pdftxt.getText(function (err, data, cmd) {
         console.log("TEXTIFYING: " + dest);
         if (err) {
-          throw cmd + " " + err;
-          reject(err);
+          reject(err + " " + cmd);
         }
         if (!data) {
           console.error("NO DATA");
