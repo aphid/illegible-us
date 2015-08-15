@@ -32,7 +32,7 @@ var scraper = {
 
 
 var Video = function (options) {
-  this.raw = "";
+  this.localPath = "";
   for (var fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
@@ -81,47 +81,56 @@ Video.prototype.getManifest = function () {
 
 Video.prototype.fetch = function (data) {
   var vid = this,
-    output;
+    output, incoming;
+
+
   return new Promise(function (fulfill, reject) {
     if (!data.type) {
       reject("Problem getting filetype");
     }
     if (data.type === 'flv') {
       console.log("ok, it's a flv!");
-      output = scraper.incomingDir + vid.basename + ".flv";
+      incoming = scraper.incomingDir + vid.basename + ".flv";
+      output = scraper.videoDir + vid.basename + ".flv";
       if (fileExists(output)) {
         console.log('file already exists');
         fulfill();
       }
       console.log("Will save to " + output);
-      scraper.getFile(data.src, output).then(function () {
-        vid.raw = output;
-        return scraper.getMeta(output);
+      scraper.getFile(data.src, incoming).then(function () {
+        fs.renameSync(incoming, output);
+        vid.localPath = output;
+        return vid.getMeta(output);
       }).then(function () {
         fulfill();
       });
     } else if (data.type === 'mp4') {
       console.log("ok, it's a mp4!");
-      output = scraper.incomingDir + vid.basename + ".mp4";
+      incoming = scraper.incomingDir + vid.basename + ".mp4";
+      output = scraper.videoDir + vid.basename + ".mp4";
+
       if (fileExists(output)) {
         console.log('file already exists');
         fulfill();
       }
       console.log("Will save to " + output);
-      scraper.getFile(data.src, output).then(function () {
-        vid.raw = output;
-        return scraper.getMeta(output);
+      scraper.getFile(data.src, incoming).then(function () {
+        vid.localPath = output;
+        fs.renameSync(incoming, ouput);
+        return vid.getMeta(output);
       }).then(function () {
         fulfill();
       });
 
     } else if (data.type === 'hds') {
-      output = scraper.incomingDir + vid.basename + ".flv";
+      incoming = scraper.incomingDir + vid.basename + ".flv";
+      output = scraper.videoDir + vid.basename + ".flv";
+
       if (fileExists(output)) {
         console.log('file already exists');
         fulfill();
       } else {
-        var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir media/video/ --outfile ' + vid.basename;
+        var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
         console.log('getting HDS!');
         //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
         console.log(command);
@@ -133,8 +142,8 @@ Video.prototype.fetch = function (data) {
           .progress(function (childProcess) {
             console.log('[exec] childProcess.pid: ', childProcess.pid);
           }).then(function (result) {
-
-            vid.raw = output;
+            fs.renameSync(incoming, ouput);
+            vid.localPath = output;
             glob("*Frag*", function (er, files) {
               console.log('deleting ' + files.length + 'files');
               for (var file of files) {
@@ -142,7 +151,7 @@ Video.prototype.fetch = function (data) {
               }
             });
           }).then(function () {
-            scraper.getMeta(vid.raw);
+            vid.getMeta();
           }).then(function () {
             fulfill();
           });
@@ -159,7 +168,7 @@ Video.prototype.transcodeToMP4 = function () {
 
   return new Promise(function (fulfill, reject) {
 
-    input = vid.raw;
+    input = vid.localPath;
     output = scraper.videoDir + vid.basename + '.mp4';
     if (fileExists(output)) {
       console.log("Video file already exists " + output);
@@ -168,7 +177,7 @@ Video.prototype.transcodeToMP4 = function () {
 
     if (vid.type === 'hds') {
       console.log("HDS");
-      input = vid.raw;
+      input = vid.localPath;
       acodec = 'copy';
       vcodec = 'copy';
     } else if (vid.type === 'flv') {
@@ -215,7 +224,7 @@ Video.prototype.transcodeToWebm = function () {
 
   return new Promise(function (fulfill, reject) {
     if (vid.type === 'hds' || vid.type === 'flv') {
-      var input = vid.raw;
+      var input = vid.localPath;
       var output = scraper.videoDir + vid.basename + "webm";
       if (fileExists(output)) {
         console.log("webm already exists! " + output);
@@ -413,7 +422,7 @@ Committee.prototype.getVideos = function (init) {
     for (var hear of comm.hearings) {
       if (hear.video) {
 
-        if (!hear.video.raw) {
+        if (!hear.video.localPath) {
           scraper.hearQueue.push(hear);
         }
       }
@@ -427,8 +436,8 @@ Committee.prototype.getVideos = function (init) {
       fulfill();
     } else {
       var hear = scraper.hearQueue.pop();
-      console.log(">>><><><><> " + " " + hear.video.raw + " " + fileExists(hear.video.raw));
-      if (fileExists(hear.video.raw)) {
+      console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
+      if (fileExists(hear.video.localPath)) {
         fulfill();
       }
       hear.video.getManifest().then(function (result) {
@@ -511,13 +520,14 @@ var Witness = function (options) {
 var Hearing = function (options) {
   this.video = {};
   this.witnesses = [];
-  this.shortdate = moment(new Date(this.date)).format("YYMMDD");
 
   for (var fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
     }
   }
+  this.shortdate = moment(new Date(this.date)).format("YYMMDD");
+
 };
 
 
@@ -544,7 +554,7 @@ Hearing.prototype.validateLocal = function (options) {
     var path = scraper.incomingDir + hear.shortdate + ext;
     if (fileExists(path)) {
       console.log("Found video at " + path);
-      hear.video.raw = path;
+      hear.video.localPath = path;
     } else {
       console.log("No video at " + path);
     }
@@ -566,14 +576,11 @@ Hearing.prototype.addVideo = function (video) {
 };
 
 var Pdf = function (options) {
-  if (options.hear && options.url) {
-    var hear = options.hear;
+  if (options.url && options.hear) {
     var url = options.url;
     this.remoteUrl = url;
     this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
-    this.pdfpath = scraper.textDir + hear.shortdate + "_" + this.remotefileName;
-    this.txtpath = this.pdfpath.replace(".pdf", ".txt");
-    this.metapath = this.pdfpath.replace(".pdf", ".json");
+    this.localName = options.hear + "_" + this.remotefileName;
   } else {
     for (var fld in options) {
       if (options[fld]) {
@@ -644,9 +651,10 @@ scraper.getFile = function (url, dest) {
 
 Pdf.prototype.getMeta = function () {
   var pdf = this;
-  var input = t
+  var input = this.localPath;
+  var jsonpath = scraper.metaDir + pdf.localName + ".json";
+  console.log("JJJJJJJJJJJ" + input + " " + jsonpath);
   return new Promise(function (fulfill, reject) {
-    var jsonpath = scraper.metaDir + dest + ".json";
     if (fileExists(jsonpath)) {
       var msize = fs.statSync(jsonpath).size;
       console.log(jsonpath + " exists! (" + msize + ")");
@@ -656,43 +664,62 @@ Pdf.prototype.getMeta = function () {
       } else {
         console.log("Deleting zero size item");
         fs.unlinkSync(jsonpath);
-        scraper.getMeta(dest);
+        pdf.getMeta();
       }
     } else {
       console.log("creating metadata...");
-      if (dest.includes('pdf')) {
-        exif.metadata(dest, function (err, metadata) {
-          if (err) {
-            throw "exiftool error: " + err;
-          } else {
-            //var json = JSON.stringify(metadata, undefined, 2);
-            pfs.writeFile(jsonpath, JSON.stringify(metadata, undefined, 2)).then(function () {
-              fulfill();
-            });
-
-          }
-        }); //end metadata
-      } else {
-        mimovie(dest, function (err, res) {
-          if (err) {
-            reject(console.log(err));
-          }
-          pfs.writeFile(jsonpath, JSON.stringify(res, undefined, 2)).then(function () {
+      exif.metadata(input, function (err, metadata) {
+        if (err) {
+          reject("exiftool error: " + err);
+        } else {
+          //var json = JSON.stringify(metadata, undefined, 2);
+          pfs.writeFile(jsonpath, JSON.stringify(metadata, undefined, 2)).then(function () {
             fulfill();
           });
-        });
 
-      }
+        }
+      }); //end metadata
     }
-  }); //end promise
+  });
+};
 
+Video.prototype.getMeta = function () {
+  var vid = this;
+  var input = this.localPath;
+  var mipath = scraper.metaDir + vid.localName + ".mediainfo.json";
+  var etpath = scraper.metaDir + vid.localName + ".exiftool.json"
+  return new Promise(function (fulfill, reject) {
+    /* mimovie(input, function (err, res) {
+      if (err) {
+        reject(console.log(err));
+      }
+      pfs.writeFile(jsonpath, JSON.stringify(res, undefined, 2)).then(function () {
+        vid.mimeta = mipath;
+        fulfill();
+      });
+    });
+      */
+
+  });
+
+  exif.metadata(input, function (err, metadata) {
+    if (err)
+      throw err;
+    else
+      pfs.writeFile(etpath, metadata).then(function () {
+        vid.etpath = etpath;
+        fulfill();
+      });
+    //console.log(JSON.parse(metadata));
+  });
 };
 
 Pdf.prototype.textify = function () {
   console.log("working on " + this.txtpath)
   var pdf = this;
-  var dest = this.pdfpath;
-  var txtpath = this.txtpath;
+  var dest = this.localPath;
+  console.log(fileExists(dest));
+  var txtpath = this.localPath.replace('pdf', 'txt')
 
   return new Promise(function (reject, fulfill) {
 
@@ -713,7 +740,7 @@ Pdf.prototype.textify = function () {
       pdftxt.getText(function (err, data, cmd) {
         console.log("TEXTIFYING: " + dest);
         if (err) {
-          reject(err + " " + cmd);
+          reject("textificationErr " + err + " " + cmd);
         }
         if (!data) {
           console.error("NO DATA");
@@ -727,6 +754,7 @@ Pdf.prototype.textify = function () {
               throw err;
             }
             console.log('fulfilling textify');
+            pdf.txtpath = txtpath;
             fulfill();
           });
           // additionally you can also access cmd array
@@ -754,7 +782,7 @@ Hearing.prototype.queuePdfs = function () {
 
     Promise.all(pdfs.map(function (a) {
       console.log('getting meta');
-      return scraper.getMeta(a.pdfpath);
+      return a.process();
     })).then(function () {
       console.log("getting text");
       return hear.textifyPdfs();
@@ -770,26 +798,33 @@ Hearing.prototype.queuePdfs = function () {
 };
 
 Pdf.prototype.process = function () {
+  console.log("####PROCESS#####");
   var pdf = this;
+  console.log(pdf);
   return new Promise(function (fulfill, reject) {
-    var dest = pdf.pdfpath;
-    scraper.getFile(pdf.remoteUrl, dest).then(function () {
-      return scraper.getMeta(dest);
-    }).then(function () {
-      console.log("textifying " + dest);
-      return pdf.textify(dest);
-    }).then(function () {
-      console.log('done with ' + dest);
-      //scraper.workQueue();
-      fulfill();
+    var incoming = scraper.incomingDir + pdf.localName;
+    var dest = scraper.textDir + pdf.localName;
+    console.log(incoming + " " + dest);
+    scraper.getFile(pdf.remoteUrl, incoming).then(function () {
+        fs.renameSync(incoming, dest);
+        pdf.localPath = dest;
+        return pdf.getMeta();
+      })
+      /* then(function () {
+        console.log("textifying " + dest);
+        return pdf.textify(dest);
+      }).then(function () {
+        console.log('done with ' + dest);
+        //scraper.workQueue();
+        fulfill();
 
-    }).catch(function (err) {
-      console.log("rejecting" + this.pdfpath);
-      reject(err);
-      //scraper.workQueue();
-    });
+      }) */
+      .catch(function (err) {
+        console.log("rejecting" + pdf.localName);
+        reject(err);
+        //scraper.workQueue();
+      });
   });
-
 
 };
 
