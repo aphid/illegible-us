@@ -14,14 +14,12 @@ var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
 var http = require('http');
 var cpp = require('child-process-promise');
-var slimerjs = require('slimerjs');
-var binPath = slimerjs.path;
 var ffmpeg = require('fluent-ffmpeg');
 var fileExists = require('file-exists');
 var mimovie = require("mimovie");
 var glob = require("glob");
 
-//paths should have trailing slash 
+//paths should have trailing slash
 var scraper = {
   dataDir: './data/',
   hearingDir: './data/hearings/',
@@ -35,6 +33,18 @@ var scraper = {
   busy: false
 };
 
+var Hearing = function (options) {
+  this.video = {};
+  this.witnesses = [];
+
+  for (var fld in options) {
+    if (options[fld]) {
+      this[fld] = options[fld];
+    }
+  }
+  this.shortdate = moment(new Date(this.date)).format("YYMMDD");
+
+};
 
 var Video = function (options) {
   var fld;
@@ -133,7 +143,7 @@ Video.prototype.fetch = function (data) {
       console.log("Will save to " + output);
       scraper.getFile(data.src, incoming).then(function () {
         vid.localPath = output;
-        fs.renameSync(incoming, ouput);
+        fs.renameSync(incoming, output);
       }).then(function () {
         return vid.getMeta(output);
       }).then(function () {
@@ -149,7 +159,6 @@ Video.prototype.fetch = function (data) {
         vid.getMeta().then(function () {
           fulfill();
         });
-        fulfill();
       } else {
         var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
         console.log('getting HDS!');
@@ -162,8 +171,8 @@ Video.prototype.fetch = function (data) {
           })
           .progress(function (childProcess) {
             console.log('[exec] childProcess.pid: ', childProcess.pid);
-          }).then(function (result) {
-            fs.renameSync(incoming, ouput);
+          }).then(function () {
+            fs.renameSync(incoming, output);
             vid.localPath = output;
             glob("*Frag*", function (er, files) {
               console.log('deleting ' + files.length + 'files');
@@ -209,7 +218,7 @@ Video.prototype.transcodeToMP4 = function () {
       vcodec = 'libx264';
     } else if (vid.type === 'mp4') {
       acodec = 'libfaac';
-      vcodec = 'copy'
+      vcodec = 'copy';
     }
 
     console.log(acodec + " / " + vcodec);
@@ -257,7 +266,6 @@ Video.prototype.transcodeToWebm = function () {
           .output(output)
           .on('progress', function (progress) {
             var mf = Math.floor(progress.percent);
-            interval = progress.percent;
 
             if (mf > lpct) {
               console.log('Processing: ' + mf + '% done');
@@ -311,6 +319,7 @@ var Witness = function (options) {
 
 
 Committee.prototype.addHearing = function (options) {
+  options.baseUrl = this.url;
   var hearing = new Hearing(options);
   for (var hear of this.hearings) {
     if (hear.date === options.date) {
@@ -343,6 +352,9 @@ Committee.prototype.scrapeRemote = function () {
       return comm.fetchAll();
     }).then(function () {
       fulfill();
+    }).catch(function (err) {
+      console.log(err);
+      reject(err);
     });
   });
 };
@@ -380,7 +392,6 @@ Committee.prototype.init = function () {
       return comm.write();
     }).then(function () {
       return comm.getVidMeta(true);
-
     }).then(function () {
       return comm.transcodeVideos(true);
     })
@@ -399,13 +410,14 @@ Committee.prototype.transcodeVideos = function (init) {
     console.log('initializing transcode queue');
     scraper.tQueue = [];
     for (var hear of comm.hearings) {
-      if (hear.video) {
-        if (!fileExists(hear.video.webm) || !fileExists(hear.video.mp4))
-          scraper.tQueue.push(hear);
+      if (!fileExists(hear.video.webm) || !fileExists(hear.video.mp4)) {
+        scraper.tQueue.push(hear);
       }
+
     }
   }
-  return new Promise(function (fulfill, reject) {
+
+  return new Promise(function (fulfill) {
     if (!scraper.tQueue.length) {
       console.log("transcode queue empty");
       fulfill();
@@ -429,14 +441,14 @@ Committee.prototype.getVidMeta = function (init) {
     console.log('initializing meta queue');
     scraper.mQueue = [];
     for (var hear of comm.hearings) {
-      if (hear.video) {
-        if (!fileExists(hear.etpath))
-          scraper.mQueue.push(hear);
+      if (!fileExists(hear.etpath)) {
+        scraper.mQueue.push(hear);
       }
+
     }
     console.log(scraper.mQueue.length + "metas to meta.");
   }
-  return new Promise(function (fulfill, reject) {
+  return new Promise(function (fulfill) {
     if (!scraper.mQueue.length) {
       console.log("meta queue empty");
       fulfill();
@@ -485,12 +497,13 @@ Committee.prototype.getVideos = function (init) {
     }
   }
   console.log(scraper.hearQueue.length);
+  if (!scraper.hearQueue.length) {
+    console.log("QUEUE EMPTY");
+    return Promise.resolve();
+  } else {
 
-  return new Promise(function (fulfill, reject) {
-    if (!scraper.hearQueue.length) {
-      console.log("QUEUE EMPTY");
-      fulfill();
-    } else {
+    return new Promise(function (fulfill, reject) {
+
       var hear = scraper.hearQueue.pop();
       console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
       if (fileExists(hear.video.localPath)) {
@@ -511,8 +524,9 @@ Committee.prototype.getVideos = function (init) {
           reject(err);
         });
       }
-    }
-  });
+
+    });
+  }
 };
 
 
@@ -533,15 +547,14 @@ Committee.prototype.readLocal = function () {
         for (var wit of hear.witnesses) {
           var theWit = new Witness(JSON.parse(JSON.stringify(wit)));
           theWit.pdfs = [];
-          if (wit.pdfs) {
-            console.log("adding PDFS");
+          console.log("adding PDFS");
 
-            for (var pdf of wit.pdfs) {
-              console.log(wit.pdfs.length);
-              theWit.readPdf(pdf);
-            }
-            theHearing.addWitness(theWit);
+          for (var pdf of wit.pdfs) {
+            console.log(wit.pdfs.length);
+            theWit.readPdf(pdf);
           }
+          theHearing.addWitness(theWit);
+
         }
         comm.addHearing(theHearing);
 
@@ -560,7 +573,9 @@ Committee.prototype.write = function (filename) {
   return new Promise(function (fulfill, reject) {
     var json = JSON.stringify(comm, undefined, 2);
     pfs.writeFile((scraper.dataDir + filename), json).then(function (err) {
-      if (err) reject(err);
+      if (err) {
+        reject(err);
+      }
       console.log("><><><><><><><><>The file was saved!");
       fulfill();
     });
@@ -569,28 +584,14 @@ Committee.prototype.write = function (filename) {
 
 
 var Witness = function (options) {
+  this.pdfs = [];
   for (var fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
     }
   }
-  if (!options.pdfs) {
-    this.pdfs = [];
-  }
 };
 
-var Hearing = function (options) {
-  this.video = {};
-  this.witnesses = [];
-
-  for (var fld in options) {
-    if (options[fld]) {
-      this[fld] = options[fld];
-    }
-  }
-  this.shortdate = moment(new Date(this.date)).format("YYMMDD");
-
-};
 
 
 Hearing.prototype.textifyPdfs = function () {
@@ -651,7 +652,7 @@ var Pdf = function (options) {
       }
     }
   }
-}
+};
 
 
 scraper.getFile = function (url, dest) {
@@ -680,6 +681,7 @@ scraper.getFile = function (url, dest) {
         var pct = 0;
         var len = parseInt(response.headers['content-length'], 10);
         var total = len / 1048576; //1048576 - bytes in  1Megabyte
+        var lpct;
         console.log("fetching " + url);
         response.pipe(file);
         response.on("data", function (chunk) {
@@ -692,13 +694,15 @@ scraper.getFile = function (url, dest) {
         });
         file.on('data', function (progress) {
           var mf = Math.floor(progress.percent);
-          interval = progress.percent;
 
           if (mf > lpct) {
             console.log('Processing: ' + mf + '% done');
             lpct = mf;
 
           }
+        });
+        file.on('error', function (err) {
+          reject(err);
         });
         file.on('finish', function () {
           file.close();
@@ -767,45 +771,44 @@ Video.prototype.getMeta = function () {
     exif.metadata(input, function (err, metadata) {
       if (err) {
         reject(err);
+      }
+      var vcode = metadata.videoEncoding;
+      if (vcode === "On2 VP6") {
+        vid.type = "flv";
+      } else if (metadata.fileType === "FLV" && vcode === "H.264") {
+        vid.type = "hds";
+      } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+        vid.type = "mp4";
+      } else {
+        console.log(JSON.stringify(metadata));
+      }
+      console.log(vid.type);
+      if (fileExists(etpath)) {
+        vid.etpath = etpath;
+
+        console.log('skipping meta');
+        fulfill();
       } else {
 
-        var vcode = metadata.videoEncoding;
-        if (vcode === "On2 VP6") {
-          vid.type = "flv";
-        } else if (metadata.fileType === "FLV" && vcode === "H.264") {
-          vid.type = "hds";
-        } else if (metadata.fileType === "MP4" && vcode === "H.264") {
-          vid.type = "mp4";
-        } else {
-          console.log(JSON.stringify(metadata));
-        }
-        console.log(vid.type);
-        if (fileExists(etpath)) {
+        pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
           vid.etpath = etpath;
-
-          console.log('skipping meta');
+          console.log('metadata written');
           fulfill();
-        } else {
-
-          pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
-            vid.etpath = etpath;
-            console.log('metadata written');
-            fulfill();
-          });
-          //console.log(JSON.parse(metadata));
-        }
+        });
+        //console.log(JSON.parse(metadata));
       }
+
     });
   });
 
 };
 
 Pdf.prototype.textify = function () {
-  console.log("working on " + this.txtpath)
+  console.log("working on " + this.txtpath);
   var pdf = this;
   var dest = this.localPath;
   console.log(fileExists(dest));
-  var txtpath = this.localPath.replace('pdf', 'txt')
+  var txtpath = this.localPath.replace('pdf', 'txt');
 
   return new Promise(function (reject, fulfill) {
 
@@ -1058,7 +1061,7 @@ Hearing.prototype.fetch = function () {
                 pdf.name = $(val).text();
                 pdf.url = $(val).attr('href');
                 if (!pdf.url.includes('http://')) {
-                  pdf.url = intel.url + pdf.url;
+                  pdf.url = hear.baseUrl + pdf.url;
                 }
                 wit.addPdf(hear, pdf.url);
               });
