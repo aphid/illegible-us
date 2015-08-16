@@ -33,6 +33,8 @@ var scraper = {
 
 var Video = function (options) {
   this.localPath = "";
+  this.mp4 = "";
+  this.webm = "";
   for (var fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
@@ -45,6 +47,10 @@ var Video = function (options) {
 
 Video.prototype.getManifest = function () {
   var vid = this;
+  if (fileExists(this.localPath)) {
+    console.log("nevermind, file exists");
+    return Promise.resolve();
+  }
   console.log("Getting remote info about " + vid.basename);
   console.log("getting manifest!");
   return new Promise(function (fulfill, reject) {
@@ -94,7 +100,9 @@ Video.prototype.fetch = function (data) {
       output = scraper.videoDir + vid.basename + ".flv";
       if (fileExists(output)) {
         console.log('file already exists');
-        fulfill();
+        vid.getMeta().then(function () {
+          fulfill();
+        });
       }
       console.log("Will save to " + output);
       scraper.getFile(data.src, incoming).then(function () {
@@ -111,6 +119,9 @@ Video.prototype.fetch = function (data) {
 
       if (fileExists(output)) {
         console.log('file already exists');
+        vid.getMeta().then(function () {
+          fulfill();
+        });
         fulfill();
       }
       console.log("Will save to " + output);
@@ -128,6 +139,9 @@ Video.prototype.fetch = function (data) {
 
       if (fileExists(output)) {
         console.log('file already exists');
+        vid.getMeta().then(function () {
+          fulfill();
+        });
         fulfill();
       } else {
         var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
@@ -170,11 +184,12 @@ Video.prototype.transcodeToMP4 = function () {
 
     input = vid.localPath;
     output = scraper.videoDir + vid.basename + '.mp4';
+    console.log("transcoding " + input + " to " + output);
     if (fileExists(output)) {
       console.log("Video file already exists " + output);
       fulfill();
     }
-
+    console.log(vid.type + " ??? " + input);
     if (vid.type === 'hds') {
       console.log("HDS");
       input = vid.localPath;
@@ -190,7 +205,7 @@ Video.prototype.transcodeToMP4 = function () {
       vcodec = 'copy'
     }
 
-
+    console.log(acodec + " / " + vcodec);
 
     //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
     ffmpeg(input)
@@ -376,7 +391,7 @@ Committee.prototype.transcodeVideos = function (init) {
     for (var hear of comm.hearings) {
       if (hear.video) {
         if (!fileExists(hear.video.webm) || !fileExists(hear.video.mp4))
-          scraper.tQueue.push(hearing);
+          scraper.tQueue.push(hear);
       }
     }
   }
@@ -386,8 +401,11 @@ Committee.prototype.transcodeVideos = function (init) {
       fulfill();
     } else {
       var hear = scraper.tQueue.pop();
-      hear.video.transcode().then(function () {
+      hear.video.transcodeToMP4().then(function () {
         console.log("transcoding finished");
+
+        return hear.video.transcodeToWebm();
+      }).then(function () {
         fulfill();
       });
     }
@@ -420,25 +438,28 @@ Committee.prototype.getVideos = function (init) {
     console.log('initializing queue');
     scraper.hearQueue = [];
     for (var hear of comm.hearings) {
-      if (hear.video) {
 
-        if (!hear.video.localPath) {
-          scraper.hearQueue.push(hear);
-        }
-      }
+      scraper.hearQueue.push(hear);
+
+
     }
   }
   console.log(scraper.hearQueue.length);
 
   return new Promise(function (fulfill, reject) {
-    if (!scraper.hearQueue.length) {
-      console.log("QUEUE EMPTY");
-      fulfill();
-    } else {
-      var hear = scraper.hearQueue.pop();
-      console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
-      if (fileExists(hear.video.localPath)) {
+      if (!scraper.hearQueue.length) {
+        console.log("QUEUE EMPTY");
         fulfill();
+      } else {
+        var hear = scraper.hearQueue.pop();
+        console.log(hear);
+        console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
+        if (fileExists(hear.video.localPath)) {
+          hear.video.getMeta().then(function () {
+            console.log("getting meta?");
+            fulfill();
+          });
+        }
       }
       hear.video.getManifest().then(function (result) {
         return hear.video.fetch(result);
@@ -447,6 +468,7 @@ Committee.prototype.getVideos = function (init) {
       }).then(function () {
         comm.getVideos();
       }).catch(function (err) {
+        console.log(err);
         reject(err);
       });
     }
@@ -545,13 +567,12 @@ Hearing.prototype.textifyPdfs = function () {
 
 };
 
-Hearing.prototype.validateLocal = function (options) {
-  var hear = this,
-    pdf, vid;
+Hearing.prototype.validateLocal = function () {
+  var hear = this;
   console.log("VALIDATION TIME");
   var exts = ['.flv', '.mp4'];
   exts.map(function (ext) {
-    var path = scraper.incomingDir + hear.shortdate + ext;
+    var path = scraper.videoDir + hear.shortdate + ext;
     if (fileExists(path)) {
       console.log("Found video at " + path);
       hear.video.localPath = path;
@@ -559,10 +580,11 @@ Hearing.prototype.validateLocal = function (options) {
       console.log("No video at " + path);
     }
   });
+  /*
   var jsonPath = scraper.incomingDir + hear.shortdate + ".json";
   if (fileExists(jsonPath)) {
-    hear.video.meta
-  }
+    //hear.video.meta
+  }*/
 
   return Promise.resolve();
 
@@ -684,11 +706,15 @@ Pdf.prototype.getMeta = function () {
 };
 
 Video.prototype.getMeta = function () {
+  console.log("#####VIDEO METADATA#######");
   var vid = this;
   var input = this.localPath;
   var mipath = scraper.metaDir + vid.localName + ".mediainfo.json";
-  var etpath = scraper.metaDir + vid.localName + ".exiftool.json"
+  var etpath = scraper.metaDir + vid.localName + ".exiftool.json";
   return new Promise(function (fulfill, reject) {
+    if (fileExists(etpath)) {
+      fulfill();
+    }
     /* mimovie(input, function (err, res) {
       if (err) {
         reject(console.log(err));
@@ -782,7 +808,7 @@ Hearing.prototype.queuePdfs = function () {
 
     Promise.all(pdfs.map(function (a) {
       console.log('getting meta');
-      return a.process();
+      return a.fetch();
     })).then(function () {
       console.log("getting text");
       return hear.textifyPdfs();
@@ -797,33 +823,31 @@ Hearing.prototype.queuePdfs = function () {
   });
 };
 
-Pdf.prototype.process = function () {
+Pdf.prototype.fetch = function () {
   console.log("####PROCESS#####");
   var pdf = this;
   console.log(pdf);
   return new Promise(function (fulfill, reject) {
     var incoming = scraper.incomingDir + pdf.localName;
     var dest = scraper.textDir + pdf.localName;
-    console.log(incoming + " " + dest);
-    scraper.getFile(pdf.remoteUrl, incoming).then(function () {
-        fs.renameSync(incoming, dest);
-        pdf.localPath = dest;
-        return pdf.getMeta();
-      })
-      /* then(function () {
-        console.log("textifying " + dest);
-        return pdf.textify(dest);
-      }).then(function () {
-        console.log('done with ' + dest);
-        //scraper.workQueue();
-        fulfill();
 
-      }) */
-      .catch(function (err) {
-        console.log("rejecting" + pdf.localName);
-        reject(err);
-        //scraper.workQueue();
-      });
+    if (fileExists(dest)) {
+      fulfill();
+    } else {
+      console.log(incoming + " " + dest);
+      scraper.getFile(pdf.remoteUrl, incoming).then(function () {
+          fs.renameSync(incoming, dest);
+          pdf.localPath = dest;
+          return pdf.getMeta();
+        }).then(function () {
+          fulfill();
+        })
+        .catch(function (err) {
+          console.log("rejecting" + pdf.localName);
+          reject(err);
+          //scraper.workQueue();
+        });
+    }
   });
 
 };
@@ -912,8 +936,9 @@ Committee.prototype.getHearingIndex = function (url) {
           var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
           hearing.date = datesplit[0];
           hearing.time = datesplit[1];
-          comm.hearings.push(new Hearing(hearing));
-
+          if (!hearing.title.includes('Postponed')) {
+            comm.hearings.push(new Hearing(hearing));
+          }
         });
 
         if (lastPage) {
@@ -925,7 +950,7 @@ Committee.prototype.getHearingIndex = function (url) {
           fulfill();
         }
       } else {
-        console.log("BAD PAGE REQUEST");
+        console.log("BAD PAGE REQUEST: " + url);
         fulfill();
 
       }
