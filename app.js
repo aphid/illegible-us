@@ -1,3 +1,8 @@
+/*jslint node: true */
+/*global require, module, Promise, __dirname */
+
+"use strict";
+
 var request = require('request');
 var cheerio = require('cheerio');
 var moment = require('moment');
@@ -32,10 +37,11 @@ var scraper = {
 
 
 var Video = function (options) {
+  var fld;
   this.localPath = "";
   this.mp4 = "";
   this.webm = "";
-  for (var fld in options) {
+  for (fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
     }
@@ -108,6 +114,7 @@ Video.prototype.fetch = function (data) {
       scraper.getFile(data.src, incoming).then(function () {
         fs.renameSync(incoming, output);
         vid.localPath = output;
+      }).then(function () {
         return vid.getMeta(output);
       }).then(function () {
         fulfill();
@@ -122,12 +129,12 @@ Video.prototype.fetch = function (data) {
         vid.getMeta().then(function () {
           fulfill();
         });
-        fulfill();
       }
       console.log("Will save to " + output);
       scraper.getFile(data.src, incoming).then(function () {
         vid.localPath = output;
         fs.renameSync(incoming, ouput);
+      }).then(function () {
         return vid.getMeta(output);
       }).then(function () {
         fulfill();
@@ -165,7 +172,7 @@ Video.prototype.fetch = function (data) {
               }
             });
           }).then(function () {
-            vid.getMeta();
+            return vid.getMeta();
           }).then(function () {
             fulfill();
           });
@@ -369,7 +376,10 @@ Committee.prototype.init = function () {
     }).then(function () {
       return comm.getVideos(true);
     }).then(function () {
+      console.log("wooo");
       return comm.write();
+    }).then(function () {
+      return comm.getVidMeta(true);
 
     }).then(function () {
       return comm.transcodeVideos(true);
@@ -406,11 +416,41 @@ Committee.prototype.transcodeVideos = function (init) {
 
         return hear.video.transcodeToWebm();
       }).then(function () {
-        fulfill();
+        return comm.transcodeVideos();
       });
     }
   });
 };
+
+Committee.prototype.getVidMeta = function (init) {
+  console.log("##META META META##");
+  var comm = this;
+  if (init) {
+    console.log('initializing meta queue');
+    scraper.mQueue = [];
+    for (var hear of comm.hearings) {
+      if (hear.video) {
+        if (!fileExists(hear.etpath))
+          scraper.mQueue.push(hear);
+      }
+    }
+    console.log(scraper.mQueue.length + "metas to meta.");
+  }
+  return new Promise(function (fulfill, reject) {
+    if (!scraper.mQueue.length) {
+      console.log("meta queue empty");
+      fulfill();
+    } else {
+      var hear = scraper.mQueue.pop();
+      hear.video.getMeta().then(function () {
+        console.log("meta finished");
+      }).then(function () {
+        return comm.getVidMeta();
+      });
+    }
+  });
+};
+
 
 
 Video.transcode = function () {
@@ -421,11 +461,11 @@ Video.transcode = function () {
     } else {
       if (!fileExists(this.mp4)) {
         vid.transcodeToMP4.then(function () {
-          vid.transcode();
+          return vid.transcode();
         });
       } else if (!fileExists(this.webm)) {
         vid.transcodeToWebm().then(function () {
-          vid.transcode();
+          return vid.transcode();
         });
       }
     }
@@ -447,30 +487,30 @@ Committee.prototype.getVideos = function (init) {
   console.log(scraper.hearQueue.length);
 
   return new Promise(function (fulfill, reject) {
-      if (!scraper.hearQueue.length) {
-        console.log("QUEUE EMPTY");
-        fulfill();
+    if (!scraper.hearQueue.length) {
+      console.log("QUEUE EMPTY");
+      fulfill();
+    } else {
+      var hear = scraper.hearQueue.pop();
+      console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
+      if (fileExists(hear.video.localPath)) {
+        hear.video.getMeta().then(function () {
+          return comm.getVideos();
+        });
       } else {
-        var hear = scraper.hearQueue.pop();
+
         console.log(hear);
-        console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
-        if (fileExists(hear.video.localPath)) {
-          hear.video.getMeta().then(function () {
-            console.log("getting meta?");
-            fulfill();
-          });
-        }
+        hear.video.getManifest().then(function (result) {
+          return hear.video.fetch(result);
+        }).then(function () {
+          return comm.write();
+        }).then(function () {
+          return comm.getVideos();
+        }).catch(function (err) {
+          console.log(err);
+          reject(err);
+        });
       }
-      hear.video.getManifest().then(function (result) {
-        return hear.video.fetch(result);
-      }).then(function () {
-        return comm.write();
-      }).then(function () {
-        comm.getVideos();
-      }).catch(function (err) {
-        console.log(err);
-        reject(err);
-      });
     }
   });
 };
@@ -558,11 +598,12 @@ Hearing.prototype.textifyPdfs = function () {
   return new Promise(function (fulfill) {
     if (!hear.pdfs) {
       fulfill();
-    }
+    } else {
 
-    return Promise.all(hear.pdfs.map(function (a) {
-      return a.textify();
-    }));
+      return Promise.all(hear.pdfs.map(function (a) {
+        return a.textify();
+      }));
+    }
   });
 
 };
@@ -706,15 +747,11 @@ Pdf.prototype.getMeta = function () {
 };
 
 Video.prototype.getMeta = function () {
-  console.log("#####VIDEO METADATA#######");
   var vid = this;
   var input = this.localPath;
-  var mipath = scraper.metaDir + vid.localName + ".mediainfo.json";
-  var etpath = scraper.metaDir + vid.localName + ".exiftool.json";
+  var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
+  var etpath = scraper.metaDir + vid.basename + ".exiftool.json";
   return new Promise(function (fulfill, reject) {
-    if (fileExists(etpath)) {
-      fulfill();
-    }
     /* mimovie(input, function (err, res) {
       if (err) {
         reject(console.log(err));
@@ -726,18 +763,41 @@ Video.prototype.getMeta = function () {
     });
       */
 
+
+    exif.metadata(input, function (err, metadata) {
+      if (err) {
+        reject(err);
+      } else {
+
+        var vcode = metadata.videoEncoding;
+        if (vcode === "On2 VP6") {
+          vid.type = "flv";
+        } else if (metadata.fileType === "FLV" && vcode === "H.264") {
+          vid.type = "hds";
+        } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+          vid.type = "mp4";
+        } else {
+          console.log(JSON.stringify(metadata));
+        }
+        console.log(vid.type);
+        if (fileExists(etpath)) {
+          vid.etpath = etpath;
+
+          console.log('skipping meta');
+          fulfill();
+        } else {
+
+          pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
+            vid.etpath = etpath;
+            console.log('metadata written');
+            fulfill();
+          });
+          //console.log(JSON.parse(metadata));
+        }
+      }
+    });
   });
 
-  exif.metadata(input, function (err, metadata) {
-    if (err)
-      throw err;
-    else
-      pfs.writeFile(etpath, metadata).then(function () {
-        vid.etpath = etpath;
-        fulfill();
-      });
-    //console.log(JSON.parse(metadata));
-  });
 };
 
 Pdf.prototype.textify = function () {
@@ -936,7 +996,7 @@ Committee.prototype.getHearingIndex = function (url) {
           var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
           hearing.date = datesplit[0];
           hearing.time = datesplit[1];
-          if (!hearing.title.includes('Postponed')) {
+          if (!hearing.title.includes('Postponed') && !hearing.hearingPage.includes('undefined')) {
             comm.hearings.push(new Hearing(hearing));
           }
         });
