@@ -27,10 +27,19 @@ var scraper = {
   incomingDir: './media/incoming/',
   metaDir: './media/metadata/',
   videoDir: './media/video/',
+  transcodedDir: './media/transcoded/',
+  tempDir: "./media/temp/",
   sockets: 5,
   current: 0,
-  queue: [],
-  busy: false
+};
+
+scraper.cleanupFrags = function () {
+  glob("*Frag*", function (er, files) {
+    console.log('deleting ' + files.length + 'files');
+    for (var file of files) {
+      fs.unlinkSync(file);
+    }
+  });
 };
 
 var Hearing = function (options) {
@@ -105,61 +114,30 @@ Video.prototype.fetch = function (data) {
   var vid = this,
     output, incoming;
 
-
+  if (!data.type) {
+    return Promise.reject("Problem getting filetype");
+  }
+  if (fileExists(scraper.videoDir + vid.basename + ".flv") || fileExists(scraper.videoDir + vid.basename + ".mp4")) {
+    return Promise.resolve();
+  }
   return new Promise(function (fulfill, reject) {
-    if (!data.type) {
-      reject("Problem getting filetype");
-    }
-    if (data.type === 'flv') {
-      console.log("ok, it's a flv!");
-      incoming = scraper.incomingDir + vid.basename + ".flv";
-      output = scraper.videoDir + vid.basename + ".flv";
-      if (fileExists(output)) {
-        console.log('file already exists');
-        vid.getMeta().then(function () {
+    {
+
+      if (data.type === 'flv' || data.type === 'mp4') {
+        incoming = scraper.incomingDir + vid.basename + data.type;
+        output = scraper.videoDir + vid.basename + data.type;
+
+        console.log("Will save to " + output);
+        scraper.getFile(data.src, incoming).then(function () {
+          fs.renameSync(incoming, output);
+          vid.localPath = output;
           fulfill();
         });
-      }
-      console.log("Will save to " + output);
-      scraper.getFile(data.src, incoming).then(function () {
-        fs.renameSync(incoming, output);
-        vid.localPath = output;
-      }).then(function () {
-        return vid.getMeta(output);
-      }).then(function () {
-        fulfill();
-      });
-    } else if (data.type === 'mp4') {
-      console.log("ok, it's a mp4!");
-      incoming = scraper.incomingDir + vid.basename + ".mp4";
-      output = scraper.videoDir + vid.basename + ".mp4";
 
-      if (fileExists(output)) {
-        console.log('file already exists');
-        vid.getMeta().then(function () {
-          fulfill();
-        });
-      }
-      console.log("Will save to " + output);
-      scraper.getFile(data.src, incoming).then(function () {
-        vid.localPath = output;
-        fs.renameSync(incoming, output);
-      }).then(function () {
-        return vid.getMeta(output);
-      }).then(function () {
-        fulfill();
-      });
 
-    } else if (data.type === 'hds') {
-      incoming = scraper.incomingDir + vid.basename + ".flv";
-      output = scraper.videoDir + vid.basename + ".flv";
-
-      if (fileExists(output)) {
-        console.log('file already exists');
-        vid.getMeta().then(function () {
-          fulfill();
-        });
-      } else {
+      } else if (data.type === 'hds') {
+        incoming = scraper.incomingDir + vid.basename + ".flv";
+        output = scraper.videoDir + vid.basename + ".flv";
         var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
         console.log('getting HDS!');
         //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
@@ -168,24 +146,20 @@ Video.prototype.fetch = function (data) {
             maxBuffer: 1024 * 750
           }).fail(function (err) {
             console.error('ERROR: ', (err.stack || err));
+            reject(err);
           })
           .progress(function (childProcess) {
             console.log('[exec] childProcess.pid: ', childProcess.pid);
           }).then(function () {
             fs.renameSync(incoming, output);
             vid.localPath = output;
-            glob("*Frag*", function (er, files) {
-              console.log('deleting ' + files.length + 'files');
-              for (var file of files) {
-                fs.unlinkSync(file);
-              }
-            });
-          }).then(function () {
-            return vid.getMeta();
+            return scraper.cleanupFrags();
+
           }).then(function () {
             fulfill();
           });
       }
+
     }
   });
 };
@@ -193,13 +167,14 @@ Video.prototype.fetch = function (data) {
 Video.prototype.transcodeToMP4 = function () {
   console.log('mp4 time');
   var vid = this,
-    input, output, acodec, vcodec;
+    input, temp, output, acodec, vcodec;
 
 
   return new Promise(function (fulfill, reject) {
 
     input = vid.localPath;
-    output = scraper.videoDir + vid.basename + '.mp4';
+    temp = scraper.transcodedDir + vid.basename + '.mp4';
+    output = scraper.transcodedDir + vid.basename + '.mp4';
     console.log("transcoding " + input + " to " + output);
     if (fileExists(output)) {
       console.log("Video file already exists " + output);
@@ -214,10 +189,13 @@ Video.prototype.transcodeToMP4 = function () {
     } else if (vid.type === 'flv') {
       console.log("Ack, flv!");
       //real transcode, not remux
-      acodec = 'libfaac';
+      acodec = 'aac';
       vcodec = 'libx264';
     } else if (vid.type === 'mp4') {
-      acodec = 'libfaac';
+      acodec = 'aac';
+      vcodec = 'libx264';
+    } else if (vid.type === 'h264') {
+      acodec = 'copy';
       vcodec = 'copy';
     }
 
@@ -225,11 +203,12 @@ Video.prototype.transcodeToMP4 = function () {
 
     //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
     ffmpeg(input)
-      .output(output)
+      .output(temp)
       .audioCodec(acodec)
       .videoCodec(vcodec)
       .on('end', function () {
         console.log('Processing Finished');
+        fs.renameSync(temp, output);
         fulfill();
       })
       .on('error', function (err, stdout, stderr) {
@@ -254,16 +233,17 @@ Video.prototype.transcodeToWebm = function () {
   var lpct = 0;
 
   return new Promise(function (fulfill, reject) {
-    if (vid.type === 'hds' || vid.type === 'flv') {
+    if (vid.type) {
       var input = vid.localPath;
-      var output = scraper.videoDir + vid.basename + "webm";
+      var temp = scraper.tempDir + vid.basename + ".webm";
+      var output = scraper.transcodedDir + vid.basename + ".webm";
       if (fileExists(output)) {
         console.log("webm already exists! " + output);
-
+        fulfill();
       } else {
 
         ffmpeg(input)
-          .output(output)
+          .output(temp)
           .on('progress', function (progress) {
             var mf = Math.floor(progress.percent);
 
@@ -278,6 +258,8 @@ Video.prototype.transcodeToWebm = function () {
           .on('end', function () {
             console.log('webm end fired?');
             console.log('Processing Finished');
+            fs.renameSync(temp, output);
+            fulfill();
           })
           .on('error', function (err, stdout, stderr) {
             console.log(err.message);
@@ -386,14 +368,14 @@ Committee.prototype.init = function () {
       }));
 
     }).then(function () {
-      return comm.getVideos(true);
+      return comm.getVideos();
     }).then(function () {
       console.log("wooo");
       return comm.write();
     }).then(function () {
-      return comm.getVidMeta(true);
+      return comm.getVidMeta();
     }).then(function () {
-      return comm.transcodeVideos(true);
+      return comm.transcodeVideos();
     })
     .catch(function (err) {
       console.log("something terrible happened");
@@ -403,66 +385,59 @@ Committee.prototype.init = function () {
 
 };
 
-Committee.prototype.transcodeVideos = function (init) {
+Committee.prototype.transcodeVideos = function () {
   console.log("//////////////////////transcooooode");
   var comm = this;
-  if (init) {
-    console.log('initializing transcode queue');
-    scraper.tQueue = [];
-    for (var hear of comm.hearings) {
-      if (!fileExists(hear.video.webm) || !fileExists(hear.video.mp4)) {
-        scraper.tQueue.push(hear);
-      }
 
-    }
-  }
 
   return new Promise(function (fulfill) {
-    if (!scraper.tQueue.length) {
-      console.log("transcode queue empty");
-      fulfill();
-    } else {
-      var hear = scraper.tQueue.pop();
-      hear.video.transcodeToMP4().then(function () {
-        console.log("transcoding finished");
 
-        return hear.video.transcodeToWebm();
-      }).then(function () {
-        return comm.transcodeVideos();
+    var queue = Promise.resolve();
+    comm.hearings.forEach(function (hear) {
+      var vid = hear.video;
+      /* if (!vid.type) {
+            queue = queue.then(function () {
+              console.log("VID TYPELESS");
+              vid.getMeta();
+            });
+        }*/
+      queue = queue.then(function () {
+        console.log("Calling meta func for" + vid.localPath);
+        return hear.video.transcodeToMP4().then(function () {
+          console.log("transcoding finished");
+
+          return hear.video.transcodeToWebm();
+        });
       });
-    }
+    });
+
+    queue.then(function () {
+      console.log("Done!");
+      fulfill();
+    });
   });
 };
 
-Committee.prototype.getVidMeta = function (init) {
+
+Committee.prototype.getVidMeta = function () {
   console.log("##META META META##");
   var comm = this;
-  if (init) {
-    console.log('initializing meta queue');
-    scraper.mQueue = [];
-    for (var hear of comm.hearings) {
-      if (!fileExists(hear.etpath)) {
-        scraper.mQueue.push(hear);
-      }
-
-    }
-    console.log(scraper.mQueue.length + "metas to meta.");
-  }
   return new Promise(function (fulfill) {
-    if (!scraper.mQueue.length) {
-      console.log("meta queue empty");
-      fulfill();
-    } else {
-      var hear = scraper.mQueue.pop();
-      hear.video.getMeta().then(function () {
-        console.log("meta finished");
-      }).then(function () {
-        return comm.getVidMeta();
+    var queue = Promise.resolve();
+    comm.hearings.forEach(function (hear) {
+      var vid = hear.video;
+      queue = queue.then(function () {
+        console.log("Calling meta func for" + vid.localPath);
+        return vid.getMeta();
       });
-    }
+    });
+
+    queue.then(function () {
+      console.log("Done!");
+      fulfill();
+    });
   });
 };
-
 
 
 Video.transcode = function () {
@@ -484,51 +459,41 @@ Video.transcode = function () {
   });
 };
 
-Committee.prototype.getVideos = function (init) {
+Committee.prototype.getVideos = function () {
   var comm = this;
-  if (init) {
-    console.log('initializing queue');
-    scraper.hearQueue = [];
-    for (var hear of comm.hearings) {
+  return new Promise(function (fulfill, reject) {
 
-      scraper.hearQueue.push(hear);
-
-
-    }
-  }
-  console.log(scraper.hearQueue.length);
-  if (!scraper.hearQueue.length) {
-    console.log("QUEUE EMPTY");
-    return Promise.resolve();
-  } else {
-
-    return new Promise(function (fulfill, reject) {
-
-      var hear = scraper.hearQueue.pop();
-      console.log(">>><><><><> " + " " + hear.video.localPath + " " + fileExists(hear.video.localPath));
-      if (fileExists(hear.video.localPath)) {
-        hear.video.getMeta().then(function () {
-          return comm.getVideos();
-        });
-      } else {
-
-        console.log(hear);
-        hear.video.getManifest().then(function (result) {
-          return hear.video.fetch(result);
-        }).then(function () {
-          return comm.write();
-        }).then(function () {
-          return comm.getVideos();
-        }).catch(function (err) {
-          console.log(err);
-          reject(err);
-        });
-      }
-
+    var queue = Promise.resolve();
+    comm.hearings.forEach(function (hear) {
+      var vid = hear.video;
+      queue = queue.then(function () {
+        console.log("Calling async func for" + hear.shortdate);
+        console.log(vid);
+        if (fileExists(vid.localPath)) {
+          console.log("already there");
+        } else {
+          console.log(vid.localPath);
+          hear.video.getManifest().then(function (result) {
+            return hear.video.fetch(result);
+          }).then(function () {
+            return hear.video.getMeta();
+          }).then(function () {
+            return comm.write();
+          }).catch(function (err) {
+            console.log(err);
+            reject(err);
+          });
+        }
+      });
     });
-  }
-};
 
+    queue.then(function () {
+      console.log("Done!");
+      fulfill();
+    });
+
+  });
+};
 
 
 Committee.prototype.readLocal = function () {
@@ -611,23 +576,20 @@ Hearing.prototype.textifyPdfs = function () {
 
 Hearing.prototype.validateLocal = function () {
   var hear = this;
-  console.log("VALIDATION TIME");
   var exts = ['.flv', '.mp4'];
   exts.map(function (ext) {
     var path = scraper.videoDir + hear.shortdate + ext;
     if (fileExists(path)) {
       console.log("Found video at " + path);
       hear.video.localPath = path;
-    } else {
-      console.log("No video at " + path);
     }
   });
-  /*
-  var jsonPath = scraper.incomingDir + hear.shortdate + ".json";
-  if (fileExists(jsonPath)) {
-    //hear.video.meta
-  }*/
-
+  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir];
+  dirs.map(function (dir) {
+    if (!fs.lstatSync(dir).isDirectory()) {
+      fs.mkdir(dir);
+    }
+  });
   return Promise.resolve();
 
 
@@ -778,6 +740,8 @@ Video.prototype.getMeta = function () {
       } else if (metadata.fileType === "FLV" && vcode === "H.264") {
         vid.type = "hds";
       } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+        vid.type = "h264";
+      } else if (metadata.fileType === "MP4" && !vcode) {
         vid.type = "mp4";
       } else {
         console.log(JSON.stringify(metadata));
@@ -785,7 +749,6 @@ Video.prototype.getMeta = function () {
       console.log(vid.type);
       if (fileExists(etpath)) {
         vid.etpath = etpath;
-
         console.log('skipping meta');
         fulfill();
       } else {
@@ -870,13 +833,13 @@ Hearing.prototype.queuePdfs = function () {
   return new Promise(function (fulfill, reject) {
 
     Promise.all(pdfs.map(function (a) {
-      console.log('getting meta');
+      //console.log('getting meta');
       return a.fetch();
     })).then(function () {
-      console.log("getting text");
+      //onsole.log("getting text");
       return hear.textifyPdfs();
     }).then(function () {
-      console.log("done with pdfs");
+      //console.log("done with pdfs");
       fulfill();
     }).catch(function (err) {
       console.log("UH OH");
@@ -1061,7 +1024,7 @@ Hearing.prototype.fetch = function () {
                 pdf.name = $(val).text();
                 pdf.url = $(val).attr('href');
                 if (!pdf.url.includes('http://')) {
-                  pdf.url = hear.baseUrl + pdf.url;
+                  pdf.url = intel.url + pdf.url;
                 }
                 wit.addPdf(hear, pdf.url);
               });
