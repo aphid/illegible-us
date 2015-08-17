@@ -71,6 +71,7 @@ var Video = function (options) {
 
 
 Video.prototype.getManifest = function () {
+  console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&manifest&&&&&&&&&&&&&&&&&&&&&");
   var vid = this;
   if (fileExists(this.localPath)) {
     console.log("nevermind, file exists");
@@ -83,8 +84,8 @@ Video.prototype.getManifest = function () {
     url = url.replace('false', 'true');
 
     //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-    var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-    //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
     console.log(">>>> " + command);
     cpp.exec(command).then(function (result) {
@@ -373,7 +374,7 @@ Committee.prototype.init = function () {
       console.log("wooo");
       return comm.write();
     }).then(function () {
-      return comm.getVidMeta();
+      //return comm.getVidMeta();
     }).then(function () {
       return comm.transcodeVideos();
     })
@@ -395,12 +396,6 @@ Committee.prototype.transcodeVideos = function () {
     var queue = Promise.resolve();
     comm.hearings.forEach(function (hear) {
       var vid = hear.video;
-      /* if (!vid.type) {
-            queue = queue.then(function () {
-              console.log("VID TYPELESS");
-              vid.getMeta();
-            });
-        }*/
       queue = queue.then(function () {
         console.log("Calling meta func for" + vid.localPath);
         return hear.video.transcodeToMP4().then(function () {
@@ -767,11 +762,13 @@ Video.prototype.getMeta = function () {
 };
 
 Pdf.prototype.textify = function () {
-  console.log("working on " + this.txtpath);
+  console.log(this);
   var pdf = this;
   var dest = this.localPath;
   console.log(fileExists(dest));
-  var txtpath = this.localPath.replace('pdf', 'txt');
+  var txtpath = scraper.textDir + this.localName + "txt";
+  this.txtpath = txtpath
+  console.log("working on " + this.txtpath);
 
   return new Promise(function (reject, fulfill) {
 
@@ -784,7 +781,7 @@ Pdf.prototype.textify = function () {
       } else {
         console.log("Deleting zero size item");
         fs.unlinkSync(txtpath);
-        pdf.textify();
+        return pdf.textify();
       }
     } else {
       console.log("Attempting to create text: " + txtpath);
@@ -801,7 +798,7 @@ Pdf.prototype.textify = function () {
         } else {
           console.log("DATA");
           fs.writeFile((txtpath), data, function (err) {
-            console.log('writing file');
+            console.log('writing file (' + data.length + ')');
             if (err) {
               throw err;
             }
@@ -830,24 +827,33 @@ Hearing.prototype.queuePdfs = function () {
       }
     }
   }
-  return new Promise(function (fulfill, reject) {
+  return new Promise(function (fulfill) {
 
-    Promise.all(pdfs.map(function (a) {
-      //console.log('getting meta');
-      return a.fetch();
-    })).then(function () {
-      //onsole.log("getting text");
-      return hear.textifyPdfs();
-    }).then(function () {
-      //console.log("done with pdfs");
-      fulfill();
-    }).catch(function (err) {
-      console.log("UH OH");
-      reject(err);
+    var queue = Promise.resolve();
+    pdfs.forEach(function (pdf) {
+      queue = queue.then(function () {
+        return pdf.fetch().then(function () {
+          return pdf.getMeta();
+        }).then(function () {
+          return pdf.textify();
+        }).then(function () {
+
+          fulfill();
+        }).catch(function (err) {
+          console.log(err);
+          reject(err);
+        });
+      });
     });
 
+    queue.then(function () {
+      console.log("Done!");
+      fulfill();
+    });
   });
 };
+
+
 
 Pdf.prototype.fetch = function () {
   console.log("####PROCESS#####");
@@ -858,6 +864,7 @@ Pdf.prototype.fetch = function () {
     var dest = scraper.textDir + pdf.localName;
 
     if (fileExists(dest)) {
+      pdf.localPath = dest;
       fulfill();
     } else {
       console.log(incoming + " " + dest);
