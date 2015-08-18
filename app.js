@@ -14,9 +14,10 @@ var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
 var http = require('http');
 var cpp = require('child-process-promise');
-var ffmpeg = require('fluent-ffmpeg');
 var fileExists = require('file-exists');
 var mimovie = require("mimovie");
+var ffmpeg = require('fluent-ffmpeg');
+
 var glob = require("glob");
 
 
@@ -42,6 +43,22 @@ scraper.cleanupFrags = function () {
       fs.unlinkSync(file);
     }
   });
+  return Promise.resolve();
+};
+
+scraper.cleanupTemp = function () {
+  var cwd = process.cwd();
+  process.chdir(scraper.tempDir);
+  glob("*Frag*", function (er, files) {
+    console.log('deleting ' + files.length + 'files');
+    for (var file of files) {
+      if (file.includes('mp4') || file.includes('ogg')) {
+        fs.unlinkSync(file);
+      }
+    }
+
+  });
+  process.chdir(cwd);
   return Promise.resolve();
 };
 
@@ -143,7 +160,7 @@ Video.prototype.fetch = function (data) {
         scraper.getFile(data.src, incoming).then(function () {
           fs.renameSync(incoming, output);
           vid.localPath = output;
-          fulfill();
+          return fulfill();
         });
 
 
@@ -166,9 +183,10 @@ Video.prototype.fetch = function (data) {
             fs.renameSync(incoming, output);
             vid.localPath = output;
             scraper.cleanupFrags();
+            scraper.cleanupTemp();
 
           }).then(function () {
-            fulfill();
+            return fulfill();
           });
       }
 
@@ -177,20 +195,22 @@ Video.prototype.fetch = function (data) {
 };
 
 Video.prototype.transcodeToMP4 = function () {
+
   console.log('mp4 time');
   var vid = this,
-    input, temp, output, acodec, vcodec;
+    input, temp, output, acodec, vcodec, lpct = 0;
 
 
   return new Promise(function (fulfill, reject) {
     console.log(vid);
     input = vid.localPath;
-    temp = scraper.transcodedDir + vid.basename + '.mp4';
+    //transcodes to temp dir rather than destination, copies when transcode is complete so we don't end up with phantom half-finshed files.
+    temp = scraper.tempDir + vid.basename + '.mp4';
     output = scraper.transcodedDir + vid.basename + '.mp4';
     console.log("transcoding " + input + " to " + output);
     if (fileExists(output)) {
       console.log("Video file already exists " + output);
-      fulfill();
+      return fulfill();
     }
     console.log(vid.type + " ??? " + input);
     if (vid.type === 'hds') {
@@ -220,18 +240,31 @@ Video.prototype.transcodeToMP4 = function () {
       .output(temp)
       .audioCodec(acodec)
       .videoCodec(vcodec)
+      .on('start', function (commandLine) {
+        console.log('Spawned Ffmpeg with command: ' + commandLine);
+      })
+      .on('progress', function (progress) {
+        var mf = Math.floor(progress.percent);
+
+        if (mf > lpct) {
+          console.log('Processing: ' + mf + '% done');
+          lpct = mf;
+
+        }
+      })
       .on('end', function () {
         //console.log('Processing Finished');
         fs.renameSync(temp, output);
-        fulfill();
+        return fulfill();
       })
       .on('error', function (err, stdout, stderr) {
         console.log(err);
         console.log(stderr);
-        reject(err);
+        return reject(err);
 
       })
       .run();
+
   });
 
 };
@@ -253,40 +286,40 @@ Video.prototype.transcodeToOgg = function () {
       var output = scraper.transcodedDir + vid.basename + ".ogg";
       if (fileExists(output)) {
         console.log("ogg already exists! " + output);
-        fulfill();
-      } else {
-
-        ffmpeg(input)
-          .output(temp)
-          .on('progress', function (progress) {
-            var mf = Math.floor(progress.percent);
-
-            if (mf > lpct) {
-              console.log('Processing: ' + mf + '% done');
-              lpct = mf;
-
-            }
-          })
-          .audioCodec('libvorbis')
-          .noVideo()
-          .on('end', function () {
-            console.log('ogg end fired?');
-            console.log('Processing Finished');
-            fs.renameSync(temp, output);
-            fulfill();
-          })
-          .on('error', function (err, stdout, stderr) {
-            console.log(err.message);
-            console.log(stderr);
-            reject(err);
-          })
-          .run();
-        /* cpp.exec(command).then(function (result) {
-          console.log(result.stdout);
-          fulfill();
-        });*/
+        return fulfill();
       }
+
+      ffmpeg(input)
+        .output(temp)
+        .on('start', function (commandLine) {
+          console.log('Spawned Ffmpeg with command: ' + commandLine);
+        })
+        .on('progress', function (progress) {
+          var mf = Math.floor(progress.percent);
+
+          if (mf > lpct) {
+            console.log('Processing: ' + mf + '% done');
+            lpct = mf;
+
+          }
+        })
+        .audioCodec('libvorbis')
+        .noVideo()
+        .on('end', function () {
+          console.log('ogg end fired?');
+          console.log('Processing Finished');
+          fs.renameSync(temp, output);
+          return fulfill();
+        })
+        .on('error', function (err, stdout, stderr) {
+          console.log(err.message);
+          console.log(stderr);
+          reject(err);
+        })
+        .run();
+
     }
+
 
   });
 };
@@ -348,9 +381,11 @@ Committee.prototype.scrapeRemote = function () {
     }).then(function () {
       return comm.fetchAll();
     }).then(function () {
-      fulfill();
+      return fulfill();
     }).catch(function (err) {
       console.log(err);
+      process.kill();
+
       reject(err);
     });
   });
@@ -385,9 +420,12 @@ Committee.prototype.init = function () {
     }).then(function () {
       return comm.getVidMeta();
     }).then(function () {
-      return comm.transcodeVideos();
+      return comm.textifyPdfs();
     }).then(function () {
       return comm.write();
+    }).then(function () {
+      return comm.transcodeVideos();
+
     })
     .catch(function (err) {
       console.log("something terrible happened");
@@ -423,7 +461,7 @@ Committee.prototype.transcodeVideos = function () {
 
     queue.then(function () {
       console.log("Done!");
-      fulfill();
+      return fulfill();
     });
   });
 };
@@ -444,7 +482,7 @@ Committee.prototype.getVidMeta = function () {
 
     queue.then(function () {
       console.log("Done!");
-      fulfill();
+      return fulfill();
     });
   });
 };
@@ -478,8 +516,9 @@ Committee.prototype.getVideos = function () {
     comm.hearings.forEach(function (hear) {
       var vid = hear.video;
       queue = queue.then(function () {
-        console.log("Calling async func for" + hear.shortdate);
+        console.log("Fetching videos for " + hear.shortdate);
         console.log(vid.localPath);
+        console.log(hear.video.isPrototypeOf(Video));
         return hear.video.getManifest().then(function (result) {
           console.log("we got a manifest? in theory?");
 
@@ -497,7 +536,7 @@ Committee.prototype.getVideos = function () {
 
     queue.then(function () {
       console.log("Done!");
-      fulfill();
+      return fulfill();
     });
 
   });
@@ -532,10 +571,10 @@ Committee.prototype.readLocal = function () {
         comm.addHearing(theHearing);
 
       }
-      fulfill();
+      return fulfill();
     }).catch(function (err) {
       console.log(err);
-      reject(err);
+      return reject(err);
     });
   });
 };
@@ -553,7 +592,7 @@ Committee.prototype.write = function (filename) {
         reject(err);
       }
       console.log("><><><><><><><><>The file was saved!");
-      fulfill();
+      return fulfill();
     });
   });
 };
@@ -570,19 +609,39 @@ var Witness = function (options) {
 
 
 
-Hearing.prototype.textifyPdfs = function () {
-  var hear = this;
-  return new Promise(function (fulfill) {
-    if (!hear.pdfs) {
-      fulfill();
-    } else {
-
-      return Promise.all(hear.pdfs.map(function (a) {
-        return a.textify();
-      }));
+Committee.prototype.textifyPdfs = function () {
+  var pdfs = [];
+  for (var hear of this.hearings) {
+    for (var wit of hear.witnesses) {
+      for (var pdf of wit.pdfs) {
+        if (!fileExists(this.txtpath)) {
+          pdfs.push(pdf);
+        }
+      }
     }
-  });
+  }
+  if (!pdfs.length) {
+    return Promise.resolve();
+  } else {
 
+    return new Promise(function (fulfill) {
+
+      var queue = Promise.resolve();
+      pdfs.forEach(function (pdf) {
+        queue = queue.then(function () {
+          return pdf.textify();
+        });
+      });
+
+      queue.then(function () {
+        console.log("Done!");
+        return fulfill();
+      }).catch(function (err) {
+        console.log("pdf err is " + err);
+        return fulfill();
+      });
+    });
+  }
 };
 
 Committee.prototype.validateLocal = function () {
@@ -636,15 +695,15 @@ scraper.getFile = function (url, dest) {
       console.log(dest + " exists (" + size + ")");
       if (size) {
         console.log("file's okay");
-        fulfill();
-      } else {
-        //validate media here?
-        console.log('exists but zero bytes, refetching');
-        fs.unlinkSync(dest);
-        scraper.getFile(url, dest);
-
-
+        return fulfill();
       }
+      //validate media here?
+      console.log('exists but zero bytes, refetching');
+      fs.unlinkSync(dest);
+      scraper.getFile(url, dest);
+
+
+
       //file does not exist
     } else {
       console.log("file " + dest + " doesn't exist yet...");
@@ -680,7 +739,7 @@ scraper.getFile = function (url, dest) {
         file.on('finish', function () {
           file.close();
           console.log("done writing " + fs.statSync(dest).size + "bytes");
-          fulfill();
+          return fulfill();
         });
       });
     }
@@ -700,12 +759,9 @@ Pdf.prototype.getMeta = function () {
       console.log(jsonpath + " exists! (" + msize + ")");
       if (msize) {
         console.log("meta's already here, moving on");
-        fulfill();
-      } else {
-        console.log("Deleting zero size item");
-        fs.unlinkSync(jsonpath);
-        pdf.getMeta();
+        return fulfill();
       }
+
     } else {
       console.log("creating metadata...");
       exif.metadata(input, function (err, metadata) {
@@ -714,7 +770,7 @@ Pdf.prototype.getMeta = function () {
         } else {
           //var json = JSON.stringify(metadata, undefined, 2);
           pfs.writeFile(jsonpath, JSON.stringify(metadata, undefined, 2)).then(function () {
-            fulfill();
+            return fulfill();
           });
 
         }
@@ -766,16 +822,16 @@ Video.prototype.getMeta = function () {
       if (fileExists(etpath)) {
         vid.etpath = etpath;
         console.log('skipping meta');
-        fulfill();
-      } else {
-
-        pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
-          vid.etpath = etpath;
-          console.log('metadata written');
-          fulfill();
-        });
-        //console.log(JSON.parse(metadata));
+        return fulfill();
       }
+
+      pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
+        vid.etpath = etpath;
+        console.log('metadata written');
+        return fulfill();
+      });
+      //console.log(JSON.parse(metadata));
+
 
     });
   });
@@ -795,37 +851,37 @@ Pdf.prototype.textify = function () {
       var msize = fs.statSync(txtpath).size;
       console.log(txtpath + " exists! (" + msize + ")");
       console.log("txt's already here, moving on");
-      fulfill();
+      return fulfill();
 
-    } else {
-      console.log("Attempting to create text: " + txtpath);
-      var pdftxt = new pdftotext(dest);
-      pdftxt.getText(function (err, data, cmd) {
-        console.log("TEXTIFYING: " + dest);
-        if (err) {
-          reject("textificationErr " + err + " " + cmd);
-        }
-        if (!data) {
-          console.error("NO DATA");
-          pdf.needsScan = true;
-          fulfill();
-        } else {
-          console.log("DATA");
-          fs.writeFile((txtpath), data, function (err) {
-            console.log('writing file (' + data.length + ')');
-            if (err) {
-              reject(err);
-            }
-            console.log('fulfilling textify');
-            pdf.txtpath = txtpath;
-            fulfill();
-          });
-          // additionally you can also access cmd array
-          // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
-          //console.log(cmd.join(' '));
-        }
-      });
     }
+    console.log("Attempting to create text: " + txtpath);
+    var pdftxt = new pdftotext(dest);
+    pdftxt.getText(function (err, data, cmd) {
+      console.log("TEXTIFYING: " + dest);
+      if (err) {
+        reject("textificationErr " + err + " " + cmd);
+      }
+      if (!data) {
+        console.error("NO DATA");
+        pdf.needsScan = true;
+        return fulfill();
+      }
+      console.log("DATA");
+      fs.writeFile((txtpath), data, function (err) {
+        console.log('writing file (' + data.length + ')');
+        if (err) {
+          reject(err);
+        }
+        console.log('fulfilling textify');
+        pdf.txtpath = txtpath;
+        return fulfill();
+      });
+      // additionally you can also access cmd array
+      // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
+      //console.log(cmd.join(' '));
+
+    });
+
   });
 };
 
@@ -855,10 +911,10 @@ Committee.prototype.queuePdfs = function () {
 
     queue.then(function () {
       console.log("Done!");
-      fulfill();
+      return fulfill();
     }).catch(function (err) {
       console.log("pdf err is " + err);
-      fulfill();
+      return fulfill();
     });
   });
 };
@@ -874,21 +930,21 @@ Pdf.prototype.fetch = function () {
 
     if (fileExists(dest)) {
       pdf.localPath = dest;
-      fulfill();
-    } else {
-      console.log(incoming + " " + dest);
-      scraper.getFile(pdf.remoteUrl, incoming).then(function () {
-          fs.renameSync(incoming, dest);
-          pdf.localPath = dest;
-        }).then(function () {
-          fulfill();
-        })
-        .catch(function (err) {
-          console.log("rejecting" + pdf.localName);
-          reject(err);
-          //scraper.workQueue();
-        });
+      return fulfill();
     }
+    console.log(incoming + " " + dest);
+    scraper.getFile(pdf.remoteUrl, incoming).then(function () {
+        fs.renameSync(incoming, dest);
+        pdf.localPath = dest;
+      }).then(function () {
+        fulfill();
+      })
+      .catch(function (err) {
+        console.log("rejecting" + pdf.localName);
+        reject(err);
+        //scraper.workQueue();
+      });
+
   });
 
 };
@@ -956,7 +1012,13 @@ Committee.prototype.getHearingIndex = function (url) {
   return new Promise(function (fulfill, reject) {
 
     console.log("trying " + url);
-    request(url, function (error, response, html) {
+    var options = {
+      url: url,
+      headers: {
+        'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
+      }
+    };
+    request(options, function (error, response, html) {
       if (error) {
         reject(error);
       }
@@ -984,15 +1046,15 @@ Committee.prototype.getHearingIndex = function (url) {
 
         if (lastPage) {
 
-          fulfill({
+          return fulfill({
             "lastPage": lastPage.query.page
           });
         } else {
-          fulfill();
+          return fulfill();
         }
       } else {
         console.log("BAD PAGE REQUEST: " + url);
-        fulfill();
+        return fulfill('fail');
 
       }
     }); // end request
@@ -1008,7 +1070,13 @@ Hearing.prototype.fetch = function () {
     var panel;
     console.log("getting info for: " + hear.date);
     console.log(hear.hearingPage);
-    request(hear.hearingPage, function (error, response, html) {
+    var options = {
+      url: hear.hearingPage,
+      headers: {
+        'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
+      }
+    };
+    request(options, function (error, response, html) {
       if (error) {
         console.log(hear.hearingPage + " is throwing an error: " + error);
         reject(error);
@@ -1056,7 +1124,7 @@ Hearing.prototype.fetch = function () {
         console.log("bad request on " + hear.hearingPage);
       } // end status
 
-      fulfill();
+      return fulfill();
 
     }); // end request
 
