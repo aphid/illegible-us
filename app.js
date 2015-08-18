@@ -74,6 +74,7 @@ var Video = function (options) {
 
 
 Video.prototype.getManifest = function () {
+
   console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&manifest&&&&&&&&&&&&&&&&&&&&&");
   var vid = this;
   if (fileExists(this.localPath)) {
@@ -91,6 +92,7 @@ Video.prototype.getManifest = function () {
       var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
       console.log(">>>> " + command);
+
       cpp.exec(command).then(function (result) {
 
           //WHAT THE ACTUAL FUCK
@@ -107,14 +109,17 @@ Video.prototype.getManifest = function () {
         .fail(function (err) {
           console.error('ERROR: ', (err.stack || err));
           reject(err);
+          process.exit();
         })
         .progress(function (childProcess) {
           console.log('[exec] childProcess.pid: ', childProcess.pid);
         });
 
-
     });
+
   }
+
+
 };
 
 Video.prototype.fetch = function (data) {
@@ -475,7 +480,9 @@ Committee.prototype.getVideos = function () {
       queue = queue.then(function () {
         console.log("Calling async func for" + hear.shortdate);
         console.log(vid.localPath);
-        hear.video.getManifest().then(function (result) {
+        return hear.video.getManifest().then(function (result) {
+          console.log("we got a manifest? in theory?");
+
           if (result) {
             return hear.video.fetch(result);
           }
@@ -686,7 +693,7 @@ Pdf.prototype.getMeta = function () {
   var pdf = this;
   var input = this.localPath;
   var jsonpath = scraper.metaDir + pdf.localName + ".json";
-  console.log("JJJJJJJJJJJ" + input + " " + jsonpath);
+  console.log(">>>>>>>>>>>>>>" + input + " " + jsonpath);
   return new Promise(function (fulfill, reject) {
     if (fileExists(jsonpath)) {
       var msize = fs.statSync(jsonpath).size;
