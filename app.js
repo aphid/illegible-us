@@ -19,6 +19,8 @@ var fileExists = require('file-exists');
 var mimovie = require("mimovie");
 var glob = require("glob");
 
+
+
 //paths should have trailing slash
 var scraper = {
   dataDir: './data/',
@@ -40,6 +42,7 @@ scraper.cleanupFrags = function () {
       fs.unlinkSync(file);
     }
   });
+  return Promise.resolve();
 };
 
 var Hearing = function (options) {
@@ -59,7 +62,7 @@ var Video = function (options) {
   var fld;
   this.localPath = "";
   this.mp4 = "";
-  this.webm = "";
+  this.ogg = "";
   for (fld in options) {
     if (options[fld]) {
       this[fld] = options[fld];
@@ -76,45 +79,48 @@ Video.prototype.getManifest = function () {
   if (fileExists(this.localPath)) {
     console.log("nevermind, file exists");
     return Promise.resolve();
+  } else {
+    console.log("Getting remote info about " + vid.basename);
+    console.log("getting manifest!");
+    return new Promise(function (fulfill, reject) {
+      var url = "'" + vid.url + "'";
+      url = url.replace('false', 'true');
+
+      //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
+      //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+
+      console.log(">>>> " + command);
+      cpp.exec(command).then(function (result) {
+
+          //WHAT THE ACTUAL FUCK
+          var response = result.stdout.replace("Vector smash protection is enabled.", "");
+          console.log(response);
+          response = JSON.parse(response);
+          if (response.type) {
+            vid.type = response.type;
+          }
+          console.log("fulfilling manifest");
+
+          fulfill(response);
+        })
+        .fail(function (err) {
+          console.error('ERROR: ', (err.stack || err));
+          reject(err);
+        })
+        .progress(function (childProcess) {
+          console.log('[exec] childProcess.pid: ', childProcess.pid);
+        });
+
+
+    });
   }
-  console.log("Getting remote info about " + vid.basename);
-  console.log("getting manifest!");
-  return new Promise(function (fulfill, reject) {
-    var url = "'" + vid.url + "'";
-    url = url.replace('false', 'true');
-
-    //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-    //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-    var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-
-    console.log(">>>> " + command);
-    cpp.exec(command).then(function (result) {
-
-        //WHAT THE ACTUAL FUCK
-        var response = result.stdout.replace("Vector smash protection is enabled.", "");
-        console.log(response);
-        response = JSON.parse(response);
-        if (response.type) {
-          vid.type = response.type;
-        }
-        fulfill(response);
-      })
-      .fail(function (err) {
-        console.error('ERROR: ', (err.stack || err));
-        reject(err);
-      })
-      .progress(function (childProcess) {
-        console.log('[exec] childProcess.pid: ', childProcess.pid);
-      });
-
-
-  });
 };
 
 Video.prototype.fetch = function (data) {
   var vid = this,
     output, incoming;
-
+  console.log(data);
   if (!data.type) {
     return Promise.reject("Problem getting filetype");
   }
@@ -123,7 +129,7 @@ Video.prototype.fetch = function (data) {
   }
   return new Promise(function (fulfill, reject) {
     {
-
+      console.log("TYPE: " + data.type);
       if (data.type === 'flv' || data.type === 'mp4') {
         incoming = scraper.incomingDir + vid.basename + data.type;
         output = scraper.videoDir + vid.basename + data.type;
@@ -154,7 +160,7 @@ Video.prototype.fetch = function (data) {
           }).then(function () {
             fs.renameSync(incoming, output);
             vid.localPath = output;
-            return scraper.cleanupFrags();
+            scraper.cleanupFrags();
 
           }).then(function () {
             fulfill();
@@ -172,7 +178,7 @@ Video.prototype.transcodeToMP4 = function () {
 
 
   return new Promise(function (fulfill, reject) {
-
+    console.log(vid);
     input = vid.localPath;
     temp = scraper.transcodedDir + vid.basename + '.mp4';
     output = scraper.transcodedDir + vid.basename + '.mp4';
@@ -198,6 +204,8 @@ Video.prototype.transcodeToMP4 = function () {
     } else if (vid.type === 'h264') {
       acodec = 'copy';
       vcodec = 'copy';
+    } else {
+      console.log("I have no idea what I'm working with here.");
     }
 
     console.log(acodec + " / " + vcodec);
@@ -208,7 +216,7 @@ Video.prototype.transcodeToMP4 = function () {
       .audioCodec(acodec)
       .videoCodec(vcodec)
       .on('end', function () {
-        console.log('Processing Finished');
+        //console.log('Processing Finished');
         fs.renameSync(temp, output);
         fulfill();
       })
@@ -228,18 +236,18 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 
-Video.prototype.transcodeToWebm = function () {
-  console.log('webm time');
+Video.prototype.transcodeToOgg = function () {
+  console.log('ogg time');
   var vid = this;
   var lpct = 0;
 
   return new Promise(function (fulfill, reject) {
     if (vid.type) {
       var input = vid.localPath;
-      var temp = scraper.tempDir + vid.basename + ".webm";
-      var output = scraper.transcodedDir + vid.basename + ".webm";
+      var temp = scraper.tempDir + vid.basename + ".ogg";
+      var output = scraper.transcodedDir + vid.basename + ".ogg";
       if (fileExists(output)) {
-        console.log("webm already exists! " + output);
+        console.log("ogg already exists! " + output);
         fulfill();
       } else {
 
@@ -255,9 +263,9 @@ Video.prototype.transcodeToWebm = function () {
             }
           })
           .audioCodec('libvorbis')
-          .videoCodec('libvpx')
+          .noVideo()
           .on('end', function () {
-            console.log('webm end fired?');
+            console.log('ogg end fired?');
             console.log('Processing Finished');
             fs.renameSync(temp, output);
             fulfill();
@@ -299,6 +307,7 @@ var Witness = function (options) {
     this.pdfs = [];
   }
 };
+
 
 
 Committee.prototype.addHearing = function (options) {
@@ -359,31 +368,27 @@ Committee.prototype.init = function () {
     }).then(function () {
       console.log("//////////////////////////////////////");
       console.log("PDFS BEGIN");
-      return Promise.all(comm.hearings.map(function (a) {
-        console.log("queueing pdfs");
-        return a.queuePdfs();
-      }));
-    }).then(function () {
-      return Promise.all(comm.hearings.map(function (a) {
-        return a.validateLocal();
-      }));
+      return comm.queuePdfs();
 
+    }).then(function () {
+      return comm.validateLocal();
     }).then(function () {
       return comm.getVideos();
     }).then(function () {
       console.log("wooo");
       return comm.write();
     }).then(function () {
-      //return comm.getVidMeta();
+      return comm.getVidMeta();
     }).then(function () {
       return comm.transcodeVideos();
+    }).then(function () {
+      return comm.write();
     })
     .catch(function (err) {
       console.log("something terrible happened");
       console.log(err);
 
     });
-
 };
 
 Committee.prototype.transcodeVideos = function () {
@@ -396,12 +401,17 @@ Committee.prototype.transcodeVideos = function () {
     var queue = Promise.resolve();
     comm.hearings.forEach(function (hear) {
       var vid = hear.video;
+      if (!vid.type) {
+        queue = queue.then(function () {
+          vid.getMeta();
+        });
+      }
       queue = queue.then(function () {
         console.log("Calling meta func for" + vid.localPath);
         return hear.video.transcodeToMP4().then(function () {
           console.log("transcoding finished");
 
-          return hear.video.transcodeToWebm();
+          return hear.video.transcodeToOgg();
         });
       });
     });
@@ -438,15 +448,15 @@ Committee.prototype.getVidMeta = function () {
 Video.transcode = function () {
   var vid = this;
   return new Promise(function (fulfill) {
-    if (fileExists(this.mp4) && fileExists(this.webm)) {
+    if (fileExists(this.mp4) && fileExists(this.ogg)) {
       fulfill();
     } else {
       if (!fileExists(this.mp4)) {
         vid.transcodeToMP4.then(function () {
           return vid.transcode();
         });
-      } else if (!fileExists(this.webm)) {
-        vid.transcodeToWebm().then(function () {
+      } else if (!fileExists(this.ogg)) {
+        vid.transcodeToOgg().then(function () {
           return vid.transcode();
         });
       }
@@ -455,6 +465,7 @@ Video.transcode = function () {
 };
 
 Committee.prototype.getVideos = function () {
+  console.log("))))))))))))))))))))getting videos!");
   var comm = this;
   return new Promise(function (fulfill, reject) {
 
@@ -463,22 +474,17 @@ Committee.prototype.getVideos = function () {
       var vid = hear.video;
       queue = queue.then(function () {
         console.log("Calling async func for" + hear.shortdate);
-        console.log(vid);
-        if (fileExists(vid.localPath)) {
-          console.log("already there");
-        } else {
-          console.log(vid.localPath);
-          hear.video.getManifest().then(function (result) {
+        console.log(vid.localPath);
+        hear.video.getManifest().then(function (result) {
+          if (result) {
             return hear.video.fetch(result);
-          }).then(function () {
-            return hear.video.getMeta();
-          }).then(function () {
-            return comm.write();
-          }).catch(function (err) {
-            console.log(err);
-            reject(err);
-          });
-        }
+          }
+
+        }).catch(function (err) {
+          console.log(err);
+          reject(err);
+        });
+
       });
     });
 
@@ -520,6 +526,9 @@ Committee.prototype.readLocal = function () {
 
       }
       fulfill();
+    }).catch(function (err) {
+      console.log(err);
+      reject(err);
     });
   });
 };
@@ -569,27 +578,27 @@ Hearing.prototype.textifyPdfs = function () {
 
 };
 
-Hearing.prototype.validateLocal = function () {
-  var hear = this;
-  var exts = ['.flv', '.mp4'];
-  exts.map(function (ext) {
-    var path = scraper.videoDir + hear.shortdate + ext;
-    if (fileExists(path)) {
-      console.log("Found video at " + path);
-      hear.video.localPath = path;
-    }
-  });
+Committee.prototype.validateLocal = function () {
+  console.log("#VALIDATION#");
   var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir];
   dirs.map(function (dir) {
     if (!fs.lstatSync(dir).isDirectory()) {
       fs.mkdir(dir);
     }
   });
+  for (var hear of this.hearings) {
+    var flvpath = scraper.videoDir + hear.shortdate + '.flv';
+    var mp4path = scraper.videoDir + hear.shortdate + '.mp4';
+    if (fileExists(flvpath)) {
+      hear.video.localPath = flvpath;
+    } else if (fileExists(mp4path)) {
+      hear.video.localPath = mp4path;
+    }
+  }
+
   return Promise.resolve();
 
-
 };
-
 
 Hearing.prototype.addVideo = function (video) {
   video.basename = this.shortdate;
@@ -601,7 +610,7 @@ var Pdf = function (options) {
     var url = options.url;
     this.remoteUrl = url;
     this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
-    this.localName = options.hear + "_" + this.remotefileName;
+    this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
   } else {
     for (var fld in options) {
       if (options[fld]) {
@@ -726,16 +735,21 @@ Video.prototype.getMeta = function () {
 
 
     exif.metadata(input, function (err, metadata) {
+      console.log("metadata for: ", vid);
+      var vcode;
       if (err) {
         reject(err);
       }
-      var vcode = metadata.videoEncoding;
-      if (vcode === "On2 VP6") {
-        vid.type = "flv";
-      } else if (metadata.fileType === "FLV" && vcode === "H.264") {
-        vid.type = "hds";
-      } else if (metadata.fileType === "MP4" && vcode === "H.264") {
-        vid.type = "h264";
+      console.log(metadata);
+      if (metadata.videoEncoding) {
+        vcode = metadata.videoEncoding;
+        if (vcode === "On2 VP6") {
+          vid.type = "flv";
+        } else if (metadata.fileType === "FLV" && vcode === "H.264") {
+          vid.type = "hds";
+        } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+          vid.type = "h264";
+        }
       } else if (metadata.fileType === "MP4" && !vcode) {
         vid.type = "mp4";
       } else {
@@ -762,12 +776,10 @@ Video.prototype.getMeta = function () {
 };
 
 Pdf.prototype.textify = function () {
-  console.log(this);
   var pdf = this;
   var dest = this.localPath;
-  console.log(fileExists(dest));
-  var txtpath = scraper.textDir + this.localName + "txt";
-  this.txtpath = txtpath
+  var txtpath = scraper.textDir + this.localName + ".txt";
+  this.txtpath = txtpath;
   console.log("working on " + this.txtpath);
 
   return new Promise(function (reject, fulfill) {
@@ -775,14 +787,9 @@ Pdf.prototype.textify = function () {
     if (fileExists(txtpath)) {
       var msize = fs.statSync(txtpath).size;
       console.log(txtpath + " exists! (" + msize + ")");
-      if (msize) {
-        console.log("txt's already here, moving on");
-        fulfill();
-      } else {
-        console.log("Deleting zero size item");
-        fs.unlinkSync(txtpath);
-        return pdf.textify();
-      }
+      console.log("txt's already here, moving on");
+      fulfill();
+
     } else {
       console.log("Attempting to create text: " + txtpath);
       var pdftxt = new pdftotext(dest);
@@ -800,7 +807,7 @@ Pdf.prototype.textify = function () {
           fs.writeFile((txtpath), data, function (err) {
             console.log('writing file (' + data.length + ')');
             if (err) {
-              throw err;
+              reject(err);
             }
             console.log('fulfilling textify');
             pdf.txtpath = txtpath;
@@ -815,12 +822,12 @@ Pdf.prototype.textify = function () {
   });
 };
 
-Hearing.prototype.queuePdfs = function () {
-  var hear = this;
-  console.log(this.title + ": ");
+Committee.prototype.queuePdfs = function () {
   var pdfs = [];
-  for (var wit of this.witnesses) {
-    if (wit.pdfs) {
+  for (var hear of this.hearings) {
+    console.log(hear.title + ": ");
+
+    for (var wit of hear.witnesses) {
       for (var pdf of wit.pdfs) {
         console.log(" " + pdf.remotefileName);
         pdfs.push(pdf);
@@ -834,20 +841,16 @@ Hearing.prototype.queuePdfs = function () {
       queue = queue.then(function () {
         return pdf.fetch().then(function () {
           return pdf.getMeta();
-        }).then(function () {
-          return pdf.textify();
-        }).then(function () {
 
-          fulfill();
-        }).catch(function (err) {
-          console.log(err);
-          reject(err);
         });
       });
     });
 
     queue.then(function () {
       console.log("Done!");
+      fulfill();
+    }).catch(function (err) {
+      console.log("pdf err is " + err);
       fulfill();
     });
   });
@@ -856,9 +859,8 @@ Hearing.prototype.queuePdfs = function () {
 
 
 Pdf.prototype.fetch = function () {
-  console.log("####PROCESS#####");
+  console.log("getting " + this.localName);
   var pdf = this;
-  console.log(pdf);
   return new Promise(function (fulfill, reject) {
     var incoming = scraper.incomingDir + pdf.localName;
     var dest = scraper.textDir + pdf.localName;
@@ -871,7 +873,6 @@ Pdf.prototype.fetch = function () {
       scraper.getFile(pdf.remoteUrl, incoming).then(function () {
           fs.renameSync(incoming, dest);
           pdf.localPath = dest;
-          return pdf.getMeta();
         }).then(function () {
           fulfill();
         })
@@ -997,7 +998,6 @@ Committee.prototype.getHearingIndex = function (url) {
 Hearing.prototype.fetch = function () {
   var hear = this;
   return new Promise(function (fulfill, reject) {
-    console.log('starting a fetch');
     var panel;
     console.log("getting info for: " + hear.date);
     console.log(hear.hearingPage);
