@@ -240,6 +240,7 @@ Video.prototype.transcodeToMP4 = function () {
       .output(temp)
       .audioCodec(acodec)
       .videoCodec(vcodec)
+      .audioChannels(2)
       .on('start', function (commandLine) {
         console.log('Spawned Ffmpeg with command: ' + commandLine);
       })
