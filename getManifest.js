@@ -1,14 +1,15 @@
 var url = phantom.args[0];
 
+
+
 var HDS = function (url) {
   var start = new Date().getTime() / 1000;
 
-  url = url.replace("'", "");
-  var url = url.replace("false", "true");
-  return new Promise(function (resolve, reject) {
+  url = url.replace("'", "").replace("false", "true");
+  return new Promise(function (resolve) {
     var data = {};
-    var vid = {};
     var page = require('webpage').create();
+    page.settings.userAgent = 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0';
 
     page.open(url, function () { // executed after loading
       //console.log("<<<<<<");

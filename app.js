@@ -153,8 +153,8 @@ Video.prototype.fetch = function (data) {
     {
       console.log("TYPE: " + data.type);
       if (data.type === 'flv' || data.type === 'mp4') {
-        incoming = scraper.incomingDir + vid.basename + data.type;
-        output = scraper.videoDir + vid.basename + data.type;
+        incoming = scraper.incomingDir + vid.basename + '.' + data.type;
+        output = scraper.videoDir + vid.basename + '.' + data.type;
 
         console.log("Will save to " + output);
         scraper.getFile(data.src, incoming).then(function () {
@@ -325,6 +325,58 @@ Video.prototype.transcodeToOgg = function () {
   });
 };
 
+
+Video.prototype.transcodeToWebm = function () {
+  console.log('webm time');
+  var vid = this;
+  var lpct = 0;
+
+  return new Promise(function (fulfill, reject) {
+    if (vid.type) {
+      var input = vid.localPath;
+      var temp = scraper.tempDir + vid.basename + ".webm";
+      var output = scraper.transcodedDir + vid.basename + ".webm";
+      if (fileExists(output)) {
+        console.log("webm already exists! " + output);
+        return fulfill();
+      }
+
+      ffmpeg(input)
+        .output(temp)
+        .on('start', function (commandLine) {
+          console.log('Spawned Ffmpeg with command: ' + commandLine);
+        })
+        .on('progress', function (progress) {
+          var mf = Math.floor(progress.percent);
+
+          if (mf > lpct) {
+            console.log('Processing: ' + mf + '% done');
+            lpct = mf;
+
+          }
+        })
+        .audioCodec('libvorbis')
+        .videoCodec('libvpx')
+        .on('end', function () {
+          console.log('webm end fired?');
+          console.log('Processing Finished');
+          fs.renameSync(temp, output);
+          return fulfill();
+        })
+        .on('error', function (err, stdout, stderr) {
+          console.log(err.message);
+          console.log(stderr);
+          reject(err);
+        })
+        .run();
+
+    }
+
+
+  });
+};
+
+
 var Committee = function (options) {
   for (var fld in options) {
     if (options[fld]) {
@@ -492,7 +544,7 @@ Committee.prototype.getVidMeta = function () {
 Video.transcode = function () {
   var vid = this;
   return new Promise(function (fulfill) {
-    if (fileExists(this.mp4) && fileExists(this.ogg)) {
+    if (fileExists(this.mp4) && fileExists(this.ogg) && fileExists(this.webm)) {
       fulfill();
     } else {
       if (!fileExists(this.mp4)) {
@@ -501,6 +553,10 @@ Video.transcode = function () {
         });
       } else if (!fileExists(this.ogg)) {
         vid.transcodeToOgg().then(function () {
+          return vid.transcode();
+        });
+      } else if (!fileExists(this.webm)) {
+        vid.transcodeToWebm().then(function () {
           return vid.transcode();
         });
       }
