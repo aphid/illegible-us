@@ -212,7 +212,7 @@ Video.prototype.transcodeToMP4 = function () {
       console.log("Video file already exists " + output);
       return fulfill();
     }
-    console.log(vid.type + " ??? " + input);
+    console.log(vid.type + " --> " + input);
     if (vid.type === 'hds') {
       console.log("HDS");
       input = vid.localPath;
@@ -305,6 +305,7 @@ Video.prototype.transcodeToOgg = function () {
           }
         })
         .audioCodec('libvorbis')
+        .audioChannels(2)
         .noVideo()
         .on('end', function () {
           console.log('ogg end fired?');
@@ -356,6 +357,7 @@ Video.prototype.transcodeToWebm = function () {
           }
         })
         .audioCodec('libvorbis')
+        .audioChannels(2)
         .videoCodec('libvpx')
         .on('end', function () {
           console.log('webm end fired?');
@@ -499,7 +501,7 @@ Committee.prototype.transcodeVideos = function () {
       var vid = hear.video;
       if (!vid.type) {
         queue = queue.then(function () {
-          vid.getMeta();
+          return vid.getMeta();
         });
       }
       queue = queue.then(function () {
@@ -508,12 +510,14 @@ Committee.prototype.transcodeVideos = function () {
           console.log("transcoding finished");
 
           return hear.video.transcodeToOgg();
+        }).then(function () {
+          return hear.video.transcodeToWebm();
         });
       });
     });
 
     queue.then(function () {
-      console.log("Done!");
+      console.log("Done with transcode!");
       return fulfill();
     });
   });
@@ -534,7 +538,7 @@ Committee.prototype.getVidMeta = function () {
     });
 
     queue.then(function () {
-      console.log("Done!");
+      console.log("Done with metadata");
       return fulfill();
     });
   });
@@ -545,17 +549,18 @@ Video.transcode = function () {
   var vid = this;
   return new Promise(function (fulfill) {
     if (fileExists(this.mp4) && fileExists(this.ogg) && fileExists(this.webm)) {
+      console.log("All transcoded video files exist");
       fulfill();
     } else {
-      if (!fileExists(this.mp4)) {
+      if (!fileExists(vid.mp4)) {
         vid.transcodeToMP4.then(function () {
           return vid.transcode();
         });
-      } else if (!fileExists(this.ogg)) {
+      } else if (!fileExists(vid.ogg)) {
         vid.transcodeToOgg().then(function () {
           return vid.transcode();
         });
-      } else if (!fileExists(this.webm)) {
+      } else if (!fileExists(vid.webm)) {
         vid.transcodeToWebm().then(function () {
           return vid.transcode();
         });
@@ -592,7 +597,7 @@ Committee.prototype.getVideos = function () {
     });
 
     queue.then(function () {
-      console.log("Done!");
+      console.log("Done getting videos");
       return fulfill();
     });
 
@@ -691,7 +696,7 @@ Committee.prototype.textifyPdfs = function () {
       });
 
       queue.then(function () {
-        console.log("Done!");
+        console.log("Done textifying!");
         return fulfill();
       }).catch(function (err) {
         console.log("pdf err is " + err);
@@ -967,7 +972,7 @@ Committee.prototype.queuePdfs = function () {
     });
 
     queue.then(function () {
-      console.log("Done!");
+      console.log("Done with pdf queue!");
       return fulfill();
     }).catch(function (err) {
       console.log("pdf err is " + err);
