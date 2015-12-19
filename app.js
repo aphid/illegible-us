@@ -19,7 +19,9 @@ var mimovie = require("mimovie");
 var ffmpeg = require('fluent-ffmpeg');
 
 var glob = require("glob");
-
+var r = require("rethinkdb");
+var http = require('http');
+var io = require('socket.io')(9080);
 
 
 //paths should have trailing slash
@@ -34,11 +36,32 @@ var scraper = {
   tempDir: "./media/temp/",
   sockets: 5,
   current: 0,
+  rdbConn: null,
+  rDb: {
+    host: 'localhost',
+    port: 28015,
+    db: 'unrInt'
+  }
 };
+
+io.on("connection", function (socket) {
+  console.log('watching the watcher');
+});
+
+scraper.message = function (thing) {
+  console.log(thing);
+  if (typeof thing === "string") {
+    io.emit('message', thing);
+  } else {
+    io.emit('message', JSON.stringify(thing));
+  }
+};
+
+
 
 scraper.cleanupFrags = function () {
   glob("*Frag*", function (er, files) {
-    console.log('deleting ' + files.length + 'files');
+    scraper.message('deleting ' + files.length + ' files');
     for (var file of files) {
       fs.unlinkSync(file);
     }
@@ -50,7 +73,7 @@ scraper.cleanupTemp = function () {
   var cwd = process.cwd();
   process.chdir(scraper.tempDir);
   glob("*Frag*", function (er, files) {
-    console.log('deleting ' + files.length + 'files');
+    scraper.message('deleting ' + files.length + 'files');
     for (var file of files) {
       if (file.includes('mp4') || file.includes('ogg')) {
         fs.unlinkSync(file);
@@ -92,14 +115,14 @@ var Video = function (options) {
 
 Video.prototype.getManifest = function () {
 
-  console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&manifest&&&&&&&&&&&&&&&&&&&&&");
+  scraper.message("&&&&&&&&&&&&&&&&&&&&&&&&&&manifest&&&&&&&&&&&&&&&&&&&&&");
   var vid = this;
   if (fileExists(this.localPath)) {
-    console.log("nevermind, file exists");
+    scraper.message("nevermind, file exists");
     return Promise.resolve();
   } else {
-    console.log("Getting remote info about " + vid.basename);
-    console.log("getting manifest!");
+    scraper.message("Getting remote info about " + vid.basename);
+    scraper.message("getting manifest!");
     return new Promise(function (fulfill, reject) {
       var url = "'" + vid.url + "'";
       url = url.replace('false', 'true');
@@ -108,18 +131,18 @@ Video.prototype.getManifest = function () {
       //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
-      console.log(">>>> " + command);
+      scraper.message(">>>> " + command);
 
       cpp.exec(command).then(function (result) {
 
           //WHAT THE ACTUAL FUCK
           var response = result.stdout.replace("Vector smash protection is enabled.", "");
-          console.log(response);
+          scraper.message(response);
           response = JSON.parse(response);
           if (response.type) {
             vid.type = response.type;
           }
-          console.log("fulfilling manifest");
+          scraper.message("fulfilling manifest");
 
           fulfill(response);
         })
@@ -129,7 +152,7 @@ Video.prototype.getManifest = function () {
           process.exit();
         })
         .progress(function (childProcess) {
-          console.log('[exec] childProcess.pid: ', childProcess.pid);
+          scraper.message('[exec] childProcess.pid: ', childProcess.pid);
         });
 
     });
@@ -142,7 +165,7 @@ Video.prototype.getManifest = function () {
 Video.prototype.fetch = function (data) {
   var vid = this,
     output, incoming;
-  console.log(data);
+  scraper.message(data);
   if (!data.type) {
     return Promise.reject("Problem getting filetype");
   }
@@ -151,12 +174,12 @@ Video.prototype.fetch = function (data) {
   }
   return new Promise(function (fulfill, reject) {
     {
-      console.log("TYPE: " + data.type);
+      scraper.message("TYPE: " + data.type);
       if (data.type === 'flv' || data.type === 'mp4') {
         incoming = scraper.incomingDir + vid.basename + '.' + data.type;
         output = scraper.videoDir + vid.basename + '.' + data.type;
 
-        console.log("Will save to " + output);
+        scraper.message("Will save to " + output);
         scraper.getFile(data.src, incoming).then(function () {
           fs.renameSync(incoming, output);
           vid.localPath = output;
@@ -168,9 +191,9 @@ Video.prototype.fetch = function (data) {
         incoming = scraper.incomingDir + vid.basename + ".flv";
         output = scraper.videoDir + vid.basename + ".flv";
         var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
-        console.log('getting HDS!');
+        scraper.message('getting HDS!');
         //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
-        console.log(command);
+        scraper.message(command);
         cpp.exec(command, {
             maxBuffer: 1024 * 750
           }).fail(function (err) {
@@ -178,7 +201,7 @@ Video.prototype.fetch = function (data) {
             reject(err);
           })
           .progress(function (childProcess) {
-            console.log('[exec] childProcess.pid: ', childProcess.pid);
+            scraper.message('[exec] childProcess.pid: ', childProcess.pid);
           }).then(function () {
             fs.renameSync(incoming, output);
             vid.localPath = output;
@@ -196,30 +219,30 @@ Video.prototype.fetch = function (data) {
 
 Video.prototype.transcodeToMP4 = function () {
 
-  console.log('mp4 time');
+  scraper.message('mp4 time');
   var vid = this,
     input, temp, output, acodec, vcodec, lpct = 0;
 
 
   return new Promise(function (fulfill, reject) {
-    console.log(vid);
+    scraper.message(vid);
     input = vid.localPath;
     //transcodes to temp dir rather than destination, copies when transcode is complete so we don't end up with phantom half-finshed files.
     temp = scraper.tempDir + vid.basename + '.mp4';
     output = scraper.transcodedDir + vid.basename + '.mp4';
-    console.log("transcoding " + input + " to " + output);
+    scraper.message("transcoding " + input + " to " + output);
     if (fileExists(output)) {
-      console.log("Video file already exists " + output);
+      scraper.message("Video file already exists " + output);
       return fulfill();
     }
-    console.log(vid.type + " --> " + input);
+    scraper.message(vid.type + " --> " + input);
     if (vid.type === 'hds') {
-      console.log("HDS");
+      scraper.message("HDS");
       input = vid.localPath;
       acodec = 'copy';
       vcodec = 'copy';
     } else if (vid.type === 'flv') {
-      console.log("Ack, flv!");
+      scraper.message("Ack, flv!");
       //real transcode, not remux
       acodec = 'aac';
       vcodec = 'libx264';
@@ -230,10 +253,10 @@ Video.prototype.transcodeToMP4 = function () {
       acodec = 'copy';
       vcodec = 'copy';
     } else {
-      console.log("I have no idea what I'm working with here.");
+      scraper.message("I have no idea what I'm working with here.");
     }
 
-    console.log(acodec + " / " + vcodec);
+    scraper.message(acodec + " / " + vcodec);
 
     //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
     ffmpeg(input)
@@ -242,25 +265,25 @@ Video.prototype.transcodeToMP4 = function () {
       .videoCodec(vcodec)
       .audioChannels(2)
       .on('start', function (commandLine) {
-        console.log('Spawned Ffmpeg with command: ' + commandLine);
+        scraper.message('Spawned Ffmpeg with command: ' + commandLine);
       })
       .on('progress', function (progress) {
         var mf = Math.floor(progress.percent);
 
         if (mf > lpct) {
-          console.log('Processing: ' + mf + '% done');
+          scraper.message('Processing: ' + mf + '% done');
           lpct = mf;
 
         }
       })
       .on('end', function () {
-        //console.log('Processing Finished');
+        //scraper.message('Processing Finished');
         fs.renameSync(temp, output);
         return fulfill();
       })
       .on('error', function (err, stdout, stderr) {
-        console.log(err);
-        console.log(stderr);
+        scraper.message(err);
+        scraper.message(stderr);
         return reject(err);
 
       })
@@ -276,7 +299,7 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 Video.prototype.transcodeToOgg = function () {
-  console.log('ogg time');
+  scraper.message('ogg time');
   var vid = this;
   var lpct = 0;
 
@@ -286,20 +309,20 @@ Video.prototype.transcodeToOgg = function () {
       var temp = scraper.tempDir + vid.basename + ".ogg";
       var output = scraper.transcodedDir + vid.basename + ".ogg";
       if (fileExists(output)) {
-        console.log("ogg already exists! " + output);
+        scraper.message("ogg already exists! " + output);
         return fulfill();
       }
 
       ffmpeg(input)
         .output(temp)
         .on('start', function (commandLine) {
-          console.log('Spawned Ffmpeg with command: ' + commandLine);
+          scraper.message('Spawned Ffmpeg with command: ' + commandLine);
         })
         .on('progress', function (progress) {
           var mf = Math.floor(progress.percent);
 
           if (mf > lpct) {
-            console.log('Processing: ' + mf + '% done');
+            scraper.message('Processing: ' + mf + '% done');
             lpct = mf;
 
           }
@@ -308,14 +331,14 @@ Video.prototype.transcodeToOgg = function () {
         .audioChannels(2)
         .noVideo()
         .on('end', function () {
-          console.log('ogg end fired?');
-          console.log('Processing Finished');
+          scraper.message('ogg end fired?');
+          scraper.message('Processing Finished');
           fs.renameSync(temp, output);
           return fulfill();
         })
         .on('error', function (err, stdout, stderr) {
-          console.log(err.message);
-          console.log(stderr);
+          scraper.message(err.message);
+          scraper.message(stderr);
           reject(err);
         })
         .run();
@@ -328,7 +351,7 @@ Video.prototype.transcodeToOgg = function () {
 
 
 Video.prototype.transcodeToWebm = function () {
-  console.log('webm time');
+  scraper.message('webm time');
   var vid = this;
   var lpct = 0;
 
@@ -338,20 +361,20 @@ Video.prototype.transcodeToWebm = function () {
       var temp = scraper.tempDir + vid.basename + ".webm";
       var output = scraper.transcodedDir + vid.basename + ".webm";
       if (fileExists(output)) {
-        console.log("webm already exists! " + output);
+        scraper.message("webm already exists! " + output);
         return fulfill();
       }
 
       ffmpeg(input)
         .output(temp)
         .on('start', function (commandLine) {
-          console.log('Spawned Ffmpeg with command: ' + commandLine);
+          scraper.message('Spawned Ffmpeg with command: ' + commandLine);
         })
         .on('progress', function (progress) {
           var mf = Math.floor(progress.percent);
 
           if (mf > lpct) {
-            console.log('Processing: ' + mf + '% done');
+            scraper.message('Processing: ' + mf + '% done');
             lpct = mf;
 
           }
@@ -360,14 +383,14 @@ Video.prototype.transcodeToWebm = function () {
         .audioChannels(2)
         .videoCodec('libvpx')
         .on('end', function () {
-          console.log('webm end fired?');
-          console.log('Processing Finished');
+          scraper.message('webm end fired?');
+          scraper.message('Processing Finished');
           fs.renameSync(temp, output);
           return fulfill();
         })
         .on('error', function (err, stdout, stderr) {
-          console.log(err.message);
-          console.log(stderr);
+          scraper.message(err.message);
+          scraper.message(stderr);
           reject(err);
         })
         .run();
@@ -408,7 +431,7 @@ Committee.prototype.addHearing = function (options) {
   var hearing = new Hearing(options);
   for (var hear of this.hearings) {
     if (hear.date === options.date) {
-      console.log("likely dupe");
+      scraper.message("likely dupe");
       return false;
     }
   }
@@ -427,7 +450,7 @@ Committee.prototype.scrapeRemote = function () {
         for (var i = 1; i <= resolve.lastPage; i++) {
           var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
           pages.push(page);
-          console.log(pages);
+          scraper.message(pages);
         }
       }
 
@@ -438,7 +461,7 @@ Committee.prototype.scrapeRemote = function () {
     }).then(function () {
       return fulfill();
     }).catch(function (err) {
-      console.log(err);
+      scraper.message(err);
       process.kill();
 
       reject(err);
@@ -454,15 +477,18 @@ Committee.prototype.init = function () {
     (function () {
       return comm.write('test.json');
     }); */
-
-  this.scrapeRemote().
-    //comm.readLocal().
+  comm.validateLocal().
 
   then(function () {
-      return comm.write();
-    }).then(function () {
-      console.log("//////////////////////////////////////");
-      console.log("PDFS BEGIN");
+    return comm.scrapeRemote();
+    //comm.readLocal().
+  }).
+  then(function () {
+    return comm.write();
+  }).
+  then(function () {
+      scraper.message("//////////////////////////////////////");
+      scraper.message("PDFS BEGIN");
       return comm.queuePdfs();
 
     }).then(function () {
@@ -470,7 +496,7 @@ Committee.prototype.init = function () {
     }).then(function () {
       return comm.getVideos();
     }).then(function () {
-      console.log("wooo");
+      scraper.message("wooo");
       return comm.write();
     }).then(function () {
       return comm.getVidMeta();
@@ -483,14 +509,14 @@ Committee.prototype.init = function () {
 
     })
     .catch(function (err) {
-      console.log("something terrible happened");
-      console.log(err);
+      scraper.message("something terrible happened");
+      scraper.message(err);
 
     });
 };
 
 Committee.prototype.transcodeVideos = function () {
-  console.log("//////////////////////transcooooode");
+  scraper.message("//////////////////////transcooooode");
   var comm = this;
 
 
@@ -505,9 +531,9 @@ Committee.prototype.transcodeVideos = function () {
         });
       }
       queue = queue.then(function () {
-        console.log("Calling meta func for" + vid.localPath);
+        scraper.message("Calling meta func for" + vid.localPath);
         return hear.video.transcodeToMP4().then(function () {
-          console.log("transcoding finished");
+          scraper.message("transcoding finished");
 
           return hear.video.transcodeToOgg();
         }).then(function () {
@@ -517,7 +543,7 @@ Committee.prototype.transcodeVideos = function () {
     });
 
     queue.then(function () {
-      console.log("Done with transcode!");
+      scraper.message("Done with transcode!");
       return fulfill();
     });
   });
@@ -525,20 +551,20 @@ Committee.prototype.transcodeVideos = function () {
 
 
 Committee.prototype.getVidMeta = function () {
-  console.log("##META META META##");
+  scraper.message("##META META META##");
   var comm = this;
   return new Promise(function (fulfill) {
     var queue = Promise.resolve();
     comm.hearings.forEach(function (hear) {
       var vid = hear.video;
       queue = queue.then(function () {
-        console.log("Calling meta func for" + vid.localPath);
+        scraper.message("Calling meta func for" + vid.localPath);
         return vid.getMeta();
       });
     });
 
     queue.then(function () {
-      console.log("Done with metadata");
+      scraper.message("Done with metadata");
       return fulfill();
     });
   });
@@ -549,7 +575,7 @@ Video.transcode = function () {
   var vid = this;
   return new Promise(function (fulfill) {
     if (fileExists(this.mp4) && fileExists(this.ogg) && fileExists(this.webm)) {
-      console.log("All transcoded video files exist");
+      scraper.message("All transcoded video files exist");
       fulfill();
     } else {
       if (!fileExists(vid.mp4)) {
@@ -570,7 +596,7 @@ Video.transcode = function () {
 };
 
 Committee.prototype.getVideos = function () {
-  console.log("))))))))))))))))))))getting videos!");
+  scraper.message("))))))))))))))))))))getting videos!");
   var comm = this;
   return new Promise(function (fulfill, reject) {
 
@@ -578,18 +604,18 @@ Committee.prototype.getVideos = function () {
     comm.hearings.forEach(function (hear) {
       var vid = hear.video;
       queue = queue.then(function () {
-        console.log("Fetching videos for " + hear.shortdate);
-        console.log(vid.localPath);
-        console.log(hear.video.isPrototypeOf(Video));
+        scraper.message("Fetching videos for " + hear.shortdate);
+        scraper.message(vid.localPath);
+        scraper.message(hear.video.isPrototypeOf(Video));
         return hear.video.getManifest().then(function (result) {
-          console.log("we got a manifest? in theory?");
+          scraper.message("we got a manifest? in theory?");
 
           if (result) {
             return hear.video.fetch(result);
           }
 
         }).catch(function (err) {
-          console.log(err);
+          scraper.message(err);
           reject(err);
         });
 
@@ -597,7 +623,7 @@ Committee.prototype.getVideos = function () {
     });
 
     queue.then(function () {
-      console.log("Done getting videos");
+      scraper.message("Done getting videos");
       return fulfill();
     });
 
@@ -621,10 +647,10 @@ Committee.prototype.readLocal = function () {
         for (var wit of hear.witnesses) {
           var theWit = new Witness(JSON.parse(JSON.stringify(wit)));
           theWit.pdfs = [];
-          console.log("adding PDFS");
+          scraper.message("adding PDFS");
 
           for (var pdf of wit.pdfs) {
-            console.log(wit.pdfs.length);
+            scraper.message(wit.pdfs.length);
             theWit.readPdf(pdf);
           }
           theHearing.addWitness(theWit);
@@ -635,7 +661,7 @@ Committee.prototype.readLocal = function () {
       }
       return fulfill();
     }).catch(function (err) {
-      console.log(err);
+      scraper.message(err);
       return reject(err);
     });
   });
@@ -653,7 +679,7 @@ Committee.prototype.write = function (filename) {
       if (err) {
         reject(err);
       }
-      console.log("><><><><><><><><>The file was saved!");
+      scraper.message("><><><><><><><><>The file was saved!");
       return fulfill();
     });
   });
@@ -696,10 +722,10 @@ Committee.prototype.textifyPdfs = function () {
       });
 
       queue.then(function () {
-        console.log("Done textifying!");
+        scraper.message("Done textifying!");
         return fulfill();
       }).catch(function (err) {
-        console.log("pdf err is " + err);
+        scraper.message("pdf err is " + err);
         return fulfill();
       });
     });
@@ -707,12 +733,18 @@ Committee.prototype.textifyPdfs = function () {
 };
 
 Committee.prototype.validateLocal = function () {
-  console.log("#VALIDATION#");
+  scraper.message("#VALIDATION#");
   var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir];
   dirs.map(function (dir) {
-    if (!fs.lstatSync(dir).isDirectory()) {
-      fs.mkdir(dir);
+
+    try {
+      scraper.message("MAKING DIR");
+      fs.mkdirSync(dir);
+    } catch (e) {
+      scraper.message(e);
+      if (e.code !== 'EEXIST') throw e;
     }
+
   });
   for (var hear of this.hearings) {
     var flvpath = scraper.videoDir + hear.shortdate + '.flv';
@@ -754,13 +786,13 @@ scraper.getFile = function (url, dest) {
     if (fileExists(dest)) {
       //file exists
       var size = fs.statSync(dest).size;
-      console.log(dest + " exists (" + size + ")");
+      scraper.message(dest + " exists (" + size + ")");
       if (size) {
-        console.log("file's okay");
+        scraper.message("file's okay");
         return fulfill();
       }
       //validate media here?
-      console.log('exists but zero bytes, refetching');
+      scraper.message('exists but zero bytes, refetching');
       fs.unlinkSync(dest);
       scraper.getFile(url, dest);
 
@@ -768,7 +800,7 @@ scraper.getFile = function (url, dest) {
 
       //file does not exist
     } else {
-      console.log("file " + dest + " doesn't exist yet...");
+      scraper.message("file " + dest + " doesn't exist yet...");
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
         var cur = 0;
@@ -776,21 +808,21 @@ scraper.getFile = function (url, dest) {
         var len = parseInt(response.headers['content-length'], 10);
         var total = len / 1048576; //1048576 - bytes in  1Megabyte
         var lpct;
-        console.log("fetching " + url);
+        scraper.message("fetching " + url);
         response.pipe(file);
         response.on("data", function (chunk) {
           cur += chunk.length;
           var newPct = (100.0 * cur / len).toFixed(2);
           if (pct !== newPct) {
             pct = newPct;
-            console.log("Downloading " + (100.0 * cur / len).toFixed(2) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
+            scraper.message("Downloading " + (100.0 * cur / len).toFixed(2) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
           }
         });
         file.on('data', function (progress) {
           var mf = Math.floor(progress.percent);
 
           if (mf > lpct) {
-            console.log('Processing: ' + mf + '% done');
+            scraper.message('Processing: ' + mf + '% done');
             lpct = mf;
 
           }
@@ -800,7 +832,7 @@ scraper.getFile = function (url, dest) {
         });
         file.on('finish', function () {
           file.close();
-          console.log("done writing " + fs.statSync(dest).size + "bytes");
+          scraper.message("done writing " + fs.statSync(dest).size + "bytes");
           return fulfill();
         });
       });
@@ -814,18 +846,18 @@ Pdf.prototype.getMeta = function () {
   var pdf = this;
   var input = this.localPath;
   var jsonpath = scraper.metaDir + pdf.localName + ".json";
-  console.log(">>>>>>>>>>>>>>" + input + " " + jsonpath);
+  scraper.message(">>>>>>>>>>>>>>" + input + " " + jsonpath);
   return new Promise(function (fulfill, reject) {
     if (fileExists(jsonpath)) {
       var msize = fs.statSync(jsonpath).size;
-      console.log(jsonpath + " exists! (" + msize + ")");
+      scraper.message(jsonpath + " exists! (" + msize + ")");
       if (msize) {
-        console.log("meta's already here, moving on");
+        scraper.message("meta's already here, moving on");
         return fulfill();
       }
 
     } else {
-      console.log("creating metadata...");
+      scraper.message("creating metadata...");
       exif.metadata(input, function (err, metadata) {
         if (err) {
           reject("exiftool error: " + err);
@@ -849,7 +881,7 @@ Video.prototype.getMeta = function () {
   return new Promise(function (fulfill, reject) {
     /* mimovie(input, function (err, res) {
       if (err) {
-        reject(console.log(err));
+        reject(scraper.message(err));
       }
       pfs.writeFile(jsonpath, JSON.stringify(res, undefined, 2)).then(function () {
         vid.mimeta = mipath;
@@ -860,12 +892,12 @@ Video.prototype.getMeta = function () {
 
 
     exif.metadata(input, function (err, metadata) {
-      console.log("metadata for: ", vid);
+      scraper.message("metadata for: ", vid);
       var vcode;
       if (err) {
         reject(err);
       }
-      console.log(metadata);
+      scraper.message(metadata);
       if (metadata.videoEncoding) {
         vcode = metadata.videoEncoding;
         if (vcode === "On2 VP6") {
@@ -878,21 +910,21 @@ Video.prototype.getMeta = function () {
       } else if (metadata.fileType === "MP4" && !vcode) {
         vid.type = "mp4";
       } else {
-        console.log(JSON.stringify(metadata));
+        scraper.message(JSON.stringify(metadata));
       }
-      console.log(vid.type);
+      scraper.message(vid.type);
       if (fileExists(etpath)) {
         vid.etpath = etpath;
-        console.log('skipping meta');
+        scraper.message('skipping meta');
         return fulfill();
       }
 
       pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
         vid.etpath = etpath;
-        console.log('metadata written');
+        scraper.message('metadata written');
         return fulfill();
       });
-      //console.log(JSON.parse(metadata));
+      //scraper.message(JSON.parse(metadata));
 
 
     });
@@ -905,21 +937,21 @@ Pdf.prototype.textify = function () {
   var dest = this.localPath;
   var txtpath = scraper.textDir + this.localName + ".txt";
   this.txtpath = txtpath;
-  console.log("working on " + this.txtpath);
+  scraper.message("working on " + this.txtpath);
 
   return new Promise(function (reject, fulfill) {
 
     if (fileExists(txtpath)) {
       var msize = fs.statSync(txtpath).size;
-      console.log(txtpath + " exists! (" + msize + ")");
-      console.log("txt's already here, moving on");
+      scraper.message(txtpath + " exists! (" + msize + ")");
+      scraper.message("txt's already here, moving on");
       return fulfill();
 
     }
-    console.log("Attempting to create text: " + txtpath);
+    scraper.message("Attempting to create text: " + txtpath);
     var pdftxt = new pdftotext(dest);
     pdftxt.getText(function (err, data, cmd) {
-      console.log("TEXTIFYING: " + dest);
+      scraper.message("TEXTIFYING: " + dest);
       if (err) {
         reject("textificationErr " + err + " " + cmd);
       }
@@ -928,19 +960,19 @@ Pdf.prototype.textify = function () {
         pdf.needsScan = true;
         return fulfill();
       }
-      console.log("DATA");
+      scraper.message("DATA");
       fs.writeFile((txtpath), data, function (err) {
-        console.log('writing file (' + data.length + ')');
+        scraper.message('writing file (' + data.length + ')');
         if (err) {
           reject(err);
         }
-        console.log('fulfilling textify');
+        scraper.message('fulfilling textify');
         pdf.txtpath = txtpath;
         return fulfill();
       });
       // additionally you can also access cmd array
       // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
-      //console.log(cmd.join(' '));
+      //scraper.message(cmd.join(' '));
 
     });
 
@@ -950,11 +982,11 @@ Pdf.prototype.textify = function () {
 Committee.prototype.queuePdfs = function () {
   var pdfs = [];
   for (var hear of this.hearings) {
-    console.log(hear.title + ": ");
+    scraper.message(hear.title + ": ");
 
     for (var wit of hear.witnesses) {
       for (var pdf of wit.pdfs) {
-        console.log(" " + pdf.remotefileName);
+        scraper.message(" " + pdf.remotefileName);
         pdfs.push(pdf);
       }
     }
@@ -972,10 +1004,10 @@ Committee.prototype.queuePdfs = function () {
     });
 
     queue.then(function () {
-      console.log("Done with pdf queue!");
+      scraper.message("Done with pdf queue!");
       return fulfill();
     }).catch(function (err) {
-      console.log("pdf err is " + err);
+      scraper.message("pdf err is " + err);
       return fulfill();
     });
   });
@@ -984,7 +1016,7 @@ Committee.prototype.queuePdfs = function () {
 
 
 Pdf.prototype.fetch = function () {
-  console.log("getting " + this.localName);
+  scraper.message("getting " + this.localName);
   var pdf = this;
   return new Promise(function (fulfill, reject) {
     var incoming = scraper.incomingDir + pdf.localName;
@@ -994,7 +1026,7 @@ Pdf.prototype.fetch = function () {
       pdf.localPath = dest;
       return fulfill();
     }
-    console.log(incoming + " " + dest);
+    scraper.message(incoming + " " + dest);
     scraper.getFile(pdf.remoteUrl, incoming).then(function () {
         fs.renameSync(incoming, dest);
         pdf.localPath = dest;
@@ -1002,7 +1034,7 @@ Pdf.prototype.fetch = function () {
         fulfill();
       })
       .catch(function (err) {
-        console.log("rejecting" + pdf.localName);
+        scraper.message("rejecting" + pdf.localName);
         reject(err);
         //scraper.workQueue();
       });
@@ -1013,7 +1045,7 @@ Pdf.prototype.fetch = function () {
 
 
 Hearing.prototype.addWitness = function (witness) {
-  console.log("adding " + witness.lastName);
+  scraper.message("adding " + witness.lastName);
   if (!witness.isPrototypeOf(Witness)) {
     var wit = new Witness(witness);
     this.witnesses.push(wit);
@@ -1031,7 +1063,7 @@ Hearing.prototype.addWitness = function (witness) {
 Witness.prototype.addPdf = function (hear, url) {
   for (var pdf of this.pdfs) {
     if (url === pdf.remoteUrl) {
-      console.log('blocking duplicate');
+      scraper.message('blocking duplicate');
       return false;
     }
   }
@@ -1073,7 +1105,7 @@ Committee.prototype.getHearingIndex = function (url) {
   var lastPage;
   return new Promise(function (fulfill, reject) {
 
-    console.log("trying " + url);
+    scraper.message("trying " + url);
     var options = {
       url: url,
       headers: {
@@ -1091,7 +1123,7 @@ Committee.prototype.getHearingIndex = function (url) {
         if (pagerLast) {
           lastPage = Url.parse(pagerLast, true);
         }
-        //console.log(lastPage.query.page);
+        //scraper.message(lastPage.query.page);
         $('.views-row').each(function (i, elem) {
           var hearing = {};
           hearing.dcDate = $(elem).find('.date-display-single').attr('content');
@@ -1115,7 +1147,7 @@ Committee.prototype.getHearingIndex = function (url) {
           return fulfill();
         }
       } else {
-        console.log("BAD PAGE REQUEST: " + url);
+        scraper.message("BAD PAGE REQUEST: " + url);
         return fulfill('fail');
 
       }
@@ -1130,8 +1162,8 @@ Hearing.prototype.fetch = function () {
   var hear = this;
   return new Promise(function (fulfill, reject) {
     var panel;
-    console.log("getting info for: " + hear.date);
-    console.log(hear.hearingPage);
+    scraper.message("getting info for: " + hear.date);
+    scraper.message(hear.hearingPage);
     var options = {
       url: hear.hearingPage,
       headers: {
@@ -1140,7 +1172,7 @@ Hearing.prototype.fetch = function () {
     };
     request(options, function (error, response, html) {
       if (error) {
-        console.log(hear.hearingPage + " is throwing an error: " + error);
+        scraper.message(hear.hearingPage + " is throwing an error: " + error);
         reject(error);
       }
       if (response.statusCode === 200) {
@@ -1174,16 +1206,16 @@ Hearing.prototype.fetch = function () {
               });
             }
             if (witness.firstName) {
-              console.log("adding witness");
+              scraper.message("adding witness");
               hear.addWitness(wit);
             }
           }); //end each
 
         } // end if
-        console.log("done with " + hear.title);
+        scraper.message("done with " + hear.title);
 
       } else {
-        console.log("bad request on " + hear.hearingPage);
+        scraper.message("bad request on " + hear.hearingPage);
       } // end status
 
       return fulfill();
@@ -1196,7 +1228,7 @@ Hearing.prototype.fetch = function () {
 
 
 process.on('unhandledRejection', function (reason, p) {
-  console.log("Unhandled Rejection at: Promise ", p, " reason: ", reason);
+  scraper.message("Unhandled Rejection at: Promise ", p, " reason: ", reason);
   // application specific logging, throwing an error, or other logic here
 });
 
