@@ -191,17 +191,24 @@ Video.prototype.fetch = function (data) {
         incoming = scraper.incomingDir + vid.basename + ".flv";
         output = scraper.videoDir + vid.basename + ".flv";
         var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
+        var childArgs = [
+  path.join(__dirname, 'lib/AdobeHDS.php'), "--manifest", data.manifest, "--auth", data.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
         scraper.message('getting HDS!');
         //var childArgs = [path.join(__dirname, 'lib/AdobeHDS.php'), flags];
         scraper.message(command);
-        cpp.exec(command, {
-            maxBuffer: 1024 * 750
-          }).fail(function (err) {
-            console.error('ERROR: ', (err.stack || err));
+        cpp.spawn("php", childArgs).fail(function (err) {
+            console.error('SPAWN ERROR: ', (err.stack || err));
             reject(err);
           })
           .progress(function (childProcess) {
             scraper.message('[exec] childProcess.pid: ', childProcess.pid);
+            childProcess.stdout.on('data', function (data) {
+              scraper.message('>>>>>>>> ' + data.toString().trim());
+            });
+            childProcess.stderr.on('data', function (data) {
+              scraper.message('[spawn] stderr: ' + data.toString().trim());
+            });
+
           }).then(function () {
             fs.renameSync(incoming, output);
             vid.localPath = output;
