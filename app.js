@@ -130,7 +130,7 @@ Video.prototype.getManifest = function () {
       //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
-      scraper.msg(">>>> " + command);
+      scraper.msg(">>>> " + command.replace(__dirname, "./"));
 
       cpp.exec(command).then(function (result) {
           scraper.msg("Ignoring vector smash detection.");
@@ -1220,7 +1220,7 @@ Hearing.prototype.fetch = function () {
               });
             }
             if (witness.firstName) {
-              scraper.msg("adding witness");
+              scraper.msg("new witness: ");
               hear.addWitness(wit);
             }
           }); //end each
