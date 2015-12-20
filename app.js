@@ -35,6 +35,7 @@ var scraper = {
   transcodedDir: './media/transcoded/',
   tempDir: "./media/temp/",
   busy: false,
+  connections: 0,
   sockets: 5,
   current: 0,
   rdbConn: null,
@@ -55,13 +56,15 @@ scraper.msg = function (thing) {
 };
 
 scraper.cleanupFrags = function () {
-  glob("*Frag*", function (er, files) {
-    scraper.msg('deleting ' + files.length + ' files');
-    for (var file of files) {
-      fs.unlinkSync(file);
-    }
+  return new Promise(function (resolve, reject) {
+    glob("*Frag*", function (er, files) {
+      scraper.msg('deleting ' + files.length + ' files');
+      for (var file of files) {
+        fs.unlinkSync(file);
+      }
+      resolve();
+    });
   });
-  return Promise.resolve();
 };
 
 scraper.cleanupTemp = function () {
@@ -868,8 +871,9 @@ Pdf.prototype.getMeta = function () {
         if (err) {
           reject("exiftool error: " + err);
         } else {
-          //var json = JSON.stringify(metadata, undefined, 2);
-          pfs.writeFile(jsonpath, JSON.stringify(metadata, undefined, 2)).then(function () {
+          var json = JSON.stringify(metadata, undefined, 2);
+          scraper.msg(json);
+          pfs.writeFile(jsonpath, json).then(function () {
             return fulfill();
           });
 
@@ -967,6 +971,9 @@ Pdf.prototype.textify = function () {
         return fulfill();
       }
       scraper.msg("DATA");
+      scraper.msg("-------------------------------------------------------------");
+      scraper.msg(data);
+      scraper.msg("-------------------------------------------------------------");
       fs.writeFile((txtpath), data, function (err) {
         scraper.msg('writing file (' + data.length + ')');
         if (err) {
@@ -1111,13 +1118,14 @@ Committee.prototype.getHearingIndex = function (url) {
   var lastPage;
   return new Promise(function (fulfill, reject) {
 
-    scraper.msg("trying " + url);
     var options = {
       url: url,
       headers: {
         'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
       }
     };
+    scraper.msg("trying " + options);
+
     request(options, function (error, response, html) {
       if (error) {
         reject(error);
@@ -1248,7 +1256,8 @@ var intel = new Committee({
 });
 
 
-io.on("connection", function (socket) {
+io.on("connect", function (socket) {
+  scraper.connections++;
   console.log('watching the watcher');
   socket.emit('message', "WELCOME");
   if (scraper.busy) {
@@ -1261,8 +1270,32 @@ io.on("connection", function (socket) {
       intel.init();
     }, 5000);
   }
+  socket.on("disconnect", function () {
+    scraper.connections--;
+    if (scraper.connections < 1) {
+      scraper.shutDown();
+    }
+
+
+  });
+
 });
 
+scraper.shutDown = function () {
+  console.log("SHUTTING DOWN");
+  scraper.cleanupTemp().then(function () {
+    return scraper.cleanupFrags();
+  }).then(function () {
+    scraper.msg("EXITING");
+    process.exit();
+  });
+
+};
+
+process.on('SIGINT', function () {
+  scraper.msg("CAUGHT INTERRUPT SIGNAL");
+  scraper.shutDown();
+});
 
 setInterval(function () {
   console.log(scraper.busy);
