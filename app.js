@@ -130,7 +130,7 @@ Video.prototype.getManifest = function () {
       //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
-      scraper.msg(">>>> " + command.replace(__dirname, "./"));
+      scraper.msg(">>>> " + command.replace(__dirname, "./")) / ;
 
       cpp.exec(command).then(function (result) {
           scraper.msg("Ignoring vector smash detection.");
@@ -149,6 +149,7 @@ Video.prototype.getManifest = function () {
         .fail(function (err) {
           console.error('ERROR: ', (err.stack || err));
           reject(err);
+          console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
           process.exit();
         })
         .progress(function (childProcess) {
