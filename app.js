@@ -20,8 +20,14 @@ var ffmpeg = require('fluent-ffmpeg');
 
 var glob = require("glob");
 var r = require("rethinkdb");
-var http = require('http');
-var io = require('socket.io')(9080);
+var pk = fs.readFileSync('./privkey.pem');
+var pc = fs.readFileSync('./cert.pem');
+
+var app = require('https').createServer({ key: pk, cert: pc });
+
+app.listen(9080);
+
+var io = require('socket.io')(app);
 
 
 //paths should have trailing slash
@@ -49,9 +55,9 @@ var scraper = {
 scraper.msg = function (thing) {
   console.log(thing);
   if (typeof thing === "string") {
-    io.emit('message', thing);
+    io.to('oversight').emit('message', thing);
   } else {
-    io.emit('message', JSON.stringify(thing));
+    io.to('oversight').emit('message', JSON.stringify(thing));
   }
 };
 
@@ -127,10 +133,10 @@ Video.prototype.getManifest = function () {
       url = url.replace('false', 'true');
 
       //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-      //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-      var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      var command = 'xvfb-run -e xvfbfail.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
-      scraper.msg(">>>> " + command.replace(__dirname, "./")) / ;
+      scraper.msg(">>>> " + command.replace(__dirname, "./"));
 
       cpp.exec(command).then(function (result) {
           scraper.msg("Ignoring vector smash detection.");
@@ -618,7 +624,7 @@ Committee.prototype.getVideos = function () {
         scraper.msg(vid.localPath);
         scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
         return hear.video.getManifest().then(function (result) {
-          scraper.msg("we got a manifest? in theory?");
+          scraper.msg("requesting manifest");
 
           if (result) {
             return hear.video.fetch(result);
@@ -744,7 +750,7 @@ Committee.prototype.textifyPdfs = function () {
 
 Committee.prototype.validateLocal = function () {
   scraper.msg("#VALIDATION#");
-  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir];
+  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir];
   dirs.map(function (dir) {
 
     try {
@@ -1125,13 +1131,13 @@ Committee.prototype.getHearingIndex = function (url) {
         'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
       }
     };
-    scraper.msg("trying " + options);
+    scraper.msg("trying " + JSON.stringify(options));
 
     request(options, function (error, response, html) {
       if (error) {
         reject(error);
       }
-
+      
       if (!error && response.statusCode === 200) {
         var $ = cheerio.load(html);
         var pagerLast = $('.pager-last a').attr('href');
@@ -1162,7 +1168,7 @@ Committee.prototype.getHearingIndex = function (url) {
           return fulfill();
         }
       } else {
-        scraper.msg("BAD PAGE REQUEST: " + url);
+        scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
         return fulfill('fail');
 
       }
@@ -1230,7 +1236,7 @@ Hearing.prototype.fetch = function () {
         scraper.msg("done with " + hear.title);
 
       } else {
-        scraper.msg("bad request on " + hear.hearingPage);
+        scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
       } // end status
 
       return fulfill();
@@ -1260,20 +1266,26 @@ var intel = new Committee({
 io.on("connect", function (socket) {
   scraper.connections++;
   console.log('watching the watcher');
-  socket.emit('message', "WELCOME");
   if (scraper.busy) {
-    socket.emit("PROCESS IN ACTION, MONITORING");
+    setTimeout(function () { 
+      socket.emit("message", "PROCESS IN ACTION, MONITORING");
+      socket.emit("message", scraper.connections + " active connections");
+    }, 3000);
+    socket.join("oversight");
   } else {
     setTimeout(function () {
-      socket.emit("starting...");
+      io.emit("message", "STARTING PROCESS");
     }, 3000);
+    socket.join("oversight");
     setTimeout(function () {
       intel.init();
-    }, 5000);
+    }, 8000);
   }
   socket.on("disconnect", function () {
     scraper.connections--;
+    scraper.msg(scraper.connections + " active connections");
     if (scraper.connections < 1) {
+       scraper.msg("no quorum");
       scraper.shutDown();
     }
 
