@@ -127,10 +127,10 @@ Video.prototype.getManifest = function () {
       url = url.replace('false', 'true');
 
       //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-      //var command = 'xvfb-run -e xvfbfail.log slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      //var command = 'xvfb-run -e xvfbfail.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
 
-      scraper.msg(">>>> " + command.replace(__dirname, "./")) / ;
+      scraper.msg(">>>> " + command.replace(__dirname, "./"));
 
       cpp.exec(command).then(function (result) {
           scraper.msg("Ignoring vector smash detection.");
@@ -606,7 +606,7 @@ Video.transcode = function () {
 };
 
 Committee.prototype.getVideos = function () {
-  scraper.msg("))))))))))))))))))))getting videos!");
+  scraper.msg("SCRAPING VIDEOS");
   var comm = this;
   return new Promise(function (fulfill, reject) {
 
@@ -618,7 +618,7 @@ Committee.prototype.getVideos = function () {
         scraper.msg(vid.localPath);
         scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
         return hear.video.getManifest().then(function (result) {
-          scraper.msg("we got a manifest? in theory?");
+          scraper.msg("MANIFEST LOCATED");
 
           if (result) {
             return hear.video.fetch(result);
@@ -1125,7 +1125,7 @@ Committee.prototype.getHearingIndex = function (url) {
         'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
       }
     };
-    scraper.msg("trying " + options);
+    scraper.msg("trying " + JSON.stringify(options));
 
     request(options, function (error, response, html) {
       if (error) {
