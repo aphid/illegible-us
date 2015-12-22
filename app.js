@@ -135,8 +135,7 @@ Video.prototype.getManifest = function () {
       //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
       var command = 'xvfb-run -e xvfbfail.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-
-      scraper.msg(">>>> " + command.replace(__dirname, "./"));
+      scraper.msg(">>>> " + command.replace(__dirname, "."));
 
       cpp.exec(command).then(function (result) {
           scraper.msg("Ignoring vector smash detection.");
@@ -612,7 +611,7 @@ Video.transcode = function () {
 };
 
 Committee.prototype.getVideos = function () {
-  scraper.msg("))))))))))))))))))))getting videos!");
+  scraper.msg("SCRAPING VIDEOS");
   var comm = this;
   return new Promise(function (fulfill, reject) {
 
@@ -624,8 +623,7 @@ Committee.prototype.getVideos = function () {
         scraper.msg(vid.localPath);
         scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
         return hear.video.getManifest().then(function (result) {
-          scraper.msg("requesting manifest");
-
+          scraper.msg("MANIFEST LOCATED");
           if (result) {
             return hear.video.fetch(result);
           }
