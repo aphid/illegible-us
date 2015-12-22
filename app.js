@@ -52,6 +52,26 @@ var scraper = {
   }
 };
 
+Object.defineProperty(global, '__line', {
+  get: function(){
+    return __stack[1].getLineNumber();
+  }
+});
+
+Object.defineProperty(global, '__stack', {
+get: function() {
+        var orig = Error.prepareStackTrace;
+        Error.prepareStackTrace = function(_, stack) {
+            return stack;
+        };
+        var err = new Error;
+        Error.captureStackTrace(err, arguments.callee);
+        var stack = err.stack;
+        Error.prepareStackTrace = orig;
+        return stack;
+    }
+});
+
 scraper.msg = function (thing) {
   console.log(thing);
   if (typeof thing === "string") {
@@ -508,14 +528,15 @@ Committee.prototype.init = function () {
     }).then(function () {
       return comm.validateLocal();
     }).then(function () {
+      //return comm.textifyPdfs();   
+    }).then(function () { 
       return comm.getVideos();
-    }).then(function () {
       scraper.msg("wooo");
       return comm.write();
     }).then(function () {
-      return comm.getVidMeta();
+      return comm.getVideos();
     }).then(function () {
-      return comm.textifyPdfs();
+      return comm.getVidMeta();
     }).then(function () {
       return comm.write();
     }).then(function () {
@@ -712,39 +733,35 @@ var Witness = function (options) {
 
 
 Committee.prototype.textifyPdfs = function () {
+  var comm = this;
+  return new Promise(function (fulfill, reject) {
+  var queue = Promise.resolve();
   var pdfs = [];
-  for (var hear of this.hearings) {
+  for (var hear of comm.hearings) {
     for (var wit of hear.witnesses) {
       for (var pdf of wit.pdfs) {
-        if (!fileExists(this.txtpath)) {
-          pdfs.push(pdf);
-        }
+           scraper.msg(JSON.stringify(pdf));
+           pdfs.push(pdf); 
+         };
+        
       }
-    }
   }
-  if (!pdfs.length) {
-    return Promise.resolve();
-  } else {
-
-    return new Promise(function (fulfill) {
-
-      var queue = Promise.resolve();
-      pdfs.forEach(function (pdf) {
-        queue = queue.then(function () {
-          return pdf.textify();
-        });
-      });
-
-      queue.then(function () {
-        scraper.msg("Done textifying!");
-        return fulfill();
-      }).catch(function (err) {
-        scraper.msg("pdf err is " + err);
-        return fulfill();
-      });
-    });
+  for (var pdf of pdfs){
+     queue = queue.then(function(){
+        pdf.textify();
+     });
   }
-};
+  queue.then(function () {
+    scraper.msg("Done textifying!");
+    return fulfill();
+  });
+/*
+.catch(function (err) {
+     scraper.msg("pdf err is " + err);
+     return reject();    
+  });*/
+  });
+ };
 
 Committee.prototype.validateLocal = function () {
   scraper.msg("#VALIDATION#");
@@ -846,7 +863,7 @@ scraper.getFile = function (url, dest) {
         });
         file.on('finish', function () {
           file.close();
-          scraper.msg("done writing " + fs.statSync(dest).size + "bytes");
+          scraper.msg("done writing " + fs.statSync(dest).size + " bytes");
           return fulfill();
         });
       });
@@ -879,7 +896,12 @@ Pdf.prototype.getMeta = function () {
           var json = JSON.stringify(metadata, undefined, 2);
           scraper.msg(json);
           pfs.writeFile(jsonpath, json).then(function () {
-            return fulfill();
+            pdf.textify();
+
+          }).then(function(){  
+            setTimeout(function(){
+              return fulfill();
+            }, 4500);
           });
 
         }
@@ -912,7 +934,6 @@ Video.prototype.getMeta = function () {
       if (err) {
         reject(err);
       }
-      scraper.msg(metadata);
       if (metadata.videoEncoding) {
         vcode = metadata.videoEncoding;
         if (vcode === "On2 VP6") {
@@ -933,11 +954,13 @@ Video.prototype.getMeta = function () {
         scraper.msg('skipping meta');
         return fulfill();
       }
-
+      scraper.msg(JSON.stringify(metadata));
       pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
         vid.etpath = etpath;
         scraper.msg('metadata written');
-        return fulfill();
+        setTimeout(function(){
+          return fulfill();
+        }, 4500);
       });
       //scraper.msg(JSON.parse(metadata));
 
@@ -954,13 +977,13 @@ Pdf.prototype.textify = function () {
   this.txtpath = txtpath;
   scraper.msg("working on " + this.txtpath);
 
-  return new Promise(function (reject, fulfill) {
+  return new Promise(function (fulfill, reject) {
 
     if (fileExists(txtpath)) {
       var msize = fs.statSync(txtpath).size;
       scraper.msg(txtpath + " exists! (" + msize + ")");
       scraper.msg("txt's already here, moving on");
-      return fulfill();
+      fulfill();
 
     }
     scraper.msg("Attempting to create text: " + txtpath);
@@ -968,32 +991,32 @@ Pdf.prototype.textify = function () {
     pdftxt.getText(function (err, data, cmd) {
       scraper.msg("TEXTIFYING: " + dest);
       if (err) {
+        scraper.msg("textification error " + err + " " + cmd);
         reject("textificationErr " + err + " " + cmd);
       }
       if (!data) {
+        scraper.msg("NO ERROR");
         console.error("NO DATA");
         pdf.needsScan = true;
-        return fulfill();
+        fulfill();
       }
       scraper.msg("DATA");
       scraper.msg("-------------------------------------------------------------");
-      scraper.msg(data);
+      scraper.msg(data.substring(0, 2000) + "...");
       scraper.msg("-------------------------------------------------------------");
       fs.writeFile((txtpath), data, function (err) {
         scraper.msg('writing file (' + data.length + ')');
         if (err) {
+          scraper.msg("ERROR WRITING TXT" + err);
           reject(err);
         }
         scraper.msg('fulfilling textify');
         pdf.txtpath = txtpath;
-        return fulfill();
-      });
-      // additionally you can also access cmd array
-      // it contains params which passed to pdftotext ['filename', '-f', '1', '-l', '1', '-']
-      //scraper.msg(cmd.join(' '));
-
+        setTimeout(function(){
+          fulfill();
+        }, 4500);
+       });
     });
-
   });
 };
 
