@@ -1,5 +1,6 @@
 /*jslint node: true */
-/*global require, module, Promise, __dirname */
+/*jshint -W105 */
+/*global require, module, Promise */
 
 "use strict";
 
@@ -50,9 +51,10 @@ var scraper = {
   }
 };
 
+/*
 Object.defineProperty(global, '__line', {
   get: function () {
-    return __stack[1].getLineNumber();
+    return _stack[1].getLineNumber();
   }
 });
 
@@ -69,7 +71,7 @@ Object.defineProperty(global, '__stack', {
     return stack;
   }
 });
-
+*/
 scraper.msg = function (thing, kind) {
   console.log(thing);
   if (!kind) {
@@ -93,7 +95,9 @@ scraper.url = function (url) {
 scraper.cleanupFrags = function () {
   return new Promise(function (resolve, reject) {
     glob("*Frag*", function (er, files) {
-      scraper.msg('deleting ' + files.length + ' files');
+      if (files.length) {
+        scraper.msg('deleting ' + files.length + 'temp fragments');
+      }
       for (var file of files) {
         fs.unlinkSync(file);
       }
@@ -105,16 +109,29 @@ scraper.cleanupFrags = function () {
 scraper.cleanupTemp = function () {
   scraper.msg("CLEANING UP");
   var cwd = process.cwd();
-  process.chdir(scraper.tempDir);
-  glob("*", function (er, files) {
-    scraper.msg('deleting ' + files.length + ' files');
-    for (var file of files) {
-      if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
-        fs.unlinkSync(file);
-      }
+  var files = fs.readdirSync(scraper.tempDir);
+  if (files.length) {
+    scraper.msg('deleting ' + files.length + ' files from temp');
+  }
+  for (var file of files) {
+    file = scraper.tempDir + file;
+    if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
+      fs.unlinkSync(file);
     }
+  }
 
-  });
+  var files = fs.readdirSync(scraper.incomingDir);
+  if (files.length) {
+    scraper.msg('deleting ' + files.length + ' files from incoming');
+  }
+  for (var file of files) {
+    file = scraper.incomingDir + file;
+    if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
+      fs.unlinkSync(file);
+    }
+  }
+
+
   process.chdir(cwd);
   return Promise.resolve();
 };
