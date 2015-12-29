@@ -81,6 +81,12 @@ scraper.msg = function (thing) {
   }
 };
 
+scraper.url = function (url) { 
+  console.log('sending url');
+  console.log(url);
+  io.to('urls').emit('url', url);
+};
+
 scraper.cleanupFrags = function () {
   return new Promise(function (resolve, reject) {
     glob("*Frag*", function (er, files) {
@@ -153,7 +159,7 @@ Video.prototype.getManifest = function () {
       url = url.replace('false', 'true');
 
       //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-      var command = 'xvfb-run -e xvfbfail.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      var command = 'xvfb-run -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       scraper.msg(">>>> " + command.replace(__dirname, "."));
 
@@ -163,6 +169,13 @@ Video.prototype.getManifest = function () {
           var response = result.stdout.replace("Vector smash protection is enabled.", "");
           scraper.msg(response);
           response = JSON.parse(response);
+          if (response.status === 'fail'){
+             console.log('manifest fail, retrying');
+             setTimeout(function(){
+              vid.getManifest(); 
+              }, 5000);
+             
+          }
           if (response.type) {
             scraper.msg("Video type: " + vid.type);
             vid.type = response.type;
@@ -175,7 +188,7 @@ Video.prototype.getManifest = function () {
           console.error('ERROR: ', (err.stack || err));
           reject(err);
           console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
-          process.exit();
+          process.exit(1);
         })
         .progress(function (childProcess) {
           scraper.msg('[exec] childProcess.pid: ', childProcess.pid);
@@ -765,7 +778,7 @@ Committee.prototype.textifyPdfs = function () {
 
 Committee.prototype.validateLocal = function () {
   scraper.msg("#VALIDATION#");
-  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir];
+  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir, scraper.transcodedDir];
   dirs.map(function (dir) {
 
     try {
@@ -813,6 +826,7 @@ var Pdf = function (options) {
 
 
 scraper.getFile = function (url, dest) {
+  var digits;
   return new Promise(function (fulfill, reject) {
     if (fileExists(dest)) {
       //file exists
@@ -826,11 +840,16 @@ scraper.getFile = function (url, dest) {
       scraper.msg('exists but zero bytes, refetching');
       fs.unlinkSync(dest);
       scraper.getFile(url, dest);
-
+     
 
 
       //file does not exist
     } else {
+      if (dest.includes('pdf')){
+        digits = 0; 
+      } else { 
+        digits = 2;
+      }
       scraper.msg("file " + dest + " doesn't exist yet...");
       var file = fs.createWriteStream(dest);
       http.get(url, function (response) {
@@ -843,10 +862,10 @@ scraper.getFile = function (url, dest) {
         response.pipe(file);
         response.on("data", function (chunk) {
           cur += chunk.length;
-          var newPct = (100.0 * cur / len).toFixed(2);
+          var newPct = (100.0 * cur / len).toFixed(digits);
           if (pct !== newPct) {
             pct = newPct;
-            scraper.msg("Downloading " + (100.0 * cur / len).toFixed(2) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
+            scraper.msg("Downloading " + (100.0 * cur / len).toFixed(digits) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
           }
         });
         file.on('data', function (progress) {
@@ -1002,7 +1021,11 @@ Pdf.prototype.textify = function () {
       }
       scraper.msg("DATA");
       scraper.msg("-------------------------------------------------------------");
-      scraper.msg(data.substring(0, 2000) + "...");
+      if (data.length > 100) {
+        scraper.msg(data.substring(0, 2000) + "...");
+      } else {
+        scraper.msg(data);
+      }
       scraper.msg("-------------------------------------------------------------");
       fs.writeFile((txtpath), data, function (err) {
         scraper.msg('writing file (' + data.length + ')');
@@ -1135,10 +1158,18 @@ Committee.prototype.getPages = function (pages) {
 
 Committee.prototype.fetchAll = function () {
   var comm = this;
-  return Promise.all(comm.hearings.map(function (a) {
-    return a.fetch();
-  }));
-
+  return new Promise(function(fulfill, reject){
+    
+    var queue = Promise.resolve();
+    comm.hearings.forEach(function(hear){
+      queue = queue.then(function(){
+        hear.fetch();
+      });
+    });
+    queue.then(function () {
+      return fulfill();
+    });
+  });
 };
 
 Committee.prototype.getHearingIndex = function (url) {
@@ -1153,7 +1184,6 @@ Committee.prototype.getHearingIndex = function (url) {
       }
     };
     scraper.msg("trying " + JSON.stringify(options));
-
     request(options, function (error, response, html) {
       if (error) {
         reject(error);
@@ -1181,12 +1211,17 @@ Committee.prototype.getHearingIndex = function (url) {
         });
 
         if (lastPage) {
-
-          return fulfill({
-            "lastPage": lastPage.query.page
-          });
+          scraper.url(url);
+          setTimeout(function(){
+            return fulfill({
+              "lastPage": lastPage.query.page
+            });
+          }, 5000);
         } else {
+          scraper.url(url);
+            setTimeout(function(){
           return fulfill();
+          }, 5000);
         }
       } else {
         scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
@@ -1259,8 +1294,10 @@ Hearing.prototype.fetch = function () {
       } else {
         scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
       } // end status
-
-      return fulfill();
+      scraper.url(hear.hearingPage);
+      setTimeout(function(){
+         fulfill();
+      }, 5000);
 
     }); // end request
 
@@ -1290,12 +1327,14 @@ io.on("connect", function (socket) {
   if (scraper.busy) {
     setTimeout(function () { 
       socket.emit("message", "PROCESS IN ACTION, MONITORING");
-      socket.emit("message", scraper.connections + " active connections");
+      io.emit("message", scraper.connections + " active connections");
     }, 3000);
     socket.join("oversight");
+    socket.join("urls");
   } else {
+    scraper.busy = true;
     setTimeout(function () {
-      io.emit("message", "STARTING PROCESS");
+      socket.emit("message", "[RE]STARTING PROCESS");
     }, 3000);
     socket.join("oversight");
     setTimeout(function () {
@@ -1305,10 +1344,12 @@ io.on("connect", function (socket) {
   socket.on("disconnect", function () {
     scraper.connections--;
     scraper.msg(scraper.connections + " active connections");
-    if (scraper.connections < 1) {
-       scraper.msg("no quorum");
-      scraper.shutDown();
-    }
+    setTimeout(function(){ 
+      if (scraper.connections < 1) {
+         scraper.msg("no quorum");
+        scraper.shutDown();
+      }
+    }, 10000);
 
 
   });
@@ -1321,7 +1362,7 @@ scraper.shutDown = function () {
     return scraper.cleanupFrags();
   }).then(function () {
     scraper.msg("EXITING");
-    process.exit();
+    process.exit(1);
   });
 
 };
@@ -1332,5 +1373,5 @@ process.on('SIGINT', function () {
 });
 
 setInterval(function () {
-  console.log(scraper.busy);
+  console.log(scraper.busy + " " + scraper.connections);
 }, 5000);
