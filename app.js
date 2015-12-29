@@ -20,15 +20,13 @@ var ffmpeg = require('fluent-ffmpeg');
 
 var glob = require("glob");
 var r = require("rethinkdb");
-var pk = fs.readFileSync('./privkey.pem');
-var pc = fs.readFileSync('./cert.pem');
-
-var app = require('https').createServer({ key: pk, cert: pc });
-
+//var pk = fs.readFileSync('./privkey.pem');
+//var pc = fs.readFileSync('./cert.pem');
+//var app = require('https').createServer({ key: pk, cert: pc });
+var app = require('http').createServer();
 app.listen(9080);
 
 var io = require('socket.io')(app);
-
 
 //paths should have trailing slash
 var scraper = {
@@ -53,38 +51,43 @@ var scraper = {
 };
 
 Object.defineProperty(global, '__line', {
-  get: function(){
+  get: function () {
     return __stack[1].getLineNumber();
   }
 });
 
 Object.defineProperty(global, '__stack', {
-get: function() {
-        var orig = Error.prepareStackTrace;
-        Error.prepareStackTrace = function(_, stack) {
-            return stack;
-        };
-        var err = new Error;
-        Error.captureStackTrace(err, arguments.callee);
-        var stack = err.stack;
-        Error.prepareStackTrace = orig;
-        return stack;
-    }
+  get: function () {
+    var orig = Error.prepareStackTrace;
+    Error.prepareStackTrace = function (_, stack) {
+      return stack;
+    };
+    var err = new Error;
+    Error.captureStackTrace(err, arguments.callee);
+    var stack = err.stack;
+    Error.prepareStackTrace = orig;
+    return stack;
+  }
 });
 
-scraper.msg = function (thing) {
+scraper.msg = function (thing, kind) {
   console.log(thing);
+  if (!kind) {
+    kind = 'message';
+  }
+
   if (typeof thing === "string") {
-    io.to('oversight').emit('message', thing);
+    io.to('oversight').emit(kind, thing);
   } else {
-    io.to('oversight').emit('message', JSON.stringify(thing));
+    io.to('oversight').emit(kind, JSON.stringify(thing));
   }
 };
 
-scraper.url = function (url) { 
+
+scraper.url = function (url) {
   console.log('sending url');
   console.log(url);
-  io.to('urls').emit('url', url);
+  io.to('oversight').emit('url', url);
 };
 
 scraper.cleanupFrags = function () {
@@ -103,10 +106,10 @@ scraper.cleanupTemp = function () {
   scraper.msg("CLEANING UP");
   var cwd = process.cwd();
   process.chdir(scraper.tempDir);
-  glob("*Frag*", function (er, files) {
+  glob("*", function (er, files) {
     scraper.msg('deleting ' + files.length + ' files');
     for (var file of files) {
-      if (file.includes('mp4') || file.includes('ogg')) {
+      if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
         fs.unlinkSync(file);
       }
     }
@@ -169,12 +172,12 @@ Video.prototype.getManifest = function () {
           var response = result.stdout.replace("Vector smash protection is enabled.", "");
           scraper.msg(response);
           response = JSON.parse(response);
-          if (response.status === 'fail'){
-             console.log('manifest fail, retrying');
-             setTimeout(function(){
-              vid.getManifest(); 
-              }, 5000);
-             
+          if (response.status === 'fail') {
+            console.log('manifest fail, retrying');
+            setTimeout(function () {
+              vid.getManifest();
+            }, 5000);
+
           }
           if (response.type) {
             scraper.msg("Video type: " + vid.type);
@@ -542,7 +545,7 @@ Committee.prototype.init = function () {
       return comm.validateLocal();
     }).then(function () {
       //return comm.textifyPdfs();   
-    }).then(function () { 
+    }).then(function () {
       return comm.getVideos();
       scraper.msg("wooo");
       return comm.write();
@@ -748,33 +751,33 @@ var Witness = function (options) {
 Committee.prototype.textifyPdfs = function () {
   var comm = this;
   return new Promise(function (fulfill, reject) {
-  var queue = Promise.resolve();
-  var pdfs = [];
-  for (var hear of comm.hearings) {
-    for (var wit of hear.witnesses) {
-      for (var pdf of wit.pdfs) {
-           scraper.msg(JSON.stringify(pdf));
-           pdfs.push(pdf); 
-         };
-        
+    var queue = Promise.resolve();
+    var pdfs = [];
+    for (var hear of comm.hearings) {
+      for (var wit of hear.witnesses) {
+        for (var pdf of wit.pdfs) {
+          scraper.msg(JSON.stringify(pdf));
+          pdfs.push(pdf);
+        };
+
       }
-  }
-  for (var pdf of pdfs){
-     queue = queue.then(function(){
+    }
+    for (var pdf of pdfs) {
+      queue = queue.then(function () {
         pdf.textify();
-     });
-  }
-  queue.then(function () {
-    scraper.msg("Done textifying!");
-    return fulfill();
+      });
+    }
+    queue.then(function () {
+      scraper.msg("Done textifying!");
+      return fulfill();
+    });
+    /*
+    .catch(function (err) {
+         scraper.msg("pdf err is " + err);
+         return reject();    
+      });*/
   });
-/*
-.catch(function (err) {
-     scraper.msg("pdf err is " + err);
-     return reject();    
-  });*/
-  });
- };
+};
 
 Committee.prototype.validateLocal = function () {
   scraper.msg("#VALIDATION#");
@@ -840,14 +843,14 @@ scraper.getFile = function (url, dest) {
       scraper.msg('exists but zero bytes, refetching');
       fs.unlinkSync(dest);
       scraper.getFile(url, dest);
-     
+
 
 
       //file does not exist
     } else {
-      if (dest.includes('pdf')){
-        digits = 0; 
-      } else { 
+      if (dest.includes('pdf')) {
+        digits = 0;
+      } else {
         digits = 2;
       }
       scraper.msg("file " + dest + " doesn't exist yet...");
@@ -913,12 +916,12 @@ Pdf.prototype.getMeta = function () {
           reject("exiftool error: " + err);
         } else {
           var json = JSON.stringify(metadata, undefined, 2);
-          scraper.msg(json);
+          scraper.msg(json, 'txt');
           pfs.writeFile(jsonpath, json).then(function () {
             pdf.textify();
 
-          }).then(function(){  
-            setTimeout(function(){
+          }).then(function () {
+            setTimeout(function () {
               return fulfill();
             }, 4500);
           });
@@ -965,11 +968,12 @@ Video.prototype.getMeta = function () {
       } else if (metadata.fileType === "MP4" && !vcode) {
         vid.type = "mp4";
       } else {
-        scraper.msg(JSON.stringify(metadata));
+        scraper.msg(JSON.stringify(metadata), 'txt');
       }
       scraper.msg(vid.type);
       if (fileExists(etpath)) {
         vid.etpath = etpath;
+        scraper.msg(JSON.stringify(metadata), 'txt');
         scraper.msg('skipping meta');
         return fulfill();
       }
@@ -977,11 +981,10 @@ Video.prototype.getMeta = function () {
       pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
         vid.etpath = etpath;
         scraper.msg('metadata written');
-        setTimeout(function(){
+        setTimeout(function () {
           return fulfill();
         }, 4500);
       });
-      //scraper.msg(JSON.parse(metadata));
 
 
     });
@@ -1022,9 +1025,7 @@ Pdf.prototype.textify = function () {
       scraper.msg("DATA");
       scraper.msg("-------------------------------------------------------------");
       if (data.length > 100) {
-        scraper.msg(data.substring(0, 2000) + "...");
-      } else {
-        scraper.msg(data);
+        scraper.msg(data.substring(0, 2000) + "...", "txt");
       }
       scraper.msg("-------------------------------------------------------------");
       fs.writeFile((txtpath), data, function (err) {
@@ -1035,10 +1036,10 @@ Pdf.prototype.textify = function () {
         }
         scraper.msg('fulfilling textify');
         pdf.txtpath = txtpath;
-        setTimeout(function(){
+        setTimeout(function () {
           fulfill();
         }, 4500);
-       });
+      });
     });
   });
 };
@@ -1158,12 +1159,12 @@ Committee.prototype.getPages = function (pages) {
 
 Committee.prototype.fetchAll = function () {
   var comm = this;
-  return new Promise(function(fulfill, reject){
-    
+  return new Promise(function (fulfill, reject) {
+
     var queue = Promise.resolve();
-    comm.hearings.forEach(function(hear){
-      queue = queue.then(function(){
-        hear.fetch();
+    comm.hearings.forEach(function (hear) {
+      queue = queue.then(function () {
+        return hear.fetch();
       });
     });
     queue.then(function () {
@@ -1188,7 +1189,7 @@ Committee.prototype.getHearingIndex = function (url) {
       if (error) {
         reject(error);
       }
-      
+
       if (!error && response.statusCode === 200) {
         var $ = cheerio.load(html);
         var pagerLast = $('.pager-last a').attr('href');
@@ -1212,15 +1213,15 @@ Committee.prototype.getHearingIndex = function (url) {
 
         if (lastPage) {
           scraper.url(url);
-          setTimeout(function(){
+          setTimeout(function () {
             return fulfill({
               "lastPage": lastPage.query.page
             });
           }, 5000);
         } else {
           scraper.url(url);
-            setTimeout(function(){
-          return fulfill();
+          setTimeout(function () {
+            return fulfill();
           }, 5000);
         }
       } else {
@@ -1295,9 +1296,9 @@ Hearing.prototype.fetch = function () {
         scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
       } // end status
       scraper.url(hear.hearingPage);
-      setTimeout(function(){
-         fulfill();
-      }, 5000);
+      setTimeout(function () {
+        fulfill();
+      }, 395);
 
     }); // end request
 
@@ -1325,7 +1326,7 @@ io.on("connect", function (socket) {
   scraper.connections++;
   console.log('watching the watcher');
   if (scraper.busy) {
-    setTimeout(function () { 
+    setTimeout(function () {
       socket.emit("message", "PROCESS IN ACTION, MONITORING");
       io.emit("message", scraper.connections + " active connections");
     }, 3000);
@@ -1344,9 +1345,9 @@ io.on("connect", function (socket) {
   socket.on("disconnect", function () {
     scraper.connections--;
     scraper.msg(scraper.connections + " active connections");
-    setTimeout(function(){ 
+    setTimeout(function () {
       if (scraper.connections < 1) {
-         scraper.msg("no quorum");
+        scraper.msg("no quorum");
         scraper.shutDown();
       }
     }, 10000);
