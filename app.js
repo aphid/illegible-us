@@ -38,6 +38,7 @@ var scraper = {
   metaDir: './media/metadata/',
   videoDir: './media/video/',
   transcodedDir: './media/transcoded/',
+  webshotDir: '/var/www/html/webshots/',
   tempDir: "./media/temp/",
   busy: false,
   connections: 0,
@@ -202,7 +203,7 @@ Video.prototype.getManifest = function () {
           }
           scraper.msg("fulfilling manifest");
 
-          fulfill(response);
+          return fulfill(response);
         })
         .fail(function (err) {
           console.error('ERROR: ', (err.stack || err));
@@ -798,7 +799,7 @@ Committee.prototype.textifyPdfs = function () {
 
 Committee.prototype.validateLocal = function () {
   scraper.msg("#VALIDATION#");
-  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir, scraper.transcodedDir];
+  var dirs = [scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir, scraper.transcodedDir, scraper.webshotDir];
   dirs.map(function (dir) {
 
     try {
@@ -933,7 +934,7 @@ Pdf.prototype.getMeta = function () {
           reject("exiftool error: " + err);
         } else {
           var json = JSON.stringify(metadata, undefined, 2);
-          scraper.msg(json, 'txt');
+          scraper.msg(json, 'detail');
           pfs.writeFile(jsonpath, json).then(function () {
             pdf.textify();
 
@@ -985,12 +986,12 @@ Video.prototype.getMeta = function () {
       } else if (metadata.fileType === "MP4" && !vcode) {
         vid.type = "mp4";
       } else {
-        scraper.msg(JSON.stringify(metadata), 'txt');
+        scraper.msg(JSON.stringify(metadata), 'detail');
       }
       scraper.msg(vid.type);
       if (fileExists(etpath)) {
         vid.etpath = etpath;
-        scraper.msg(JSON.stringify(metadata), 'txt');
+        scraper.msg(JSON.stringify(metadata), 'detail');
         scraper.msg('skipping meta');
         return fulfill();
       }
@@ -1005,6 +1006,18 @@ Video.prototype.getMeta = function () {
 
 
     });
+  });
+
+};
+
+Pdf.prototype.imagify = function () {
+  //STUB!!! if pdf doesn't have data/text then break into images for OCR.
+
+  var pdf = this;
+  var dest = ""; //where do image files go?
+
+  return new Promise(function (fulfill, reject) {
+    fulfill();
   });
 
 };
@@ -1081,6 +1094,8 @@ Committee.prototype.queuePdfs = function () {
         return pdf.fetch().then(function () {
           return pdf.getMeta();
 
+        }).then(function () {
+          return pdf.imagify();
         });
       });
     });
@@ -1202,8 +1217,13 @@ Committee.prototype.getHearingIndex = function (url) {
       }
     };
     scraper.msg("trying " + JSON.stringify(options));
+    var imgname = "hearpage" + Date.now();
+    scraper.screenshot(url, imgname).then(function () {
+      scraper.url(imgname);
+    });
     request(options, function (error, response, html) {
       if (error) {
+        scraper.msg("error " + error);
         reject(error);
       }
 
@@ -1223,13 +1243,14 @@ Committee.prototype.getHearingIndex = function (url) {
           var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
           hearing.date = datesplit[0];
           hearing.time = datesplit[1];
+          scraper.msg(JSON.stringify(hearing), 'detail');
+
           if (!hearing.title.includes('Postponed') && !hearing.hearingPage.includes('undefined')) {
             comm.hearings.push(new Hearing(hearing));
+
           }
         });
-
         if (lastPage) {
-          scraper.url(url);
           setTimeout(function () {
             return fulfill({
               "lastPage": lastPage.query.page
@@ -1251,7 +1272,28 @@ Committee.prototype.getHearingIndex = function (url) {
 
 };
 
+scraper.screenshot = function (url, filename) {
 
+  if (filename.includes("undefined")) {
+    console.log("UNDEFINED");
+    process.exit();
+  }
+
+  return new Promise(function (fulfill, reject) {
+
+    if (fileExists(scraper.webshotDir + filename)) {
+      console.log("shot already exists")
+      fulfill();
+    }
+
+    console.log("capturing " + url + " to " + filename);
+    var command = 'xvfb-run -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'screenshot.js') + " " + url + " " + filename;
+    cpp.exec(command).then(function (result) {
+      console.log("STDOUT:", result.stdout);
+      return fulfill();
+    }); //exec
+  }); //promise
+};
 
 Hearing.prototype.fetch = function () {
   var hear = this;
@@ -1265,6 +1307,9 @@ Hearing.prototype.fetch = function () {
         'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
       }
     };
+    scraper.screenshot(hear.hearingPage, hear.shortdate).then(function () {
+      return scraper.url(hear.shortdate);
+    });
     request(options, function (error, response, html) {
       if (error) {
         scraper.msg(hear.hearingPage + " is throwing an error: " + error);
@@ -1305,20 +1350,18 @@ Hearing.prototype.fetch = function () {
               hear.addWitness(wit);
             }
           }); //end each
-
+          scraper.msg(JSON.stringify(hear), 'detail');
         } // end if
         scraper.msg("done with " + hear.title);
 
       } else {
         scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
       } // end status
-      scraper.url(hear.hearingPage);
       setTimeout(function () {
         fulfill();
       }, 395);
 
     }); // end request
-
   }); //end promise
 };
 
