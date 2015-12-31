@@ -108,24 +108,25 @@ scraper.cleanupFrags = function () {
 };
 
 scraper.cleanupTemp = function () {
+  var file;
   scraper.msg("CLEANING UP");
   var cwd = process.cwd();
   var files = fs.readdirSync(scraper.tempDir);
   if (files.length) {
     scraper.msg('deleting ' + files.length + ' files from temp');
   }
-  for (var file of files) {
+  for (file of files) {
     file = scraper.tempDir + file;
     if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
       fs.unlinkSync(file);
     }
   }
 
-  var files = fs.readdirSync(scraper.incomingDir);
+  files = fs.readdirSync(scraper.incomingDir);
   if (files.length) {
     scraper.msg('deleting ' + files.length + ' files from incoming');
   }
-  for (var file of files) {
+  for (file of files) {
     file = scraper.incomingDir + file;
     if (file.includes('mp4') || file.includes('ogg') || file.includes('pdf')) {
       fs.unlinkSync(file);
@@ -253,7 +254,7 @@ Video.prototype.fetch = function (data) {
         //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
         var childArgs = [
   path.join(__dirname, 'lib/AdobeHDS.php'), "--manifest", data.manifest, "--auth", data.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
-        scraper.msg('Requesting HDS fragments with credentials:')
+        scraper.msg('Requesting HDS fragments with credentials:');
         scraper.msg(' Authentication key: ' + data.auth);
         scraper.msg(' Manifest: ' + data.manifest);
         //scraper.msg(command);
@@ -564,9 +565,10 @@ Committee.prototype.init = function () {
     }).then(function () {
       //return comm.textifyPdfs();   
     }).then(function () {
-      return comm.getVideos();
       scraper.msg("wooo");
       return comm.write();
+    }).then(function () {
+      return comm.getVideos();
     }).then(function () {
       return comm.getVideos();
     }).then(function () {
@@ -575,7 +577,9 @@ Committee.prototype.init = function () {
       return comm.write();
     }).then(function () {
       return comm.transcodeVideos();
+    }).then(function () {
       scraper.busy = false;
+
     })
     .catch(function (err) {
       scraper.msg("something terrible happened");
@@ -767,20 +771,21 @@ var Witness = function (options) {
 
 
 Committee.prototype.textifyPdfs = function () {
-  var comm = this;
+  var comm = this,
+    pdf;
   return new Promise(function (fulfill, reject) {
     var queue = Promise.resolve();
     var pdfs = [];
     for (var hear of comm.hearings) {
       for (var wit of hear.witnesses) {
-        for (var pdf of wit.pdfs) {
+        for (pdf of wit.pdfs) {
           scraper.msg(JSON.stringify(pdf));
           pdfs.push(pdf);
-        };
+        }
 
       }
     }
-    for (var pdf of pdfs) {
+    for (pdf of pdfs) {
       queue = queue.then(function () {
         pdf.textify();
       });
@@ -1282,7 +1287,7 @@ scraper.screenshot = function (url, filename) {
   return new Promise(function (fulfill, reject) {
 
     if (fileExists(scraper.webshotDir + filename)) {
-      console.log("shot already exists")
+      console.log("shot already exists");
       fulfill();
     }
 
