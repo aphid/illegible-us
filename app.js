@@ -42,6 +42,7 @@ var scraper = {
   tempDir: "./media/temp/",
   busy: false,
   connections: 0,
+  started: false,
   sockets: 5,
   current: 0,
   rdbConn: null,
@@ -85,7 +86,6 @@ scraper.msg = function (thing, kind) {
     io.to('oversight').emit(kind, JSON.stringify(thing));
   }
 };
-
 
 scraper.url = function (url) {
   console.log('sending url');
@@ -1058,11 +1058,9 @@ Pdf.prototype.textify = function () {
         fulfill();
       }
       scraper.msg("DATA");
-      scraper.msg("-------------------------------------------------------------");
       if (data.length > 100) {
         scraper.msg(data.substring(0, 2000) + "...", "txt");
       }
-      scraper.msg("-------------------------------------------------------------");
       fs.writeFile((txtpath), data, function (err) {
         scraper.msg('writing file (' + data.length + ')');
         if (err) {
@@ -1071,9 +1069,7 @@ Pdf.prototype.textify = function () {
         }
         scraper.msg('fulfilling textify');
         pdf.txtpath = txtpath;
-        setTimeout(function () {
-          fulfill();
-        }, 4500);
+        fulfill();
       });
     });
   });
@@ -1248,24 +1244,20 @@ Committee.prototype.getHearingIndex = function (url) {
             var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
             hearing.date = datesplit[0];
             hearing.time = datesplit[1];
-            scraper.msg(JSON.stringify(hearing), 'detail');
 
             if (!hearing.title.includes('Postponed') && !hearing.hearingPage.includes('undefined')) {
               comm.hearings.push(new Hearing(hearing));
+              scraper.msg(JSON.stringify(comm.hearings), 'detail');
 
             }
           });
           if (lastPage) {
-            setTimeout(function () {
-              return fulfill({
-                "lastPage": lastPage.query.page
-              });
-            }, 5000);
+            return fulfill({
+              "lastPage": lastPage.query.page
+            });
           } else {
             scraper.url(url);
-            setTimeout(function () {
-              fulfill();
-            }, 5000);
+            fulfill();
           }
         } else {
           scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
@@ -1296,9 +1288,7 @@ scraper.screenshot = function (url, filename) {
     cpp.exec(command)
       .then(function (result) {
         console.log("STDOUT:", result.stdout);
-        setTimeout(function () {
-          return fulfill();
-        }, 3000);
+        return fulfill();
       })
       .fail(function (err) {
         console.error('ERROR: ', (err.stack || err));
@@ -1377,7 +1367,7 @@ Hearing.prototype.fetch = function () {
         } // end status
         setTimeout(function () {
           fulfill();
-        }, 395);
+        }, 123);
 
       }); // end request
     }); //end then
@@ -1403,6 +1393,7 @@ var intel = new Committee({
 
 io.on("connect", function (socket) {
   scraper.connections++;
+  scraper.started = true;
   console.log('watching the watcher');
   if (scraper.busy) {
     setTimeout(function () {
@@ -1454,7 +1445,7 @@ process.on('SIGINT', function () {
 
 setInterval(function () {
   console.log(scraper.busy + " " + scraper.connections);
-  if (scraper.connections < 1) {
+  if (!scraper.connections && scraper.started) {
     scraper.msg("no quorum");
     scraper.shutDown();
   }
