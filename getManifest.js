@@ -4,7 +4,7 @@ var url = phantom.args[0];
 
 var HDS = function (url) {
   var start = new Date().getTime() / 1000;
-
+  //nothing is true, everything is false! ok, but we need autoplay to be true.
   url = url.replace("'", "").replace("false", "true");
   return new Promise(function (resolve) {
     var data = {};
