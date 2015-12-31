@@ -97,7 +97,7 @@ scraper.cleanupFrags = function () {
   return new Promise(function (resolve, reject) {
     glob("*Frag*", function (er, files) {
       if (files.length) {
-        scraper.msg('deleting ' + files.length + 'temp fragments');
+        scraper.msg('deleting ' + files.length + ' temp fragments');
       }
       for (var file of files) {
         fs.unlinkSync(file);
@@ -1224,55 +1224,55 @@ Committee.prototype.getHearingIndex = function (url) {
     scraper.msg("trying " + JSON.stringify(options));
     var imgname = "hearpage" + Date.now();
     scraper.screenshot(url, imgname).then(function () {
-      scraper.url(imgname);
-    });
-    request(options, function (error, response, html) {
-      if (error) {
-        scraper.msg("error " + error);
-        reject(error);
-      }
-
-      if (!error && response.statusCode === 200) {
-        var $ = cheerio.load(html);
-        var pagerLast = $('.pager-last a').attr('href');
-        if (pagerLast) {
-          lastPage = Url.parse(pagerLast, true);
+      return scraper.url(imgname);
+    }).then(function () {
+      request(options, function (error, response, html) {
+        if (error) {
+          scraper.msg("error " + error);
+          reject(error);
         }
-        //scraper.msg(lastPage.query.page);
-        $('.views-row').each(function (i, elem) {
-          var hearing = {};
-          hearing.dcDate = $(elem).find('.date-display-single').attr('content');
-          hearing.hearingPage = "" + $(elem).find('.views-field-field-hearing-video').find('a').attr('href');
-          hearing.hearingPage = Url.resolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
-          hearing.title = $(elem).find('.views-field-title').text().trim();
-          var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
-          hearing.date = datesplit[0];
-          hearing.time = datesplit[1];
-          scraper.msg(JSON.stringify(hearing), 'detail');
 
-          if (!hearing.title.includes('Postponed') && !hearing.hearingPage.includes('undefined')) {
-            comm.hearings.push(new Hearing(hearing));
-
+        if (!error && response.statusCode === 200) {
+          var $ = cheerio.load(html);
+          var pagerLast = $('.pager-last a').attr('href');
+          if (pagerLast) {
+            lastPage = Url.parse(pagerLast, true);
           }
-        });
-        if (lastPage) {
-          setTimeout(function () {
-            return fulfill({
-              "lastPage": lastPage.query.page
-            });
-          }, 5000);
-        } else {
-          scraper.url(url);
-          setTimeout(function () {
-            return fulfill();
-          }, 5000);
-        }
-      } else {
-        scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
-        return fulfill('fail');
+          //scraper.msg(lastPage.query.page);
+          $('.views-row').each(function (i, elem) {
+            var hearing = {};
+            hearing.dcDate = $(elem).find('.date-display-single').attr('content');
+            hearing.hearingPage = "" + $(elem).find('.views-field-field-hearing-video').find('a').attr('href');
+            hearing.hearingPage = Url.resolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
+            hearing.title = $(elem).find('.views-field-title').text().trim();
+            var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
+            hearing.date = datesplit[0];
+            hearing.time = datesplit[1];
+            scraper.msg(JSON.stringify(hearing), 'detail');
 
-      }
-    }); // end request
+            if (!hearing.title.includes('Postponed') && !hearing.hearingPage.includes('undefined')) {
+              comm.hearings.push(new Hearing(hearing));
+
+            }
+          });
+          if (lastPage) {
+            setTimeout(function () {
+              return fulfill({
+                "lastPage": lastPage.query.page
+              });
+            }, 5000);
+          } else {
+            scraper.url(url);
+            setTimeout(function () {
+              fulfill();
+            }, 5000);
+          }
+        } else {
+          scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
+          return fulfill('fail');
+        }
+      }); // end request
+    }); // end then
   }); // end promise
 
 };
@@ -1288,15 +1288,27 @@ scraper.screenshot = function (url, filename) {
 
     if (fileExists(scraper.webshotDir + filename)) {
       console.log("shot already exists");
-      fulfill();
+      return fulfill();
     }
 
     console.log("capturing " + url + " to " + filename);
-    var command = 'xvfb-run -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'screenshot.js') + " " + url + " " + filename;
-    cpp.exec(command).then(function (result) {
-      console.log("STDOUT:", result.stdout);
-      return fulfill();
-    }); //exec
+    var command = 'xvfb-run -a -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+    cpp.exec(command)
+      .then(function (result) {
+        console.log("STDOUT:", result.stdout);
+        setTimeout(function () {
+          return fulfill();
+        }, 3000);
+      })
+      .fail(function (err) {
+        console.error('ERROR: ', (err.stack || err));
+        reject(err);
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
+        process.exit(1);
+      })
+      .progress(function (childProcess) {
+        scraper.msg('[exec] childProcess.pid: ', childProcess.pid);
+      });
   }); //promise
 };
 
@@ -1314,59 +1326,61 @@ Hearing.prototype.fetch = function () {
     };
     scraper.screenshot(hear.hearingPage, hear.shortdate).then(function () {
       return scraper.url(hear.shortdate);
-    });
-    request(options, function (error, response, html) {
-      if (error) {
-        scraper.msg(hear.hearingPage + " is throwing an error: " + error);
-        reject(error);
-      }
-      if (response.statusCode === 200) {
-        var $ = cheerio.load(html);
-        hear.addVideo({
-          url: decodeURIComponent($('.pane-node-field-hearing-video').find('iframe').attr('src'))
-        });
-        var wits = $('.pane-node-field-hearing-witness');
-        if (wits.find('.pane-title').text().trim() === "Witnesses") {
-          wits.find('.content').each(function (k, v) {
-            if ($(v).find('.field-name-field-witness-panel').length) {
-              panel = $(v).find('.field-name-field-witness-panel').text().trim().replace(':', '');
-            }
+    }).then(function () {
 
-            var witness = {};
-            witness.firstName = $(v).find('.field-name-field-witness-firstname').text().trim();
-            witness.lastName = $(v).find('.field-name-field-witness-lastname').text().trim();
-            witness.title = $(v).find('.field-name-field-witness-job').text().trim();
-            witness.org = $(v).find('.field-name-field-witness-organization').text().trim();
-            witness.group = panel;
-            var wit = new Witness(witness);
-            if ($(v).find('li').length) {
-              $(v).find('a').each(function (key, val) {
-                var pdf = {};
-                pdf.name = $(val).text();
-                pdf.url = $(val).attr('href');
-                if (!pdf.url.includes('http://')) {
-                  pdf.url = intel.url + pdf.url;
-                }
-                wit.addPdf(hear, pdf.url);
-              });
-            }
-            if (witness.firstName) {
-              scraper.msg("new witness: ");
-              hear.addWitness(wit);
-            }
-          }); //end each
-          scraper.msg(JSON.stringify(hear), 'detail');
-        } // end if
-        scraper.msg("done with " + hear.title);
+      request(options, function (error, response, html) {
+        if (error) {
+          scraper.msg(hear.hearingPage + " is throwing an error: " + error);
+          reject(error);
+        }
+        if (response.statusCode === 200) {
+          var $ = cheerio.load(html);
+          hear.addVideo({
+            url: decodeURIComponent($('.pane-node-field-hearing-video').find('iframe').attr('src'))
+          });
+          var wits = $('.pane-node-field-hearing-witness');
+          if (wits.find('.pane-title').text().trim() === "Witnesses") {
+            wits.find('.content').each(function (k, v) {
+              if ($(v).find('.field-name-field-witness-panel').length) {
+                panel = $(v).find('.field-name-field-witness-panel').text().trim().replace(':', '');
+              }
 
-      } else {
-        scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
-      } // end status
-      setTimeout(function () {
-        fulfill();
-      }, 395);
+              var witness = {};
+              witness.firstName = $(v).find('.field-name-field-witness-firstname').text().trim();
+              witness.lastName = $(v).find('.field-name-field-witness-lastname').text().trim();
+              witness.title = $(v).find('.field-name-field-witness-job').text().trim();
+              witness.org = $(v).find('.field-name-field-witness-organization').text().trim();
+              witness.group = panel;
+              var wit = new Witness(witness);
+              if ($(v).find('li').length) {
+                $(v).find('a').each(function (key, val) {
+                  var pdf = {};
+                  pdf.name = $(val).text();
+                  pdf.url = $(val).attr('href');
+                  if (!pdf.url.includes('http://')) {
+                    pdf.url = intel.url + pdf.url;
+                  }
+                  wit.addPdf(hear, pdf.url);
+                });
+              }
+              if (witness.firstName) {
+                scraper.msg("new witness: ");
+                hear.addWitness(wit);
+              }
+            }); //end each
+            scraper.msg(JSON.stringify(hear), 'detail');
+          } // end if
+          scraper.msg("done with " + hear.title);
 
-    }); // end request
+        } else {
+          scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
+        } // end status
+        setTimeout(function () {
+          fulfill();
+        }, 395);
+
+      }); // end request
+    }); //end then
   }); //end promise
 };
 
@@ -1428,7 +1442,7 @@ scraper.shutDown = function () {
     return scraper.cleanupFrags();
   }).then(function () {
     scraper.msg("EXITING");
-    process.exit(1);
+    return process.exit(1);
   });
 
 };
@@ -1440,4 +1454,8 @@ process.on('SIGINT', function () {
 
 setInterval(function () {
   console.log(scraper.busy + " " + scraper.connections);
-}, 5000);
+  if (scraper.connections < 1) {
+    scraper.msg("no quorum");
+    scraper.shutDown();
+  }
+}, 15000);
