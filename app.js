@@ -18,7 +18,7 @@ var cpp = require('child-process-promise');
 var fileExists = require('file-exists');
 var mimovie = require("mimovie");
 var ffmpeg = require('fluent-ffmpeg');
-
+var Agent = require('socks5-http-client/lib/Agent')
 var glob = require("glob");
 var r = require("rethinkdb");
 //var pk = fs.readFileSync('./privkey.pem');
@@ -42,6 +42,7 @@ var scraper = {
   tempDir: "./media/temp/",
   busy: false,
   connections: 0,
+  slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
   started: false,
   sockets: 5,
   current: 0,
@@ -89,7 +90,7 @@ scraper.msg = function (thing, kind) {
 
 scraper.url = function (url) {
   console.log('sending url');
-  console.log(url);
+  console.log(JSON.stringify(url));
   io.to('oversight').emit('url', url);
 };
 
@@ -181,7 +182,7 @@ Video.prototype.getManifest = function () {
       url = url.replace('false', 'true');
 
       //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-      var command = 'xvfb-run -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+      var command = 'xvfb-run -e xv.log node_modules/.bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url;
       //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
       scraper.msg(">>>> " + command.replace(__dirname, "."));
 
@@ -505,9 +506,13 @@ Committee.prototype.addHearing = function (options) {
     }
   }
   this.hearings.push(hearing);
+  scraper.hearing(hearing);
   return hearing;
 };
 
+scraper.hearing = function (hearing) {
+  io.to('oversight').emit('hearing', hearing);
+}
 
 Committee.prototype.scrapeRemote = function () {
   var comm = this;
@@ -1213,14 +1218,20 @@ Committee.prototype.getHearingIndex = function (url) {
 
     var options = {
       url: url,
+      agentclass: Agent,
+      agentOptions: {
+        socksPort: 9050
+      },
       headers: {
-        'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
+        'User-Agent': 'Windows / Chrome 34: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36
       }
     };
     scraper.msg("trying " + JSON.stringify(options));
     var imgname = "hearpage" + Date.now();
     scraper.screenshot(url, imgname).then(function () {
-      return scraper.url(imgname);
+      return scraper.url({
+        'url': imgname
+      });
     }).then(function () {
       request(options, function (error, response, html) {
         if (error) {
@@ -1256,7 +1267,9 @@ Committee.prototype.getHearingIndex = function (url) {
               "lastPage": lastPage.query.page
             });
           } else {
-            scraper.url(url);
+            scraper.url({
+              'url': url
+            });
             fulfill();
           }
         } else {
@@ -1284,7 +1297,8 @@ scraper.screenshot = function (url, filename) {
     }
 
     console.log("capturing " + url + " to " + filename);
-    var command = 'xvfb-run -a -e xv.log node_modules/.bin/slimerjs ' + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+    var command = 'node_modules/.bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+    console.log(command);
     cpp.exec(command)
       .then(function (result) {
         console.log("STDOUT:", result.stdout);
@@ -1309,13 +1323,20 @@ Hearing.prototype.fetch = function () {
     scraper.msg("getting info for: " + hear.date);
     scraper.msg(hear.hearingPage);
     var options = {
-      url: hear.hearingPage,
+      url: url,
+      agentclass: Agent,
+      agentOptions: {
+        socksPort: 9050
+      },
       headers: {
-        'User-Agent': 'Mozilla / 5.0(compatible; MSIE 10.0; Windows NT 6.1; Trident / 6.0'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36'
       }
     };
     scraper.screenshot(hear.hearingPage, hear.shortdate).then(function () {
-      return scraper.url(hear.shortdate);
+      return scraper.url({
+        'url': hear.shortdate,
+        'title': hear.title
+      });
     }).then(function () {
 
       request(options, function (error, response, html) {
@@ -1365,9 +1386,7 @@ Hearing.prototype.fetch = function () {
         } else {
           scraper.msg("bad request on " + hear.hearingPage + " code: " + response.statusCode);
         } // end status
-        setTimeout(function () {
-          fulfill();
-        }, 123);
+        fulfill();
 
       }); // end request
     }); //end then
@@ -1412,6 +1431,11 @@ io.on("connect", function (socket) {
       intel.init();
     }, 8000);
   }
+  socket.on("reconnect", function () {
+    scraper.connections++;
+    scraper.msg(scraper.connections + " active connections");
+  });
+
   socket.on("disconnect", function () {
     scraper.connections--;
     scraper.msg(scraper.connections + " active connections");
