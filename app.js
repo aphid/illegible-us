@@ -18,7 +18,7 @@ var cpp = require('child-process-promise');
 var fileExists = require('file-exists');
 var mimovie = require("mimovie");
 var ffmpeg = require('fluent-ffmpeg');
-var Agent = require('socks5-http-client/lib/Agent')
+var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
 var r = require("rethinkdb");
 
@@ -72,7 +72,6 @@ scraper.setupTables = function () {
     r.db('unrInt').tableCreate('hearings').run(scraper.rdbConn).then(function (result) {
       scraper.msg(result);
       return fulfill();
-      console.log(JSON.stringify(result, null, 2));
     }).catch(function (result) {
       if (result.msg.includes('exists')) {
         scraper.msg("rdb table exists");
@@ -549,7 +548,7 @@ Committee.prototype.addHearing = function (options) {
 
 scraper.hearing = function (hearing) {
   io.to('oversight').emit('hearing', hearing);
-}
+};
 
 Committee.prototype.scrapeRemote = function () {
   var comm = this;
@@ -1336,7 +1335,7 @@ scraper.checkBlock = function () {
     };
     request(options, function (error, response, html) {
       if (error) {
-        scraper.msg(hear.hearingPage + " is throwing an error: " + error);
+        scraper.msg("CheckBlock is throwing an error: " + error);
         reject(error);
       }
       if (response.statusCode === 200) {
