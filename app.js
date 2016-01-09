@@ -21,6 +21,7 @@ var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent')
 var glob = require("glob");
 var r = require("rethinkdb");
+
 //var pk = fs.readFileSync('./privkey.pem');
 //var pc = fs.readFileSync('./cert.pem');
 //var app = require('https').createServer({ key: pk, cert: pc });
@@ -835,7 +836,7 @@ Committee.prototype.textifyPdfs = function () {
       });
     }
     queue.then(function () {
-      scraper.msg("Done textifying!");
+      scraper.msg("Done extracting text!");
       return fulfill();
     });
     /*
@@ -1090,10 +1091,10 @@ Pdf.prototype.textify = function () {
     scraper.msg("Attempting to create text: " + txtpath);
     var pdftxt = new pdftotext(dest);
     pdftxt.getText(function (err, data, cmd) {
-      scraper.msg("TEXTIFYING: " + dest);
+      scraper.msg("Extracting text: " + dest);
       if (err) {
-        scraper.msg("textification error " + err + " " + cmd);
-        reject("textificationErr " + err + " " + cmd);
+        scraper.msg("txt extraction error " + err + " " + cmd);
+        reject("txt extraction error " + err + " " + cmd);
       }
       if (!data) {
         scraper.msg("NO ERROR");
@@ -1111,7 +1112,7 @@ Pdf.prototype.textify = function () {
           scraper.msg("ERROR WRITING TXT" + err);
           reject(err);
         }
-        scraper.msg('fulfilling textify');
+        scraper.msg('text extraction complete');
         pdf.txtpath = txtpath;
         fulfill();
       });
@@ -1389,7 +1390,9 @@ scraper.screenshot = function (url, filename) {
     cpp.exec(command, {
         maxBuffer: 500 * 1024
       }).then(function (result) {
-        var data = JSON.parse(result.stdout);
+        var response = result.stdout.replace("Vector smash protection is enabled.", "");
+
+        var data = JSON.parse(response);
         console.log(data);
         if (data.status === 'denied') {
           scraper.checkBlock().then(function () {
@@ -1435,37 +1438,60 @@ Hearing.prototype.fetch = function () {
     }).then(function () {
 
       request(options, function (error, response, html) {
+        var target;
         if (error) {
           scraper.msg(hear.hearingPage + " is throwing an error: " + error);
           reject(error);
         }
         if (response.statusCode === 200) {
           var $ = cheerio.load(html);
+          target = $('.pane-node-field-hearing-video').find('iframe');
+          scraper.msg(target.html() + " " + target.attr('src'), "detail");
           hear.addVideo({
-            url: decodeURIComponent($('.pane-node-field-hearing-video').find('iframe').attr('src'))
+            url: decodeURIComponent(target.attr('src'))
           });
           var wits = $('.pane-node-field-hearing-witness');
           if (wits.find('.pane-title').text().trim() === "Witnesses") {
+            scraper.msg(wits.find('.pane-title').html(), "detail");
             wits.find('.content').each(function (k, v) {
               if ($(v).find('.field-name-field-witness-panel').length) {
                 panel = $(v).find('.field-name-field-witness-panel').text().trim().replace(':', '');
               }
 
               var witness = {};
-              witness.firstName = $(v).find('.field-name-field-witness-firstname').text().trim();
-              witness.lastName = $(v).find('.field-name-field-witness-lastname').text().trim();
-              witness.title = $(v).find('.field-name-field-witness-job').text().trim();
-              witness.org = $(v).find('.field-name-field-witness-organization').text().trim();
+              target = $(v).find('.field-name-field-witness-firstname');
+              scraper.msg(target.html(), "detail");
+              scraper.msg(target.text().trim(), "detail");
+              witness.firstName = target.text().trim();
+
+              target = $(v).find('.field-name-field-witness-lastname');
+              scraper.msg(target.html(), "detail");
+              scraper.msg(target.text().trim(), "detail");
+
+              witness.lastName = target.text().trim();
+
+              target = $(v).find('.field-name-field-witness-job');
+              scraper.msg(target.html(), "detail");
+              scraper.msg(target.text().trim(), "detail");
+              witness.title = target.text().trim();
+
+              target = $(v).find('.field-name-field-witness-organization');
+              scraper.msg(target.html(), "detail");
+              scraper.msg(target.text().trim(), "detail");
+              witness.org = target.text().trim();
               witness.group = panel;
               var wit = new Witness(witness);
+              scraper.msg(JSON.stringify(wit), "detail");
               if ($(v).find('li').length) {
                 $(v).find('a').each(function (key, val) {
+                  scraper.msg($(val).html(), "detail");
                   var pdf = {};
                   pdf.name = $(val).text();
                   pdf.url = $(val).attr('href');
                   if (!pdf.url.includes('http://')) {
                     pdf.url = intel.url + pdf.url;
                   }
+                  scraper.msg(pdf, "detail");
                   wit.addPdf(hear, pdf.url);
                 });
               }
@@ -1474,7 +1500,6 @@ Hearing.prototype.fetch = function () {
                 hear.addWitness(wit);
               }
             }); //end each
-            scraper.msg(JSON.stringify(hear), 'detail');
           } // end if
           scraper.msg("done with " + hear.title);
 
@@ -1484,10 +1509,11 @@ Hearing.prototype.fetch = function () {
         fulfill();
 
       }); // end request
-    }); //end then
-  }).catch(function (err) {
-    console.log(err);
-    throw (err);
+
+    }).catch(function (err) {
+      console.log(err);
+      throw (err);
+    });
   }); //end promise
 };
 

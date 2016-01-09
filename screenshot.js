@@ -37,7 +37,7 @@ requestPage = function () {
 
 
 if (!url || !filename) {
-  console.log("no url or filename");
+  console.log("{'status': 'failed'}");
   slimer.exit();
 } else {
 
