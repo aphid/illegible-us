@@ -51,8 +51,44 @@ var scraper = {
     host: 'localhost',
     port: 28015,
     db: 'unrInt'
-  }
+  },
+  userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
+
 };
+
+r.connect({
+  host: scraper.rDb.host,
+  port: scraper.rDb.port
+}).then(function (conn) {
+  scraper.rdbConn = conn;
+  return scraper.setupTables();
+
+});
+
+scraper.setupTables = function () {
+  return new Promise(function (fulfill, reject) {
+
+    r.db('unrInt').tableCreate('hearings').run(scraper.rdbConn).then(function (result) {
+      scraper.msg(result);
+      return fulfill();
+      console.log(JSON.stringify(result, null, 2));
+    }).catch(function (result) {
+      if (result.msg.includes('exists')) {
+        scraper.msg("rdb table exists");
+        return fulfill();
+      }
+    });
+  });
+
+};
+
+
+/*
+r.db(scraper.rDb.db).tableCreate('hearings').run(scraper.rdbConn, function (err, result) {
+  if (err) throw err;
+  console.log(JSON.stringify(result, null, 2));
+}); */
+
 
 /*
 Object.defineProperty(global, '__line', {
@@ -551,8 +587,11 @@ Committee.prototype.init = function () {
     (function () {
       return comm.write('test.json');
     }); */
-  comm.validateLocal().
 
+  comm.validateLocal().
+  then(function () {
+    return scraper.checkBlock();
+  }).
   then(function () {
     return comm.scrapeRemote();
     //comm.readLocal().
@@ -1223,7 +1262,7 @@ Committee.prototype.getHearingIndex = function (url) {
         socksPort: 9050
       },
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36'
+        'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
       }
     };
     scraper.msg("trying " + JSON.stringify(options));
@@ -1267,9 +1306,9 @@ Committee.prototype.getHearingIndex = function (url) {
               "lastPage": lastPage.query.page
             });
           } else {
-            scraper.url({
+            /* scraper.url({
               'url': url
-            });
+            }); */
             fulfill();
           }
         } else {
@@ -1280,6 +1319,54 @@ Committee.prototype.getHearingIndex = function (url) {
     }); // end then
   }); // end promise
 
+};
+
+scraper.checkBlock = function () {
+  return new Promise(function (fulfill, reject) {
+    var options = {
+      url: "http://www.intelligence.senate.gov/hearings/open",
+      agentclass: Agent,
+      agentOptions: {
+        socksPort: 9050
+      },
+      headers: {
+        'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
+      }
+    };
+    request(options, function (error, response, html) {
+      if (error) {
+        scraper.msg(hear.hearingPage + " is throwing an error: " + error);
+        reject(error);
+      }
+      if (response.statusCode === 200) {
+        if (html.includes('Denied')) {
+          scraper.msg("Access denied, Tor exit node has been blocked.");
+          scraper.msg("Attempting new identity...");
+          scraper.getNewID().then(function () {
+            scraper.checkBlock();
+          });
+        } else {
+          scraper.msg("Exit node appears to be working...");
+          setTimeout(function () {
+            fulfill();
+          }, 2500);
+        }
+
+      }
+    });
+
+  });
+};
+
+scraper.getNewID = function () {
+  return new Promise(function (fulfill, reject) {
+    //needs special configuration in visudo to allow this without su, not ideal but so it goes
+    var command = "/usr/bin/killall -HUP tor";
+    console.log(command);
+    cpp.exec(command).then(function () {
+      fulfill();
+    });
+  });
 };
 
 scraper.screenshot = function (url, filename) {
@@ -1297,10 +1384,18 @@ scraper.screenshot = function (url, filename) {
     }
 
     console.log("capturing " + url + " to " + filename);
-    var command = 'node_modules/.bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+    var command = 'xvfb-run -a -e xv.log node_modules/.bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
     console.log(command);
-    cpp.exec(command)
-      .then(function (result) {
+    cpp.exec(command, {
+        maxBuffer: 500 * 1024
+      }).then(function (result) {
+        var data = JSON.parse(result.stdout);
+        console.log(data);
+        if (data.status === 'denied') {
+          scraper.checkBlock().then(function () {
+            fulfill();
+          });
+        }
         console.log("STDOUT:", result.stdout);
         return fulfill();
       })
@@ -1323,13 +1418,13 @@ Hearing.prototype.fetch = function () {
     scraper.msg("getting info for: " + hear.date);
     scraper.msg(hear.hearingPage);
     var options = {
-      url: url,
+      url: hear.hearingPage,
       agentclass: Agent,
       agentOptions: {
         socksPort: 9050
       },
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36'
+        'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
       }
     };
     scraper.screenshot(hear.hearingPage, hear.shortdate).then(function () {
@@ -1390,6 +1485,9 @@ Hearing.prototype.fetch = function () {
 
       }); // end request
     }); //end then
+  }).catch(function (err) {
+    console.log(err);
+    throw (err);
   }); //end promise
 };
 
