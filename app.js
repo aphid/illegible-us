@@ -22,15 +22,6 @@ var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
 var r = require("rethinkdb");
 
-//var pk = fs.readFileSync('./privkey.pem');
-//var pc = fs.readFileSync('./cert.pem');
-//var app = require('https').createServer({ key: pk, cert: pc });
-var app = require('http').createServer();
-app.listen(9080);
-
-var io = require('socket.io')(app);
-
-//paths should have trailing slash
 var scraper = {
   dataDir: './data/',
   hearingDir: './data/hearings/',
@@ -45,6 +36,9 @@ var scraper = {
   connections: 0,
   slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
   started: false,
+  //privkey: fs.readFileSync('./privkey.pem'),
+  //cert: fs.readFileSync('./cert.pem'),
+  blocked: false,
   sockets: 5,
   current: 0,
   rdbConn: null,
@@ -55,7 +49,22 @@ var scraper = {
   },
   userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
 
+  torPass: fs.readFileSync('./torpass.txt'),
+  torPort: 9051,
 };
+if (scraper.privkey && scraper.cert) {
+  var app = require('https').createServer({
+    key: scraper.privkey,
+    cert: scraper.cert
+  });
+} else {
+  app = require('http').createServer();
+}
+app.listen(9080);
+
+var io = require('socket.io')(app);
+
+//paths should have trailing slash
 
 r.connect({
   host: scraper.rDb.host,
@@ -581,6 +590,7 @@ Committee.prototype.scrapeRemote = function () {
 
 Committee.prototype.init = function () {
   var comm = this;
+  scraper.committee = this;
   scraper.busy = true;
   /*
     //gets from local file
@@ -852,10 +862,9 @@ Committee.prototype.validateLocal = function () {
   dirs.map(function (dir) {
 
     try {
-      scraper.msg("MAKING DIR");
       fs.mkdirSync(dir);
     } catch (e) {
-      scraper.msg(e);
+      scraper.msg("dir exists");
       if (e.code !== 'EEXIST') throw e;
     }
 
@@ -1257,7 +1266,7 @@ Committee.prototype.getHearingIndex = function (url) {
 
     var options = {
       url: url,
-      agentclass: Agent,
+      agentClass: Agent,
       agentOptions: {
         socksPort: 9050
       },
@@ -1266,7 +1275,7 @@ Committee.prototype.getHearingIndex = function (url) {
       }
     };
     scraper.msg("trying " + JSON.stringify(options));
-    var imgname = "hearpage" + Date.now();
+    var imgname = "hearpage" + moment().format("YYYYMMDD");
     scraper.screenshot(url, imgname).then(function () {
       return scraper.url({
         'url': imgname
@@ -1321,11 +1330,12 @@ Committee.prototype.getHearingIndex = function (url) {
 
 };
 
-scraper.checkBlock = function () {
+Committee.prototype.testNode = function () {
+  var comm = this;
   return new Promise(function (fulfill, reject) {
     var options = {
-      url: "http://www.intelligence.senate.gov/hearings/open",
-      agentclass: Agent,
+      url: comm.hearingIndex,
+      agentClass: Agent,
       agentOptions: {
         socksPort: 9050
       },
@@ -1338,33 +1348,60 @@ scraper.checkBlock = function () {
         scraper.msg("CheckBlock is throwing an error: " + error);
         reject(error);
       }
-      if (response.statusCode === 200) {
-        if (html.includes('Denied')) {
-          scraper.msg("Access denied, Tor exit node has been blocked.");
-          scraper.msg("Attempting new identity...");
-          scraper.getNewID().then(function () {
-            scraper.checkBlock();
-          });
-        } else {
-          scraper.msg("Exit node appears to be working...");
-          setTimeout(function () {
-            fulfill();
-          }, 2500);
-        }
-
+      if (response.statusCode === 403) {
+        scraper.blocked = true;
+        scraper.msg(html, "detail");
+        scraper.msg("Access denied, Tor exit node has been blocked.");
+        fulfill("blocked");
+      } else if (response.statusCode === 200) {
+        scraper.blocked = false;
+        scraper.msg("Tor exit node is not blacklisted by Senate CDN.");
+        fulfill("allowed");
+      } else {
+        scraper.blocked = true;
+        reject(response.statusCode);
       }
     });
-
   });
 };
 
+scraper.checkBlock = function () {
+  var scrape = this;
+  scraper.msg("Testing for CDN block");
+  return new Promise(function (fulfill, reject) {
+    scrape.committee.testNode().then(function (result) {
+      if (result === "allowed") {
+        scraper.msg("No block detected.");
+        fulfill();
+      } else {
+        scraper.msg("Attempting new identity...");
+        return scraper.getNewID().then(fulfill);
+      }
+    }).catch(function (err) {
+      scraper.msg(err);
+    });
+  });
+
+};
+
+
 scraper.getNewID = function () {
   return new Promise(function (fulfill, reject) {
-    //needs special configuration in visudo to allow this without su, not ideal but so it goes
-    var command = "/usr/bin/killall -HUP tor";
-    console.log(command);
-    cpp.exec(command).then(function () {
-      fulfill();
+    var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
+    var nc = cpp.exec(cmd).then(function (result) {
+      scraper.msg("SIGNAL NEWNYM");
+      scraper.msg(result.stdout);
+      return scraper.committee.testNode();
+    }).then(function (result) {
+      scraper.msg(result);
+      if (result === "blocked") {
+        return scraper.getNewID();
+      } else {
+        fulfill();
+      }
+    }).catch(function (err) {
+      scraper.msg(err);
+      return reject();
     });
   });
 };
@@ -1395,10 +1432,16 @@ scraper.screenshot = function (url, filename) {
         console.log(data);
         if (data.status === 'denied') {
           scraper.checkBlock().then(function () {
+            scraper.url({
+              'url': filename
+            });
             fulfill();
           });
         }
         console.log("STDOUT:", result.stdout);
+        scraper.url({
+          'url': filename
+        });
         return fulfill();
       })
       .fail(function (err) {
@@ -1421,7 +1464,7 @@ Hearing.prototype.fetch = function () {
     scraper.msg(hear.hearingPage);
     var options = {
       url: hear.hearingPage,
-      agentclass: Agent,
+      agentClass: Agent,
       agentOptions: {
         socksPort: 9050
       },
