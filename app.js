@@ -1371,7 +1371,7 @@ scraper.checkBlock = function () {
   return new Promise(function (fulfill, reject) {
     scrape.committee.testNode().then(function (result) {
       if (result === "allowed") {
-        scraper.msg("No block detected.");
+        //scraper.msg("No block detected.");
         fulfill();
       } else {
         scraper.msg("Attempting new identity...");
@@ -1395,7 +1395,7 @@ scraper.getNewID = function () {
     }).then(function (result) {
       scraper.msg(result);
       if (result === "blocked") {
-        return scraper.getNewID();
+        return scraper.getNewID().then(fulfill);
       } else {
         fulfill();
       }
