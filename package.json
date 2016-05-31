@@ -18,7 +18,7 @@
     "pdftotextjs": "^0.3.1",
     "request": "^2.67.0",
     "rethinkdb": "^2.2.0",
-    "slimerjs": "^0.9.6",
+    "socket.io": "^1.4.6",
     "socks5-http-client": "^1.0.2",
     "url": "^0.10.3"
   },
