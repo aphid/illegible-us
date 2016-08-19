@@ -31,14 +31,14 @@ var scraper = {
     metaDir: './media/metadata/',
     videoDir: './media/video/',
     transcodedDir: './media/transcoded/',
-    webshotDir: '/var/www/html/webshots/',
+    webshotDir: '/home/aphid/domains/oversightmachin.es/public_html/webshots/',
     tempDir: "./media/temp/",
     busy: false,
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
     started: false,
-    //privkey: fs.readFileSync('./privkey.pem'),
-    //cert: fs.readFileSync('./cert.pem'),
+    privkey: fs.readFileSync('./oversightmachin.es.key'),
+    cert: fs.readFileSync('./oversightmachin.es.cert'),
     blocked: false,
     sockets: 5,
     current: 0,
@@ -50,7 +50,7 @@ var scraper = {
     },
     userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
 
-    torPass: fs.readFileSync('torpass.txt'),
+    torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
 };
 if (scraper.privkey && scraper.cert) {
@@ -228,7 +228,7 @@ Video.prototype.getManifest = function () {
             url = url.replace('false', 'true');
 
             //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-            var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url;
+            var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url;
             console.log(command);
             //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
             scraper.msg(">>>> " + command.replace(__dirname, "."));
@@ -1407,7 +1407,7 @@ scraper.checkBlock = function () {
 
 scraper.getNewID = function () {
     return new Promise(function (fulfill, reject) {
-        var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
+        var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g,"") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
         console.log(cmd);
         var nc = cpp.exec(cmd).then(function (result) {
             scraper.msg("SIGNAL NEWNYM");
@@ -1442,8 +1442,8 @@ scraper.screenshot = function (url, filename) {
         }
 
         console.log("capturing " + url + " to " + filename);
-        //var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
-        var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+        var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+       // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
         console.log(command);
         cpp.exec(command, {
                 maxBuffer: 500 * 1024
