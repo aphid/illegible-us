@@ -31,14 +31,15 @@ var scraper = {
     metaDir: './media/metadata/',
     videoDir: './media/video/',
     transcodedDir: './media/transcoded/',
-    webshotDir: '/home/aphid/domains/oversightmachin.es/public_html/webshots/',
+    webshotDir: '/var/www/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
     started: false,
-    privkey: fs.readFileSync('./oversightmachin.es.key'),
-    cert: fs.readFileSync('./oversightmachin.es.cert'),
+    secure: false,
+    //privkey: fs.readFileSync('./oversightmachin.es.key'),
+    //cert: fs.readFileSync('./oversightmachin.es.cert'),
     blocked: false,
     sockets: 5,
     current: 0,
@@ -53,7 +54,13 @@ var scraper = {
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
 };
-if (scraper.privkey && scraper.cert) {
+
+if (scraper.secure){
+    scraper.privkey = "";
+    scraper.cert = "";
+}
+
+if (scraper.secure) {
     var app = require('https').createServer({
         key: scraper.privkey,
         cert: scraper.cert
@@ -228,7 +235,7 @@ Video.prototype.getManifest = function () {
             url = url.replace('false', 'true');
 
             //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-            var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url;
+            var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url + '| grep -v GraphicsCriticalError';
             console.log(command);
             //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
             scraper.msg(">>>> " + command.replace(__dirname, "."));
@@ -604,7 +611,7 @@ Committee.prototype.init = function () {
       (function () {
         return comm.write('test.json');
       }); */
-
+    console.log("here we go...");
     comm.validateLocal().
     then(function () {
         return scraper.checkBlock();
@@ -1442,7 +1449,7 @@ scraper.screenshot = function (url, filename) {
         }
 
         console.log("capturing " + url + " to " + filename);
-        var command = 'xvfb-run -a -e xv.log /home/aphid/bin/slimerjs/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+        var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
        // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
         console.log(command);
         cpp.exec(command, {

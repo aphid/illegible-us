@@ -28,6 +28,7 @@ var HDS = function (url) {
             }
         });
         page.onResourceReceived = function (response) {
+//console.log(response.url);
             var current = new Date().getTime() / 1000;
             if (current - start > 45) {
                 resp.status = "fail";
@@ -35,25 +36,25 @@ var HDS = function (url) {
                 slimer.exit();
             }
 
-            if (response.url.contains('flv')) {
+            if (response.url.includes('flv')) {
                 data.type = "flv";
                 data.src = response.url;
                 page.close();
                 resolve(data);
-            } else if (response.url.contains('mp4?v') && response.status === 200) {
+            } else if (response.url.includes('mp4?v') && response.status === 200) {
                 data.type = "mp4";
                 data.src = response.url;
                 page.close();
                 resolve(data);
             }
-            if (response.status === 200 && (response.url.contains('manifest')) && (!response.url.contains('gif'))) {
+            if (response.status === 200 && (response.url.includes('manifest')) && (!response.url.includes('gif'))) {
                 //console.log(">>>>>>>>>>  " + response.status);
                 url = response.url;
                 //console.log(url);
                 data.type = "hds";
                 data.manifest = url;
             }
-            if (response.status === 200 && response.url.contains('Frag')) {
+            if (response.status === 200 && response.url.includes('Frag')) {
                 data.auth = response.url.split('?').pop();
 
             }
