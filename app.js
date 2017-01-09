@@ -15,7 +15,6 @@ var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
 var http = require('http');
 var cpp = require('child-process-promise');
-var fileExists = require('file-exists');
 var mimovie = require("mimovie");
 var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
@@ -70,60 +69,6 @@ var io = require('socket.io')(app);
 
 //paths should have trailing slash
 
-r.connect({
-    host: scraper.rDb.host,
-    port: scraper.rDb.port
-}).then(function (conn) {
-    scraper.rdbConn = conn;
-    return scraper.setupTables();
-
-});
-
-scraper.setupTables = function () {
-    return new Promise(function (fulfill, reject) {
-
-        r.db('unrInt').tableCreate('hearings').run(scraper.rdbConn).then(function (result) {
-            scraper.msg(result);
-            return fulfill();
-        }).catch(function (result) {
-            if (result.msg.includes('exists')) {
-                scraper.msg("rdb table exists");
-                return fulfill();
-            }
-        });
-    });
-
-};
-
-
-/*
-r.db(scraper.rDb.db).tableCreate('hearings').run(scraper.rdbConn, function (err, result) {
-  if (err) throw err;
-  console.log(JSON.stringify(result, null, 2));
-}); */
-
-
-/*
-Object.defineProperty(global, '__line', {
-  get: function () {
-    return _stack[1].getLineNumber();
-  }
-});
-
-Object.defineProperty(global, '__stack', {
-  get: function () {
-    var orig = Error.prepareStackTrace;
-    Error.prepareStackTrace = function (_, stack) {
-      return stack;
-    };
-    var err = new Error;
-    Error.captureStackTrace(err, arguments.callee);
-    var stack = err.stack;
-    Error.prepareStackTrace = orig;
-    return stack;
-  }
-});
-*/
 scraper.msg = function (thing, kind) {
     console.log(thing);
     if (!kind) {
@@ -220,7 +165,7 @@ Video.prototype.getManifest = function () {
 
     scraper.msg("ADOBE HDS STREAM DETECTED");
     var vid = this;
-    if (fileExists(this.localPath)) {
+    if (fs.existsSync(this.localPath)) {
         scraper.msg("nevermind, file already exists");
         return Promise.resolve();
     } else {
@@ -286,7 +231,7 @@ Video.prototype.fetch = function (data) {
     if (!data.type) {
         return Promise.reject("Problem getting filetype");
     }
-    if (fileExists(scraper.videoDir + vid.basename + ".flv") || fileExists(scraper.videoDir + vid.basename + ".mp4")) {
+    if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
         return Promise.resolve();
     }
     return new Promise(function (fulfill, reject) {
@@ -356,7 +301,7 @@ Video.prototype.transcodeToMP4 = function () {
         temp = scraper.tempDir + vid.basename + '.mp4';
         output = scraper.transcodedDir + vid.basename + '.mp4';
         scraper.msg("transcoding " + input + " to " + output);
-        if (fileExists(output)) {
+        if (fs.existsSync(output)) {
             scraper.msg("Video file already exists " + output);
             return fulfill();
         }
@@ -433,7 +378,7 @@ Video.prototype.transcodeToOgg = function () {
             var input = vid.localPath;
             var temp = scraper.tempDir + vid.basename + ".ogg";
             var output = scraper.transcodedDir + vid.basename + ".ogg";
-            if (fileExists(output)) {
+            if (fs.existsSync(output)) {
                 scraper.msg("ogg already exists! " + output);
                 return fulfill();
             }
@@ -485,7 +430,7 @@ Video.prototype.transcodeToWebm = function () {
             var input = vid.localPath;
             var temp = scraper.tempDir + vid.basename + ".webm";
             var output = scraper.transcodedDir + vid.basename + ".webm";
-            if (fileExists(output)) {
+            if (fs.existsSync(output)) {
                 scraper.msg("webm already exists! " + output);
                 return fulfill();
             }
@@ -569,36 +514,32 @@ scraper.hearing = function (hearing) {
     io.to('oversight').emit('hearing', hearing);
 };
 
-Committee.prototype.scrapeRemote = function () {
+Committee.prototype.scrapeRemote = async function () {
     var comm = this;
     var pages = [];
-
-    return new Promise(function (fulfill, reject) {
-        comm.getHearingIndex(comm.hearingIndex).then(function (resolve) {
-            if (resolve) {
-                for (var i = 1; i <= resolve.lastPage; i++) {
-                    var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
-                    pages.push(page);
-                    scraper.msg(pages);
-                }
+    try {
+        var idx = await comm.getHearingIndex(comm.hearingIndex);
+        if (idx) {
+            for (var i = 1; i <= idx.lastPage; i++) {
+                var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
+                pages.push(page);
+                scraper.msg(pages);
             }
+        }
 
-        }).then(function () {
-            return comm.getPages(pages);
-        }).then(function () {
-            return comm.fetchAll();
-        }).then(function () {
-            return fulfill();
-        }).catch(function (err) {
-            scraper.msg(err);
-            process.kill();
+        await comm.getPages(pages);
+        await comm.fetchAll();
+        return Promise.resolve();
+    } catch (err) {
+        scraper.msg(err);
+        process.kill();
 
-            reject(err);
-        });
-    });
+        return Promise.reject(err);
+    }
 };
 
-Committee.prototype.init = function () {
+
+Committee.prototype.init = async function () {
     var comm = this;
     scraper.committee = this;
     scraper.busy = true;
@@ -608,48 +549,26 @@ Committee.prototype.init = function () {
         return comm.write('test.json');
       }); */
     console.log("here we go...");
-    comm.validateLocal().
-    then(function () {
-        return scraper.checkBlock();
-    }).
-    then(function () {
-        return comm.scrapeRemote();
-        //comm.readLocal().
-    }).
-    then(function () {
-        return comm.write();
-    }).
-    then(function () {
-            scraper.msg("//////////////////////////////////////");
-            scraper.msg("PDFS BEGIN");
-            return comm.queuePdfs();
+    try {
+        await comm.validateLocal();
+        await scraper.checkBlock();
+        await comm.scrapeRemote(); // or comm.readLocal().
+        await comm.write();
+        await comm.queuePdfs();
+        await comm.validateLocal();
+        await comm.textifyPdfs();
+        await comm.write();
+        await comm.getVideos();
+        await comm.getVidMeta();
+        await comm.write();
+        await comm.transcodeVideos();
+        scraper.busy = false;
 
-        }).then(function () {
-            return comm.validateLocal();
-        }).then(function () {
-            //return comm.textifyPdfs();   
-        }).then(function () {
-            scraper.msg("wooo");
-            return comm.write();
-        }).then(function () {
-            return comm.getVideos();
-        }).then(function () {
-            return comm.getVideos();
-        }).then(function () {
-            return comm.getVidMeta();
-        }).then(function () {
-            return comm.write();
-        }).then(function () {
-            return comm.transcodeVideos();
-        }).then(function () {
-            scraper.busy = false;
+    } catch (err) {
+        scraper.msg("something terrible happened");
+        scraper.msg(err);
 
-        })
-        .catch(function (err) {
-            scraper.msg("something terrible happened");
-            scraper.msg(err);
-
-        });
+    }
 };
 
 
@@ -712,19 +631,19 @@ Committee.prototype.getVidMeta = function () {
 Video.transcode = function () {
     var vid = this;
     return new Promise(function (fulfill) {
-        if (fileExists(this.mp4) && fileExists(this.ogg) && fileExists(this.webm)) {
+        if (fs.existsSync(this.mp4) && fs.existsSync(this.ogg) && fs.existsSync(this.webm)) {
             scraper.msg("All transcoded video files exist");
             fulfill();
         } else {
-            if (!fileExists(vid.mp4)) {
+            if (!fs.existsSync(vid.mp4)) {
                 vid.transcodeToMP4.then(function () {
                     return vid.transcode();
                 });
-            } else if (!fileExists(vid.ogg)) {
+            } else if (!fs.existsSync(vid.ogg)) {
                 vid.transcodeToOgg().then(function () {
                     return vid.transcode();
                 });
-            } else if (!fileExists(vid.webm)) {
+            } else if (!fs.existsSync(vid.webm)) {
                 vid.transcodeToWebm().then(function () {
                     return vid.transcode();
                 });
@@ -834,36 +753,21 @@ var Witness = function (options) {
 
 
 
-Committee.prototype.textifyPdfs = function () {
+Committee.prototype.textifyPdfs = async function () {
     var comm = this,
         pdf;
-    return new Promise(function (fulfill, reject) {
-        var queue = Promise.resolve();
-        var pdfs = [];
-        for (var hear of comm.hearings) {
-            for (var wit of hear.witnesses) {
-                for (pdf of wit.pdfs) {
-                    scraper.msg(JSON.stringify(pdf));
-                    pdfs.push(pdf);
-                }
 
+    for (var hear of comm.hearings) {
+        for (var wit of hear.witnesses) {
+            for (pdf of wit.pdfs) {
+                scraper.msg(JSON.stringify(pdf));
+                await pdf.getMeta();
             }
+
         }
-        for (pdf of pdfs) {
-            queue = queue.then(function () {
-                pdf.textify();
-            });
-        }
-        queue.then(function () {
-            scraper.msg("Done extracting text!");
-            return fulfill();
-        });
-        /*
-        .catch(function (err) {
-             scraper.msg("pdf err is " + err);
-             return reject();    
-          });*/
-    });
+    }
+    return Promise.resolve();
+
 };
 
 Committee.prototype.validateLocal = function () {
@@ -882,9 +786,9 @@ Committee.prototype.validateLocal = function () {
     for (var hear of this.hearings) {
         var flvpath = scraper.videoDir + hear.shortdate + '.flv';
         var mp4path = scraper.videoDir + hear.shortdate + '.mp4';
-        if (fileExists(flvpath)) {
+        if (fs.existsSync(flvpath)) {
             hear.video.localPath = flvpath;
-        } else if (fileExists(mp4path)) {
+        } else if (fs.existsSync(mp4path)) {
             hear.video.localPath = mp4path;
         }
     }
@@ -982,36 +886,33 @@ scraper.getFile = function (url, dest) {
 };
 
 
-Pdf.prototype.getMeta = function () {
+Pdf.prototype.getMeta = async function () {
     var pdf = this;
     var input = this.localPath;
     var jsonpath = scraper.metaDir + pdf.localName + ".json";
     scraper.msg(">>>>>>>>>>>>>>" + input + " " + jsonpath);
-    return new Promise(function (fulfill, reject) {
-        if (fileExists(jsonpath)) {
+    return new Promise(function (resolve, reject) {
+        if (fs.existsSync(jsonpath)) {
             var msize = fs.statSync(jsonpath).size;
             scraper.msg(jsonpath + " exists! (" + msize + ")");
             if (msize) {
                 scraper.msg("meta's already here, moving on");
-                return fulfill();
+                return resolve();
+            } else {
+
             }
 
         } else {
             scraper.msg("creating metadata...");
-            exif.metadata(input, function (err, metadata) {
+            exif.metadata(input, async function (err, metadata) {
                 if (err) {
                     reject("exiftool error: " + err);
                 } else {
                     var json = JSON.stringify(metadata, undefined, 2);
                     scraper.msg(json, 'detail');
-                    pfs.writeFile(jsonpath, json).then(function () {
-                        pdf.textify();
-
-                    }).then(function () {
-                        setTimeout(function () {
-                            return fulfill();
-                        }, 4500);
-                    });
+                    await pfs.writeFile(jsonpath, json);
+                    await pdf.textify();
+                    return fulfill();
 
                 }
             }); //end metadata
@@ -1025,19 +926,8 @@ Video.prototype.getMeta = function () {
     var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
     var etpath = scraper.metaDir + vid.basename + ".exiftool.json";
     return new Promise(function (fulfill, reject) {
-        /* mimovie(input, function (err, res) {
-          if (err) {
-            reject(scraper.msg(err));
-          }
-          pfs.writeFile(jsonpath, JSON.stringify(res, undefined, 2)).then(function () {
-            vid.mimeta = mipath;
-            fulfill();
-          });
-        });
-          */
 
-
-        exif.metadata(input, function (err, metadata) {
+        exif.metadata(input, async function (err, metadata) {
             scraper.msg("metadata for: ", vid);
             var vcode;
             if (err) {
@@ -1058,20 +948,18 @@ Video.prototype.getMeta = function () {
                 scraper.msg(JSON.stringify(metadata), 'detail');
             }
             scraper.msg(vid.type);
-            if (fileExists(etpath)) {
-                vid.etpath = etpath;
+            if (fs.existsSync(etpath)) {
+                vid.metapath = etpath;
                 scraper.msg(JSON.stringify(metadata), 'detail');
                 scraper.msg('skipping meta');
                 return fulfill();
             }
             scraper.msg(JSON.stringify(metadata));
-            pfs.writeFile(etpath, JSON.stringify(metadata)).then(function () {
-                vid.etpath = etpath;
-                scraper.msg('metadata written');
-                setTimeout(function () {
-                    return fulfill();
-                }, 4500);
-            });
+            await pfs.writeFile(etpath, JSON.stringify(metadata));
+            vid.metapath = etpath;
+            scraper.msg('metadata written');
+            return fulfill();
+
 
 
         });
@@ -1079,19 +967,22 @@ Video.prototype.getMeta = function () {
 
 };
 
-Pdf.prototype.imagify = function () {
+Pdf.prototype.imagify = async function () {
     //STUB!!! if pdf doesn't have data/text then break into images for OCR.
-
-    var pdf = this;
-    var dest = ""; //where do image files go?
-
-    return new Promise(function (fulfill, reject) {
-        fulfill();
-    });
-
+    var basename = this.localName.replace(".pdf", "");
+    var imgdir = scraper.textDir + basename;
+    try {
+        fs.mkdirSync(imgdir);
+    } catch (e) {
+        scraper.msg("dir exists");
+    }
+    this.imgdir = imgdir;
+    var cmd = "convert - density 300 input.pdf - quality 100 " + imgdir + "/basename.png";
+    var nc = await cpp.exec(cmd);
+    return Promise.resolve();
 };
 
-Pdf.prototype.textify = function () {
+Pdf.prototype.textify = async function () {
     var pdf = this;
     var dest = this.localPath;
     var txtpath = scraper.textDir + this.localName + ".txt";
@@ -1100,7 +991,7 @@ Pdf.prototype.textify = function () {
 
     return new Promise(function (fulfill, reject) {
 
-        if (fileExists(txtpath)) {
+        if (fs.existsSync(txtpath)) {
             var msize = fs.statSync(txtpath).size;
             scraper.msg(txtpath + " exists! (" + msize + ")");
             scraper.msg("txt's already here, moving on");
@@ -1109,7 +1000,7 @@ Pdf.prototype.textify = function () {
         }
         scraper.msg("Attempting to create text: " + txtpath);
         var pdftxt = new pdftotext(dest);
-        pdftxt.getText(function (err, data, cmd) {
+        pdftxt.getText(async function (err, data, cmd) {
             scraper.msg("Extracting text: " + dest);
             if (err) {
                 scraper.msg("txt extraction error " + err + " " + cmd);
@@ -1119,6 +1010,7 @@ Pdf.prototype.textify = function () {
                 scraper.msg("NO ERROR");
                 console.error("NO DATA");
                 pdf.needsScan = true;
+                await pdf.imagify();
                 fulfill();
             }
             scraper.msg("DATA");
@@ -1139,7 +1031,7 @@ Pdf.prototype.textify = function () {
     });
 };
 
-Committee.prototype.queuePdfs = function () {
+Committee.prototype.queuePdfs = async function () {
     var pdfs = [];
     for (var hear of this.hearings) {
         scraper.msg(hear.title + ": ");
@@ -1147,61 +1039,32 @@ Committee.prototype.queuePdfs = function () {
         for (var wit of hear.witnesses) {
             for (var pdf of wit.pdfs) {
                 scraper.msg(" " + pdf.remotefileName);
-                pdfs.push(pdf);
+                await pdf.fetch();
+                await pdf.getMeta();
+
             }
         }
     }
-    return new Promise(function (fulfill) {
-
-        var queue = Promise.resolve();
-        pdfs.forEach(function (pdf) {
-            queue = queue.then(function () {
-                return pdf.fetch().then(function () {
-                    return pdf.getMeta();
-
-                }).then(function () {
-                    return pdf.imagify();
-                });
-            });
-        });
-
-        queue.then(function () {
-            scraper.msg("Done with pdf queue!");
-            return fulfill();
-        }).catch(function (err) {
-            scraper.msg("pdf err is " + err);
-            return fulfill();
-        });
-    });
+    return Promise.resolve();
 };
 
 
 
-Pdf.prototype.fetch = function () {
+Pdf.prototype.fetch = async function () {
     scraper.msg("getting " + this.localName);
     var pdf = this;
-    return new Promise(function (fulfill, reject) {
-        var incoming = scraper.incomingDir + pdf.localName;
-        var dest = scraper.textDir + pdf.localName;
+    var incoming = scraper.incomingDir + pdf.localName;
+    var dest = scraper.textDir + pdf.localName;
 
-        if (fileExists(dest)) {
-            pdf.localPath = dest;
-            return fulfill();
-        }
-        scraper.msg(incoming + " " + dest);
-        scraper.getFile(pdf.remoteUrl, incoming).then(function () {
-                fs.renameSync(incoming, dest);
-                pdf.localPath = dest;
-            }).then(function () {
-                fulfill();
-            })
-            .catch(function (err) {
-                scraper.msg("rejecting" + pdf.localName);
-                reject(err);
-                //scraper.workQueue();
-            });
-
-    });
+    if (fs.existsSync(dest)) {
+        pdf.localPath = dest;
+        return fulfill();
+    }
+    scraper.msg(incoming + " " + dest);
+    await scraper.getFile(pdf.remoteUrl, incoming)
+    fs.renameSync(incoming, dest);
+    pdf.localPath = dest;
+    return Promise.resolve();
 
 };
 
@@ -1254,26 +1117,17 @@ Committee.prototype.getPages = function (pages) {
     }));
 };
 
-Committee.prototype.fetchAll = function () {
-    var comm = this;
-    return new Promise(function (fulfill, reject) {
-
-        var queue = Promise.resolve();
-        comm.hearings.forEach(function (hear) {
-            queue = queue.then(function () {
-                return hear.fetch();
-            });
-        });
-        queue.then(function () {
-            return fulfill();
-        });
-    });
+Committee.prototype.fetchAll = async function () {
+    for (var hear of this.hearings) {
+        await hear.fetch();
+    }
+    return Promise.resolve();
 };
 
 Committee.prototype.getHearingIndex = function (url) {
     var comm = this;
     var lastPage;
-    return new Promise(function (fulfill, reject) {
+    return new Promise(async function (fulfill, reject) {
 
         var options = {
             url: url,
@@ -1287,12 +1141,12 @@ Committee.prototype.getHearingIndex = function (url) {
         };
         scraper.msg("trying " + JSON.stringify(options));
         var imgname = "hearpage" + moment().format("YYYYMMDD");
-        scraper.screenshot(url, imgname).then(function () {
-            return scraper.url({
-                'url': imgname
-            });
-        }).then(function () {
-            request(options, function (error, response, html) {
+        await scraper.screenshot(url, imgname);
+        scraper.url({
+            'url': imgname
+        });
+        try {
+            await request(options, function (error, response, html) {
                 if (error) {
                     scraper.msg("error " + error);
                     reject(error);
@@ -1326,9 +1180,6 @@ Committee.prototype.getHearingIndex = function (url) {
                             "lastPage": lastPage.query.page
                         });
                     } else {
-                        /* scraper.url({
-                          'url': url
-                        }); */
                         fulfill();
                     }
                 } else {
@@ -1336,7 +1187,9 @@ Committee.prototype.getHearingIndex = function (url) {
                     return fulfill('fail');
                 }
             }); // end request
-        }); // end then
+        } catch (err) {
+            return reject(err);
+        }
     }); // end promise
 
 };
@@ -1357,11 +1210,11 @@ Committee.prototype.testNode = function () {
         request(options, function (error, response, html) {
             if (error) {
                 scraper.msg("CheckBlock is throwing an error: " + error);
-                reject(error);
+                return reject(error);
             }
             if (!response) {
                 console.log("dead socket");
-                reject("dead socket");
+                return reject("dead socket");
             }
             if (response.statusCode === 403) {
                 scraper.blocked = true;
@@ -1389,25 +1242,23 @@ Committee.prototype.testNode = function () {
     });
 };
 
-scraper.checkBlock = function () {
+scraper.checkBlock = async function () {
     var scrape = this;
     scraper.msg("Testing for CDN block");
-    return new Promise(function (fulfill, reject) {
-        scrape.committee.testNode().then(function (result) {
-            if (result === "allowed") {
-                //scraper.msg("No block detected.");
-                fulfill();
-            } else {
-                scraper.msg("Attempting new identity...");
-                return scraper.getNewID().then(fulfill);
-            }
-        }).catch(function (err) {
-            scraper.msg(err);
-        });
-    });
-
+    try {
+        var resp = await scrape.committee.testNode();
+        if (resp === "allowed") {
+            scraper.msg("No block detected.");
+            return Promise.resolve();
+        } else {
+            scraper.msg("Attempting new identity...");
+            await scraper.getNewID();
+            return Promise.resolve();
+        }
+    } catch (err) {
+        scraper.msg(err);
+    };
 };
-
 
 scraper.getNewID = function () {
     return new Promise(function (fulfill, reject) {
@@ -1439,8 +1290,8 @@ scraper.screenshot = function (url, filename) {
     }
 
     return new Promise(function (fulfill, reject) {
-
-        if (fileExists(scraper.webshotDir + filename)) {
+        console.log("looking for " + scraper.webshotDir + filename);
+        if (fs.existsSync(scraper.webshotDir + filename + ".png")) {
             console.log("shot already exists");
             return fulfill();
         }
@@ -1461,20 +1312,21 @@ scraper.screenshot = function (url, filename) {
                         'url': data.filename
                     });
                     scraper.checkBlock().then(function () {
-                        fulfill();
+                        fulfill(data);
                     });
                 }
                 console.log("STDOUT:", result.stdout);
                 scraper.url({
                     'url': filename
                 });
-                return fulfill();
+                return fulfill(data);
             })
-            .fail(function (err) {
+            .fail(async function (err) {
                 console.error('ERROR: ', (err.stack || err));
                 //reject(err);
                 console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
-                scraper.screenshot(url, filename).then(fulfill);
+                await scraper.screenshot(url, filename)
+                fulfill();
                 //process.exit(1);
             })
             .progress(function (childProcess) {

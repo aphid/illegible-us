@@ -1,4 +1,4 @@
-var url = system.args[0];
+var url = phantom.args[0];
 
 var resp = {};
 var page = require('webpage').create();
