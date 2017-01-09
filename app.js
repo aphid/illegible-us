@@ -23,6 +23,12 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
+    secure: false,
+    //privkey: fs.readFileSync('./privkey.pem'),
+    //cert: fs.readFileSync('./cert.pem'),
+    torPass: fs.readFileSync('torpass.txt', 'utf8'),
+    torPort: 9051,
+
     dataDir: './data/',
     hearingDir: './data/hearings/',
     textDir: './media/text/',
@@ -37,9 +43,6 @@ var scraper = {
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
     started: false,
-    secure: true,
-    privkey: fs.readFileSync('./privkey.pem'),
-    cert: fs.readFileSync('./cert.pem'),
     blocked: false,
     sockets: 5,
     current: 0,
@@ -50,9 +53,6 @@ var scraper = {
         db: 'unrInt'
     },
     userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
-
-    torPass: fs.readFileSync('torpass.txt', 'utf8'),
-    torPort: 9051,
 };
 
 
@@ -916,8 +916,9 @@ var Pdf = function (options) {
 
 scraper.getFile = function (url, dest) {
     var digits;
+    const lib = url.startsWith('https') ? require('https') : require('http');
     return new Promise(function (fulfill, reject) {
-        if (fileExists(dest)) {
+        if (fs.existsSync(dest)) {
             //file exists
             var size = fs.statSync(dest).size;
             scraper.msg(dest + " exists (" + size + ")");
@@ -941,7 +942,7 @@ scraper.getFile = function (url, dest) {
             }
             scraper.msg("file " + dest + " doesn't exist yet...");
             var file = fs.createWriteStream(dest);
-            http.get(url, function (response) {
+            lib.get(url, function (response) {
                 var cur = 0;
                 var pct = 0;
                 var len = parseInt(response.headers['content-length'], 10);
@@ -1410,7 +1411,7 @@ scraper.checkBlock = function () {
 
 scraper.getNewID = function () {
     return new Promise(function (fulfill, reject) {
-        var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g,"") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
+        var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g, "") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
         console.log(cmd);
         var nc = cpp.exec(cmd).then(function (result) {
             scraper.msg("SIGNAL NEWNYM");
@@ -1446,7 +1447,7 @@ scraper.screenshot = function (url, filename) {
 
         console.log("capturing " + url + " to " + filename);
         var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
-       // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+        // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
         console.log(command);
         cpp.exec(command, {
                 maxBuffer: 500 * 1024
