@@ -37,9 +37,9 @@ var scraper = {
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
     started: false,
-    secure: false,
-    //privkey: fs.readFileSync('./oversightmachin.es.key'),
-    //cert: fs.readFileSync('./oversightmachin.es.cert'),
+    secure: true,
+    privkey: fs.readFileSync('./privkey.pem'),
+    cert: fs.readFileSync('./cert.pem'),
     blocked: false,
     sockets: 5,
     current: 0,
@@ -55,10 +55,6 @@ var scraper = {
     torPort: 9051,
 };
 
-if (scraper.secure){
-    scraper.privkey = "";
-    scraper.cert = "";
-}
 
 if (scraper.secure) {
     var app = require('https').createServer({
