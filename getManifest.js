@@ -1,4 +1,4 @@
-var url = phantom.args[0];
+var url = system.args[0];
 
 var resp = {};
 var page = require('webpage').create();
@@ -28,7 +28,7 @@ var HDS = function (url) {
             }
         });
         page.onResourceReceived = function (response) {
-//console.log(response.url);
+            //console.log(response.url);
             var current = new Date().getTime() / 1000;
             if (current - start > 45) {
                 resp.status = "fail";
