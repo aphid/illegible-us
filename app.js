@@ -891,33 +891,32 @@ Pdf.prototype.getMeta = async function () {
     var input = this.localPath;
     var jsonpath = scraper.metaDir + pdf.localName + ".json";
     scraper.msg(">>>>>>>>>>>>>>" + input + " " + jsonpath);
-    return new Promise(function (resolve, reject) {
-        if (fs.existsSync(jsonpath)) {
-            var msize = fs.statSync(jsonpath).size;
-            scraper.msg(jsonpath + " exists! (" + msize + ")");
-            if (msize) {
-                scraper.msg("meta's already here, moving on");
-                return resolve();
+    if (fs.existsSync(jsonpath)) {
+        var msize = fs.statSync(jsonpath).size;
+        scraper.msg(jsonpath + " exists! (" + msize + ")");
+        if (msize) {
+            scraper.msg("meta's already here, moving on");
+            return Promise.resolve();
+        } else {
+
+        }
+
+    } else {
+        scraper.msg("creating metadata...");
+        var resp = await exif.metadata(input, async function (err, metadata) {
+            if (err) {
+                return Promise.reject("exiftool error: " + err);
             } else {
+                var json = JSON.stringify(metadata, undefined, 2);
+                scraper.msg(json, 'detail');
+                await pfs.writeFile(jsonpath, json);
+                await pdf.textify();
+                return Promise.resolve();
 
             }
-
-        } else {
-            scraper.msg("creating metadata...");
-            exif.metadata(input, async function (err, metadata) {
-                if (err) {
-                    reject("exiftool error: " + err);
-                } else {
-                    var json = JSON.stringify(metadata, undefined, 2);
-                    scraper.msg(json, 'detail');
-                    await pfs.writeFile(jsonpath, json);
-                    await pdf.textify();
-                    return fulfill();
-
-                }
-            }); //end metadata
-        }
-    });
+        }); //end metadata
+        return resp;
+    }
 };
 
 Video.prototype.getMeta = function () {
@@ -989,18 +988,18 @@ Pdf.prototype.textify = async function () {
     this.txtpath = txtpath;
     scraper.msg("working on " + this.txtpath);
 
-    return new Promise(function (fulfill, reject) {
 
-        if (fs.existsSync(txtpath)) {
-            var msize = fs.statSync(txtpath).size;
-            scraper.msg(txtpath + " exists! (" + msize + ")");
-            scraper.msg("txt's already here, moving on");
-            fulfill();
+    if (fs.existsSync(txtpath)) {
+        var msize = fs.statSync(txtpath).size;
+        scraper.msg(txtpath + " exists! (" + msize + ")");
+        scraper.msg("txt's already here, moving on");
+        return Promise.resolve();
 
-        }
-        scraper.msg("Attempting to create text: " + txtpath);
-        var pdftxt = new pdftotext(dest);
-        pdftxt.getText(async function (err, data, cmd) {
+    }
+    scraper.msg("Attempting to create text: " + txtpath);
+    var pdftxt = new pdftotext(dest);
+    try {
+        var resp = await pdftxt.getText(async function (err, data, cmd) {
             scraper.msg("Extracting text: " + dest);
             if (err) {
                 scraper.msg("txt extraction error " + err + " " + cmd);
@@ -1011,13 +1010,13 @@ Pdf.prototype.textify = async function () {
                 console.error("NO DATA");
                 pdf.needsScan = true;
                 await pdf.imagify();
-                fulfill();
+                return Promise.resolve();
             }
             scraper.msg("DATA");
             if (data.length > 100) {
                 scraper.msg(data.substring(0, 2000) + "...", "txt");
             }
-            fs.writeFile((txtpath), data, function (err) {
+            var fz = await pfs.writeFile((txtpath), data, function (err) {
                 scraper.msg('writing file (' + data.length + ')');
                 if (err) {
                     scraper.msg("ERROR WRITING TXT" + err);
@@ -1025,10 +1024,15 @@ Pdf.prototype.textify = async function () {
                 }
                 scraper.msg('text extraction complete');
                 pdf.txtpath = txtpath;
-                fulfill();
             });
+            return Promise.resolve();
+
         });
-    });
+        console.log(resp);
+        return resp;
+    } catch (err) {
+        throw (err);
+    }
 };
 
 Committee.prototype.queuePdfs = async function () {
@@ -1058,7 +1062,7 @@ Pdf.prototype.fetch = async function () {
 
     if (fs.existsSync(dest)) {
         pdf.localPath = dest;
-        return fulfill();
+        return Promise.resolve();
     }
     scraper.msg(incoming + " " + dest);
     await scraper.getFile(pdf.remoteUrl, incoming)
@@ -1260,79 +1264,67 @@ scraper.checkBlock = async function () {
     };
 };
 
-scraper.getNewID = function () {
-    return new Promise(function (fulfill, reject) {
-        var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g, "") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
-        console.log(cmd);
-        var nc = cpp.exec(cmd).then(function (result) {
-            scraper.msg("SIGNAL NEWNYM");
-            scraper.msg(result.stdout);
-            return scraper.committee.testNode();
-        }).then(function (result) {
-            scraper.msg(result);
-            if (result === "blocked") {
-                return scraper.getNewID().then(fulfill);
-            } else {
-                fulfill();
-            }
-        }).catch(function (err) {
-            scraper.msg(err);
-            return reject();
-        });
-    });
+scraper.getNewID = async function () {
+    var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g, "") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
+    console.log(cmd);
+    try {
+        var result = await cpp.exec(cmd);
+
+        scraper.msg("SIGNAL NEWNYM");
+        scraper.msg(result.stdout);
+        await scraper.committee.testNode();
+        scraper.msg(result);
+        if (result === "blocked") {
+            await scraper.getNewID();
+            Promise.resolve();
+        } else {
+            Promise.resolve();
+
+        }
+    } catch (err) {
+        scraper.msg(err);
+        return Promise.reject();
+    };
 };
 
-scraper.screenshot = function (url, filename) {
+scraper.screenshot = async function (url, filename) {
 
     if (filename.includes("undefined")) {
         console.log("UNDEFINED");
         process.exit();
     }
 
-    return new Promise(function (fulfill, reject) {
-        console.log("looking for " + scraper.webshotDir + filename);
-        if (fs.existsSync(scraper.webshotDir + filename + ".png")) {
-            console.log("shot already exists");
-            return fulfill();
-        }
+    console.log("looking for " + scraper.webshotDir + filename);
+    if (fs.existsSync(scraper.webshotDir + filename + ".png")) {
+        console.log("shot already exists");
+        return Promise.resolve();
+    }
 
-        console.log("capturing " + url + " to " + filename);
-        var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
-        // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
-        console.log(command);
-        cpp.exec(command, {
-                maxBuffer: 500 * 1024
-            }).then(function (result) {
-                var response = result.stdout.replace("Vector smash protection is enabled.", "");
-                console.log(response);
-                var data = JSON.parse(response);
-                console.log(data);
-                if (data.status === 'denied') {
-                    scraper.url({
-                        'url': data.filename
-                    });
-                    scraper.checkBlock().then(function () {
-                        fulfill(data);
-                    });
-                }
-                console.log("STDOUT:", result.stdout);
-                scraper.url({
-                    'url': filename
-                });
-                return fulfill(data);
-            })
-            .fail(async function (err) {
-                console.error('ERROR: ', (err.stack || err));
-                //reject(err);
-                console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
-                await scraper.screenshot(url, filename)
-                fulfill();
-                //process.exit(1);
-            })
-            .progress(function (childProcess) {
-                scraper.msg('[exec] childProcess.pid: ', childProcess.pid);
-            });
-    }); //promise
+    console.log("capturing " + url + " to " + filename);
+    var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
+    // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
+    console.log(command);
+    var result = await cpp.exec(command, {
+        maxBuffer: 500 * 1024
+    });
+
+    var response = result.stdout.replace("Vector smash protection is enabled.", "");
+    console.log(response);
+    var data = JSON.parse(response);
+    console.log(data);
+    if (data.status === 'denied') {
+        scraper.url({
+            'url': data.filename
+        });
+        await scraper.checkBlock();
+        fulfill(data);
+    }
+
+    console.log("STDOUT:", result.stdout);
+    scraper.url({
+        'url': filename
+    });
+    return Promise.resolve(data);
 };
 
 Hearing.prototype.fetch = function () {
@@ -1496,15 +1488,11 @@ io.on("connect", function (socket) {
 
 });
 
-scraper.shutDown = function () {
+scraper.shutDown = async function () {
     console.log("SHUTTING DOWN");
-    scraper.cleanupTemp().then(function () {
-        return scraper.cleanupFrags();
-    }).then(function () {
-        scraper.msg("EXITING");
-        return process.exit(1);
-    });
-
+    await scraper.cleanupTemp();
+    await scraper.cleanupFrags();
+    return process.exit(1);
 };
 
 process.on('SIGINT', function () {
