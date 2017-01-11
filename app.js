@@ -576,34 +576,22 @@ Committee.prototype.transcodeVideos = function () {
     scraper.msg("//////////////////////transcooooode");
     var comm = this;
 
+    for (var hear of this.hearings) {
+        var vid = hear.video;
+        if (!vid.type) {
+            await vid.getMeta();
+        }
+        scraper.msg("Calling meta func for" + vid.localPath);
+        await hear.video.transcodeToMP4().
+        scraper.msg("transcoding finished");
+        await hear.video.transcodeToOgg();
+        await hear.video.transcodeToWebm();
+    }
 
-    return new Promise(function (fulfill) {
 
-        var queue = Promise.resolve();
-        comm.hearings.forEach(function (hear) {
-            var vid = hear.video;
-            if (!vid.type) {
-                queue = queue.then(function () {
-                    return vid.getMeta();
-                });
-            }
-            queue = queue.then(function () {
-                scraper.msg("Calling meta func for" + vid.localPath);
-                return hear.video.transcodeToMP4().then(function () {
-                    scraper.msg("transcoding finished");
 
-                    return hear.video.transcodeToOgg();
-                }).then(function () {
-                    return hear.video.transcodeToWebm();
-                });
-            });
-        });
-
-        queue.then(function () {
-            scraper.msg("Done with transcode!");
-            return fulfill();
-        });
-    });
+    scraper.msg("Done with transcode!");
+    return Promise.resolve();
 };
 
 
@@ -652,38 +640,28 @@ Video.transcode = function () {
     });
 };
 
-Committee.prototype.getVideos = function () {
+Committee.prototype.getVideos = async function () {
     scraper.msg("SCRAPING VIDEOS");
-    var comm = this;
-    return new Promise(function (fulfill, reject) {
 
-        var queue = Promise.resolve();
-        comm.hearings.forEach(function (hear) {
-            var vid = hear.video;
-            queue = queue.then(function () {
-                scraper.msg("Fetching videos for " + hear.shortdate);
-                scraper.msg(vid.localPath);
-                scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
-                return hear.video.getManifest().then(function (result) {
-                    scraper.msg("MANIFEST LOCATED");
-                    if (result) {
-                        return hear.video.fetch(result);
-                    }
+    for (var hear of this.hearings) {
+        var vid = hear.video;
+        scraper.msg("Fetching videos for " + hear.shortdate);
+        scraper.msg(vid.localPath);
+        scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
+        try {
+            var result = await hear.video.getManifest();
+            scraper.msg("MANIFEST LOCATED");
+            if (result) {
+                return hear.video.fetch(result);
+            }
+        } catch (err) {
+            scraper.msg(err);
+            return Promise.reject(err);
 
-                }).catch(function (err) {
-                    scraper.msg(err);
-                    reject(err);
-                });
 
-            });
-        });
-
-        queue.then(function () {
-            scraper.msg("Done getting videos");
-            return fulfill();
-        });
-
-    });
+        }
+    }
+    return Promise.resolve();
 };
 
 
@@ -724,21 +702,14 @@ Committee.prototype.readLocal = function () {
 };
 
 
-Committee.prototype.write = function (filename) {
+Committee.prototype.write = async function (filename) {
     if (!filename) {
         filename = "data.json";
     }
     var comm = this;
-    return new Promise(function (fulfill, reject) {
-        var json = JSON.stringify(comm, undefined, 2);
-        pfs.writeFile((scraper.dataDir + filename), json).then(function (err) {
-            if (err) {
-                reject(err);
-            }
-            scraper.msg("><><><><><><><><>The file was saved!");
-            return fulfill();
-        });
-    });
+    var json = JSON.stringify(comm, undefined, 2);
+    var resp = await pfs.writeFile((scraper.dataDir + filename), json);
+    return resp;
 };
 
 
@@ -919,55 +890,48 @@ Pdf.prototype.getMeta = async function () {
     }
 };
 
-Video.prototype.getMeta = function () {
+Video.prototype.getMeta = async function () {
     var vid = this;
     var input = this.localPath;
-    var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
-    var etpath = scraper.metaDir + vid.basename + ".exiftool.json";
-    return new Promise(function (fulfill, reject) {
-
-        exif.metadata(input, async function (err, metadata) {
-            scraper.msg("metadata for: ", vid);
-            var vcode;
-            if (err) {
-                reject(err);
+    //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
+    var etpath = scraper.metaDir + vid.basename + ".json";
+    var resp = await exif.metadata(input, async function (err, metadata) {
+        scraper.msg("metadata for: ", vid);
+        var vcode;
+        if (err) {
+            return Promise.reject(err);
+        }
+        if (metadata.videoEncoding) {
+            vcode = metadata.videoEncoding;
+            if (vcode === "On2 VP6") {
+                vid.type = "flv";
+            } else if (metadata.fileType === "FLV" && vcode === "H.264") {
+                vid.type = "hds";
+            } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+                vid.type = "h264";
             }
-            if (metadata.videoEncoding) {
-                vcode = metadata.videoEncoding;
-                if (vcode === "On2 VP6") {
-                    vid.type = "flv";
-                } else if (metadata.fileType === "FLV" && vcode === "H.264") {
-                    vid.type = "hds";
-                } else if (metadata.fileType === "MP4" && vcode === "H.264") {
-                    vid.type = "h264";
-                }
-            } else if (metadata.fileType === "MP4" && !vcode) {
-                vid.type = "mp4";
-            } else {
-                scraper.msg(JSON.stringify(metadata), 'detail');
-            }
-            scraper.msg(vid.type);
-            if (fs.existsSync(etpath)) {
-                vid.metapath = etpath;
-                scraper.msg(JSON.stringify(metadata), 'detail');
-                scraper.msg('skipping meta');
-                return fulfill();
-            }
-            scraper.msg(JSON.stringify(metadata));
-            await pfs.writeFile(etpath, JSON.stringify(metadata));
+        } else if (metadata.fileType === "MP4" && !vcode) {
+            vid.type = "mp4";
+        } else {
+            scraper.msg(JSON.stringify(metadata), 'detail');
+        }
+        scraper.msg(vid.type);
+        if (fs.existsSync(etpath)) {
             vid.metapath = etpath;
-            scraper.msg('metadata written');
-            return fulfill();
-
-
-
-        });
+            scraper.msg(JSON.stringify(metadata), 'detail');
+            scraper.msg('skipping meta');
+            return Promise.resolve();
+        }
+        scraper.msg(JSON.stringify(metadata));
+        await pfs.writeFile(etpath, JSON.stringify(metadata));
+        vid.metapath = etpath;
+        scraper.msg('metadata written');
+        return Promise.resolve();
     });
-
+    return resp;
 };
 
 Pdf.prototype.imagify = async function () {
-    //STUB!!! if pdf doesn't have data/text then break into images for OCR.
     var basename = this.localName.replace(".pdf", "");
     var imgdir = scraper.textDir + basename;
     try {
@@ -1352,7 +1316,7 @@ Hearing.prototype.fetch = function () {
 
             request(options, function (error, response, html) {
                 var target;
-                if (error) {
+                if (error || !response.statusCode) {
                     scraper.msg(hear.hearingPage + " is throwing an error: " + error);
                     reject(error);
                 }
