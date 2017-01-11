@@ -12,7 +12,6 @@
     "fs-promise": "^0.3.1",
     "glob": "^5.0.14",
     "graceful-fs": "^4.1.2",
-    "mimovie": "^1.0.0",
     "moment": "^2.10.3",
     "node-slimerjs": "^1.0.1",
     "pdftotextjs": "^0.3.1",

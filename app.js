@@ -15,7 +15,6 @@ var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
 var http = require('http');
 var cpp = require('child-process-promise');
-var mimovie = require("mimovie");
 var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
@@ -88,18 +87,19 @@ scraper.url = function (url) {
     io.to('oversight').emit('url', url);
 };
 
-scraper.cleanupFrags = function () {
-    return new Promise(function (resolve, reject) {
-        glob("*Frag*", function (er, files) {
-            if (files.length) {
-                scraper.msg('deleting ' + files.length + ' temp fragments');
-            }
-            for (var file of files) {
-                fs.unlinkSync(file);
-            }
-            resolve();
-        });
+scraper.cleanupFrags = async function () {
+    var result = await glob("*Frag*", function (er, files) {
+        fs.unlinkSync("Cookies.txt");
+        if (files.length) {
+            scraper.msg('deleting ' + files.length + ' temp fragments');
+        }
+        for (var file of files) {
+            fs.unlinkSync(file);
+        }
+        return Promise.resolve();
     });
+    return result;
+
 };
 
 scraper.cleanupTemp = function () {
@@ -258,7 +258,7 @@ Video.prototype.fetch = function (data) {
                 scraper.msg('Requesting HDS fragments with credentials:');
                 scraper.msg(' Authentication key: ' + data.auth);
                 scraper.msg(' Manifest: ' + data.manifest);
-                //scraper.msg(command);
+                scraper.msg(childArgs);
                 cpp.spawn("php", childArgs).fail(function (err) {
                         console.error('SPAWN ERROR: ', (err.stack || err));
                         reject(err);
@@ -572,7 +572,7 @@ Committee.prototype.init = async function () {
 };
 
 
-Committee.prototype.transcodeVideos = function () {
+Committee.prototype.transcodeVideos = async function () {
     scraper.msg("//////////////////////transcooooode");
     var comm = this;
 
