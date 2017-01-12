@@ -89,17 +89,18 @@ scraper.url = function (url) {
 
 scraper.cleanupFrags = async function () {
     var result = await glob("*Frag*", function (er, files) {
-        fs.unlinkSync("Cookies.txt");
         if (files.length) {
             scraper.msg('deleting ' + files.length + ' temp fragments');
         }
         for (var file of files) {
             fs.unlinkSync(file);
         }
+        if (fs.existsSync("Cookies.txt")) {
+            fs.unlinkSync("Cookies.txt");
+        }
         return Promise.resolve();
     });
     return result;
-
 };
 
 scraper.cleanupTemp = function () {
@@ -223,6 +224,7 @@ Video.prototype.getManifest = function () {
 
 
 };
+
 
 Video.prototype.fetch = function (data) {
     var vid = this,
@@ -595,24 +597,14 @@ Committee.prototype.transcodeVideos = async function () {
 };
 
 
-Committee.prototype.getVidMeta = function () {
+Committee.prototype.getVidMeta = async function () {
     scraper.msg("##META META META##");
     var comm = this;
-    return new Promise(function (fulfill) {
-        var queue = Promise.resolve();
-        comm.hearings.forEach(function (hear) {
-            var vid = hear.video;
-            queue = queue.then(function () {
-                scraper.msg("Calling meta func for" + vid.localPath);
-                return vid.getMeta();
-            });
-        });
-
-        queue.then(function () {
-            scraper.msg("Done with metadata");
-            return fulfill();
-        });
-    });
+    for (var hear of this.hearings) {
+        var vid = hear.video;
+        await vid.getMeta();
+    }
+    return Promise.resolve();
 };
 
 
