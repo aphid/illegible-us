@@ -21,7 +21,7 @@ requestPage = function () {
     }).then(function () {
         if (page.content.includes("Denied")) {
 
-            page.render(dir + filename + ".denied.png");
+            page.render(filename + ".denied.png");
 
             response = {
                 status: "denied",

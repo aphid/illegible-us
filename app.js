@@ -21,20 +21,20 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
-    secure: false,
-    //privkey: fs.readFileSync('./privkey.pem'),
-    //cert: fs.readFileSync('./cert.pem'),
+    secure: true,
+    privkey: fs.readFileSync('./privkey.pem'),
+    cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
 
     dataDir: './data/',
+    mediaDir: './media/',
     hearingDir: './data/hearings/',
     textDir: './media/text/',
-    mediaDir: './media/',
-    incomingDir: './media/incoming/',
+    incomingDir:  './media/incoming/',
     metaDir: './media/metadata/',
     videoDir: './media/video/',
-    transcodedDir: './media/transcoded/',
+    transcodedDir:  '/var/www/html/oversee/media/transcoded/',
     webshotDir: '/var/www/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
@@ -375,17 +375,17 @@ Video.prototype.transcodeToOgg = function () {
     var vid = this;
     var lpct = 0;
 
-    return new Promise(function (fulfill, reject) {
-        if (vid.type) {
+    return new Promise(async function (resolve, reject) {
+        if (vid.tpe) {
             var input = vid.localPath;
             var temp = scraper.tempDir + vid.basename + ".ogg";
             var output = scraper.transcodedDir + vid.basename + ".ogg";
             if (fs.existsSync(output)) {
                 scraper.msg("ogg already exists! " + output);
                 return fulfill();
-            }
-
-            ffmpeg(input)
+            } 
+            
+            var asdf = await ffmpeg(input)
                 .output(temp)
                 .on('start', function (commandLine) {
                     scraper.msg('Spawned Ffmpeg with command: ' + commandLine);
@@ -406,15 +406,18 @@ Video.prototype.transcodeToOgg = function () {
                     scraper.msg('ogg end fired?');
                     scraper.msg('Processing Finished');
                     fs.renameSync(temp, output);
-                    return fulfill();
+                    return resolve();
                 })
                 .on('error', function (err, stdout, stderr) {
                     scraper.msg(err.message);
                     scraper.msg(stderr);
-                    reject(err);
+                    return reject(err);
                 })
                 .run();
+		return asdf;
 
+        } else {
+	     reject("no vidtype?");
         }
 
 
@@ -579,12 +582,13 @@ Committee.prototype.transcodeVideos = async function () {
     var comm = this;
 
     for (var hear of this.hearings) {
+        scraper.msg("transcoding " + hear.shortdate);
         var vid = hear.video;
         if (!vid.type) {
             await vid.getMeta();
         }
         scraper.msg("Calling meta func for" + vid.localPath);
-        await hear.video.transcodeToMP4().
+        await hear.video.transcodeToMP4();
         scraper.msg("transcoding finished");
         await hear.video.transcodeToOgg();
         await hear.video.transcodeToWebm();
@@ -853,7 +857,7 @@ Pdf.prototype.getMeta = async function () {
     var pdf = this;
     var input = this.localPath;
     var jsonpath = scraper.metaDir + pdf.localName + ".json";
-    scraper.msg(">>>>>>>>>>>>>>" + input + " " + jsonpath);
+    scraper.msg("pdf meta for " + input + " " + jsonpath);
     if (fs.existsSync(jsonpath)) {
         var msize = fs.statSync(jsonpath).size;
         scraper.msg(jsonpath + " exists! (" + msize + ")");
@@ -886,11 +890,15 @@ Video.prototype.getMeta = async function () {
     var vid = this;
     var input = this.localPath;
     //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
+    
     var etpath = scraper.metaDir + vid.basename + ".json";
     var resp = await exif.metadata(input, async function (err, metadata) {
-        scraper.msg("metadata for: ", vid);
+        console.dir(vid);
+        scraper.msg("metadata for: ", vid.localPath);
+        console.log("metadata for: ", vid.localPath);
         var vcode;
         if (err) {
+            console.log("boo, err in metadata");
             return Promise.reject(err);
         }
         if (metadata.videoEncoding) {
@@ -908,6 +916,7 @@ Video.prototype.getMeta = async function () {
             scraper.msg(JSON.stringify(metadata), 'detail');
         }
         scraper.msg(vid.type);
+        console.log(vid.type);
         if (fs.existsSync(etpath)) {
             vid.metapath = etpath;
             scraper.msg(JSON.stringify(metadata), 'detail');
@@ -1144,7 +1153,7 @@ Committee.prototype.getHearingIndex = function (url) {
                     }
                 } else {
                     scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
-                    return fulfill('fail');
+                    return reject('fail');
                 }
             }); // end request
         } catch (err) {
@@ -1227,9 +1236,9 @@ scraper.getNewID = async function () {
         var result = await cpp.exec(cmd);
 
         scraper.msg("SIGNAL NEWNYM");
-        scraper.msg(result.stdout);
+        //scraper.msg(result.stdout);
         await scraper.committee.testNode();
-        scraper.msg(result);
+        //scraper.msg(result);
         if (result === "blocked") {
             await scraper.getNewID();
             Promise.resolve();
@@ -1238,6 +1247,7 @@ scraper.getNewID = async function () {
 
         }
     } catch (err) {
+        console.log("ERROR IN GETNEWID");
         scraper.msg(err);
         return Promise.reject();
     };
