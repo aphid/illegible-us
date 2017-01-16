@@ -420,7 +420,7 @@ Video.prototype.transcodeToOgg = async function () {
         }
 
     } else {
-        reject("no vidtype?");
+        return Promise.reject("no vidtype?");
     }
 
 
@@ -894,6 +894,11 @@ Video.prototype.getMeta = async function () {
     //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
 
     var etpath = scraper.metaDir + vid.basename + ".json";
+
+    if (fs.existsSync(etpath)) {
+        vid.metapath = etpath;
+        return Promise.resolve();
+    }
     var resp = await exif.metadata(input, async function (err, metadata) {
         console.dir(vid);
         scraper.msg("metadata for: ", vid.localPath);
@@ -918,13 +923,6 @@ Video.prototype.getMeta = async function () {
             scraper.msg(JSON.stringify(metadata), 'detail');
         }
         scraper.msg(vid.type);
-        console.log(vid.type);
-        if (fs.existsSync(etpath)) {
-            vid.metapath = etpath;
-            scraper.msg(JSON.stringify(metadata), 'detail');
-            scraper.msg('skipping meta');
-            return Promise.resolve();
-        }
         scraper.msg(JSON.stringify(metadata));
         await pfs.writeFile(etpath, JSON.stringify(metadata));
         vid.metapath = etpath;
