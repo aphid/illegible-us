@@ -31,10 +31,10 @@ var scraper = {
     mediaDir: './media/',
     hearingDir: './data/hearings/',
     textDir: './media/text/',
-    incomingDir:  './media/incoming/',
+    incomingDir: './media/incoming/',
     metaDir: './media/metadata/',
     videoDir: './media/video/',
-    transcodedDir:  '/var/www/html/oversee/media/transcoded/',
+    transcodedDir: '/var/www/html/oversee/media/transcoded/',
     webshotDir: '/var/www/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
@@ -370,21 +370,20 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 
-Video.prototype.transcodeToOgg = function () {
+Video.prototype.transcodeToOgg = async function () {
     scraper.msg('TRANSCODING TO OGG VORBIS AUDIO');
     var vid = this;
     var lpct = 0;
 
-    return new Promise(async function (resolve, reject) {
-        if (vid.tpe) {
-            var input = vid.localPath;
-            var temp = scraper.tempDir + vid.basename + ".ogg";
-            var output = scraper.transcodedDir + vid.basename + ".ogg";
-            if (fs.existsSync(output)) {
-                scraper.msg("ogg already exists! " + output);
-                return fulfill();
-            } 
-            
+    if (vid.mp4) {
+        var input = vid.localPath;
+        var temp = scraper.tempDir + vid.basename + ".ogg";
+        var output = scraper.transcodedDir + vid.basename + ".ogg";
+        if (fs.existsSync(output)) {
+            scraper.msg("ogg already exists! " + output);
+            return Promise.resolve();
+        }
+        try {
             var asdf = await ffmpeg(input)
                 .output(temp)
                 .on('start', function (commandLine) {
@@ -411,17 +410,20 @@ Video.prototype.transcodeToOgg = function () {
                 .on('error', function (err, stdout, stderr) {
                     scraper.msg(err.message);
                     scraper.msg(stderr);
-                    return reject(err);
+                    return Promise.reject(err);
                 })
                 .run();
-		return asdf;
-
-        } else {
-	     reject("no vidtype?");
+            return asdf;
+        } catch (err) {
+            scraper.msg(err);
+            throw (err);
         }
 
+    } else {
+        reject("no vidtype?");
+    }
 
-    });
+
 };
 
 
@@ -890,7 +892,7 @@ Video.prototype.getMeta = async function () {
     var vid = this;
     var input = this.localPath;
     //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
-    
+
     var etpath = scraper.metaDir + vid.basename + ".json";
     var resp = await exif.metadata(input, async function (err, metadata) {
         console.dir(vid);
