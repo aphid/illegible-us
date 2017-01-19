@@ -5,6 +5,7 @@
 "use strict";
 
 var request = require('request');
+var progress = require('request-progress');
 var cheerio = require('cheerio');
 var moment = require('moment');
 var Url = require('url');
@@ -30,12 +31,12 @@ var scraper = {
     dataDir: './data/',
     mediaDir: './media/',
     hearingDir: './data/hearings/',
-    textDir: './media/text/',
+    textDir: '/var/www/illegible.us/html/oversee/media/text/',
     incomingDir: './media/incoming/',
-    metaDir: './media/metadata/',
+    metaDir: '/var/www/illegible.us/html/oversee/media/metadata/',
     videoDir: './media/video/',
-    transcodedDir: '/var/www/html/oversee/media/transcoded/',
-    webshotDir: '/var/www/html/oversee/images/',
+    transcodedDir: '/var/www/illegible.us/html/oversee/media/transcoded/',
+    webshotDir: '/var/www/illegible.us/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
     connections: 0,
@@ -521,6 +522,14 @@ scraper.hearing = function (hearing) {
     io.to('oversight').emit('hearing', hearing);
 };
 
+scraper.wait = function(sec){
+   return new Promise(function(resolve){
+     setTimeout(function(){
+       resolve();
+     },sec*1000);
+   });
+};
+
 Committee.prototype.scrapeRemote = async function () {
     var comm = this;
     var pages = [];
@@ -565,10 +574,10 @@ Committee.prototype.init = async function () {
         await comm.validateLocal();
         await comm.textifyPdfs();
         await comm.write();
-        await comm.getVideos();
-        await comm.getVidMeta();
+        //await comm.getVideos();
+        //await comm.getVidMeta();
         await comm.write();
-        await comm.transcodeVideos();
+        //await comm.transcodeVideos();
         scraper.busy = false;
 
     } catch (err) {
@@ -788,72 +797,37 @@ var Pdf = function (options) {
 
 
 scraper.getFile = function (url, dest) {
-    var digits;
-    const lib = url.startsWith('https') ? require('https') : require('http');
-    return new Promise(function (fulfill, reject) {
+    var pct = 0;
+    return new Promise(function (resolve) {
         if (fs.existsSync(dest)) {
-            //file exists
-            var size = fs.statSync(dest).size;
-            scraper.msg(dest + " exists (" + size + ")");
-            if (size) {
-                scraper.msg("file's okay");
-                return fulfill();
-            }
-            //validate media here?
-            scraper.msg('exists but zero bytes, refetching');
-            fs.unlinkSync(dest);
-            scraper.getFile(url, dest);
+            return resolve("file here already");
 
-
-
-            //file does not exist
-        } else {
-            if (dest.includes('pdf')) {
-                digits = 0;
-            } else {
-                digits = 2;
-            }
-            scraper.msg("file " + dest + " doesn't exist yet...");
-            var file = fs.createWriteStream(dest);
-            lib.get(url, function (response) {
-                var cur = 0;
-                var pct = 0;
-                var len = parseInt(response.headers['content-length'], 10);
-                var total = len / 1048576; //1048576 - bytes in  1Megabyte
-                var lpct;
-                scraper.msg("fetching " + url);
-                response.pipe(file);
-                response.on("data", function (chunk) {
-                    cur += chunk.length;
-                    var newPct = (100.0 * cur / len).toFixed(digits);
-                    if (pct !== newPct) {
-                        pct = newPct;
-                        scraper.msg("Downloading " + (100.0 * cur / len).toFixed(digits) + "% " + (cur / 1048576).toFixed(2) + " mb " + " Total size: " + total.toFixed(2) + " mb");
-                    }
-                });
-                file.on('data', function (progress) {
-                    var mf = Math.floor(progress.percent);
-
-                    if (mf > lpct) {
-                        scraper.msg('Processing: ' + mf + '% done');
-                        lpct = mf;
-
-                    }
-                });
-                file.on('error', function (err) {
-                    reject(err);
-                });
-                file.on('finish', function () {
-                    file.close();
-                    scraper.msg("done writing " + fs.statSync(dest).size + " bytes");
-                    return fulfill();
+        }
+        var options = {
+            url: url,
+            agentClass: Agent,
+            agentOptions: {
+                socksPort: 9050
+            },
+            headers: {}
+        };
+        var stream = progress(request(url), options)
+            .on('response', function (response) {
+                console.log(response.statusCode) // 200
+                console.log(response.headers['content-type']) // 'image/png'
+            }).on('progress', function (state) {
+                if (Math.floor(state.percent > pct)) {
+                    console.log(state.percent.toFixed(4) * 100 + "%", state.time.remaining);
+                }
+            })
+            .pipe(fs.createWriteStream(dest)).on('finish', function () {
+                console.log("FILE'S DONE");
+                return resolve({
+                    status: "success"
                 });
             });
-        }
     });
-
 };
-
 
 Pdf.prototype.getMeta = async function () {
     var pdf = this;
@@ -879,9 +853,7 @@ Pdf.prototype.getMeta = async function () {
                 var json = JSON.stringify(metadata, undefined, 2);
                 scraper.msg(json, 'detail');
                 await pfs.writeFile(jsonpath, json);
-                await pdf.textify();
                 return Promise.resolve();
-
             }
         }); //end metadata
         return resp;
@@ -933,6 +905,8 @@ Video.prototype.getMeta = async function () {
 };
 
 Pdf.prototype.imagify = async function () {
+    console.log("#################MAKING IMAGES################");
+    await scraper.wait(6);
     var basename = this.localName.replace(".pdf", "");
     var imgdir = scraper.textDir + basename;
     try {
@@ -942,11 +916,13 @@ Pdf.prototype.imagify = async function () {
     }
     this.imgdir = imgdir;
     var cmd = "convert - density 300 input.pdf - quality 100 " + imgdir + "/basename.png";
+    console.log(cmd);
     var nc = await cpp.exec(cmd);
     return Promise.resolve();
 };
 
 Pdf.prototype.textify = async function () {
+    console.log("@@@@@@@@@@textify@@@@@@@@");
     var pdf = this;
     var dest = this.localPath;
     var txtpath = scraper.textDir + this.localName + ".txt";
@@ -967,8 +943,7 @@ Pdf.prototype.textify = async function () {
         var resp = await pdftxt.getText(async function (err, data, cmd) {
             scraper.msg("Extracting text: " + dest);
             if (err) {
-                scraper.msg("txt extraction error " + err + " " + cmd);
-                reject("txt extraction error " + err + " " + cmd);
+                scraper.msg("txt extraction error ", err, cmd);
             }
             if (!data) {
                 scraper.msg("NO ERROR");
@@ -993,7 +968,7 @@ Pdf.prototype.textify = async function () {
             return Promise.resolve();
 
         });
-        console.log(resp);
+        //console.log(resp);
         return resp;
     } catch (err) {
         throw (err);
@@ -1008,9 +983,11 @@ Committee.prototype.queuePdfs = async function () {
         for (var wit of hear.witnesses) {
             for (var pdf of wit.pdfs) {
                 scraper.msg(" " + pdf.remotefileName);
-                await pdf.fetch();
-                await pdf.getMeta();
-
+                await scraper.wait(5);
+                var a = await pdf.fetch();
+                //var b = await pdf.getMeta();
+                console.log("result of scrape");
+                
             }
         }
     }
@@ -1020,6 +997,7 @@ Committee.prototype.queuePdfs = async function () {
 
 
 Pdf.prototype.fetch = async function () {
+    console.log("^^^^^^^^PDFFETCH^^^^^^^^^^");
     scraper.msg("getting " + this.localName);
     var pdf = this;
     var incoming = scraper.incomingDir + pdf.localName;
@@ -1030,7 +1008,19 @@ Pdf.prototype.fetch = async function () {
         return Promise.resolve();
     }
     scraper.msg(incoming + " " + dest);
-    await scraper.getFile(pdf.remoteUrl, incoming)
+    try{
+    var resp = await scraper.getFile(pdf.remoteUrl, incoming);
+    console.log("RESP ", resp);
+    if (resp.location){
+        scraper.msg("Updating location due to REDIRECT");
+        scraper.wait(4);
+	pdf.oldUrl = pdf.remoteUrl;
+        pdf.remoteUrl = err.location;
+        return await pdf.fetch();
+       }
+    } catch (err){
+    	console.log(err);
+    }
     fs.renameSync(incoming, dest);
     pdf.localPath = dest;
     return Promise.resolve();
