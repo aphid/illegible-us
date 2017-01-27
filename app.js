@@ -1,6 +1,9 @@
 /*jslint node: true */
 /*jshint -W105 */
 /*global require, module, Promise */
+//TODO = scrape all hearings, show the closed ones.
+//when you find a pdf or video, break of and analyze.
+//this should pause scrape.
 
 "use strict";
 
@@ -22,12 +25,12 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
-    secure: false,
-    //privkey: fs.readFileSync('./privkey.pem'),
-    //cert: fs.readFileSync('./cert.pem'),
+    secure: true,
+    privkey: fs.readFileSync('./privkey.pem'),
+    cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
-
+    /*
     dataDir: './data/',
     mediaDir: './media/',
     hearingDir: './data/hearings/',
@@ -37,6 +40,16 @@ var scraper = {
     videoDir: './media/video/',
     transcodedDir: '/var/www/html/oversee/media/transcoded/',
     webshotDir: '/var/www/html/oversee/images/',
+    tempDir: "./media/temp/",*/
+    dataDir: './data/',
+    mediaDir: './media/',
+    hearingDir: './data/hearings/',
+    textDir: '/var/www/illegible.us/html/oversee/media/text/',
+    incomingDir: './media/incoming/',
+    metaDir: '/var/www/illegible.us/html/oversee/media/metadata/',
+    videoDir: './media/video/',
+    transcodedDir: '/var/www/illegible.us/html/oversee/media/transcoded/',
+    webshotDir: '/var/www/illegible.us/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
     connections: 0,
@@ -45,15 +58,8 @@ var scraper = {
     blocked: false,
     sockets: 5,
     current: 0,
-    rdbConn: null,
-    rDb: {
-        host: 'localhost',
-        port: 28015,
-        db: 'unrInt'
-    },
     userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
 };
-
 
 if (scraper.secure) {
     var app = require('https').createServer({
@@ -574,7 +580,7 @@ Committee.prototype.init = async function () {
         await comm.write();
         await comm.queuePdfs();
         await comm.validateLocal();
-        await comm.textifyPdfs();
+        //await comm.textifyPdfs();
         await comm.write();
         //await comm.getVideos();
         //await comm.getVidMeta();
@@ -986,6 +992,9 @@ Committee.prototype.queuePdfs = async function () {
                 scraper.msg(" " + pdf.remotefileName);
                 await scraper.wait(5);
                 var a = await pdf.fetch();
+                await pdf.getMeta();
+                await pdf.textify();
+		await this.write();
                 console.log("result of scrape");
 
             }
