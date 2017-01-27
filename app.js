@@ -22,21 +22,21 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
-    secure: true,
-    privkey: fs.readFileSync('./privkey.pem'),
-    cert: fs.readFileSync('./cert.pem'),
+    secure: false,
+    //privkey: fs.readFileSync('./privkey.pem'),
+    //cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
 
     dataDir: './data/',
     mediaDir: './media/',
     hearingDir: './data/hearings/',
-    textDir: '/var/www/illegible.us/html/oversee/media/text/',
+    textDir: '/var/www/html/oversee/media/text/',
     incomingDir: './media/incoming/',
-    metaDir: '/var/www/illegible.us/html/oversee/media/metadata/',
+    metaDir: '/var/www/html/oversee/media/metadata/',
     videoDir: './media/video/',
-    transcodedDir: '/var/www/illegible.us/html/oversee/media/transcoded/',
-    webshotDir: '/var/www/illegible.us/html/oversee/images/',
+    transcodedDir: '/var/www/html/oversee/media/transcoded/',
+    webshotDir: '/var/www/html/oversee/images/',
     tempDir: "./media/temp/",
     busy: false,
     connections: 0,
@@ -522,12 +522,12 @@ scraper.hearing = function (hearing) {
     io.to('oversight').emit('hearing', hearing);
 };
 
-scraper.wait = function(sec){
-   return new Promise(function(resolve){
-     setTimeout(function(){
-       resolve();
-     },sec*1000);
-   });
+scraper.wait = function (sec) {
+    return new Promise(function (resolve) {
+        setTimeout(function () {
+            resolve();
+        }, sec * 1000);
+    });
 };
 
 Committee.prototype.scrapeRemote = async function () {
@@ -535,13 +535,15 @@ Committee.prototype.scrapeRemote = async function () {
     var pages = [];
     try {
         var idx = await comm.getHearingIndex(comm.hearingIndex);
-        if (idx) {
-            for (var i = 1; i <= idx.lastPage; i++) {
-                var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
-                pages.push(page);
-                scraper.msg(pages);
-            }
+        if (idx === "fail") {
+            await scraper.getNewID();
         }
+        for (var i = 1; i <= idx.lastPage; i++) {
+            var page = 'http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=' + i;
+            pages.push(page);
+            scraper.msg(pages);
+        }
+
 
         await comm.getPages(pages);
         await comm.fetchAll();
@@ -732,14 +734,13 @@ var Witness = function (options) {
 
 
 Committee.prototype.textifyPdfs = async function () {
-    var comm = this,
-        pdf;
 
-    for (var hear of comm.hearings) {
-        for (var wit of hear.witnesses) {
-            for (pdf of wit.pdfs) {
+    for (let hear of this.hearings) {
+        for (let wit of hear.witnesses) {
+            for (let pdf of wit.pdfs) {
                 scraper.msg(JSON.stringify(pdf));
                 await pdf.getMeta();
+                await pdf.textify();
             }
 
         }
@@ -841,7 +842,7 @@ Pdf.prototype.getMeta = async function () {
             scraper.msg("meta's already here, moving on");
             return Promise.resolve();
         } else {
-
+            return Promise.resolve();
         }
 
     } else {
@@ -985,9 +986,8 @@ Committee.prototype.queuePdfs = async function () {
                 scraper.msg(" " + pdf.remotefileName);
                 await scraper.wait(5);
                 var a = await pdf.fetch();
-                //var b = await pdf.getMeta();
                 console.log("result of scrape");
-                
+
             }
         }
     }
@@ -1008,18 +1008,18 @@ Pdf.prototype.fetch = async function () {
         return Promise.resolve();
     }
     scraper.msg(incoming + " " + dest);
-    try{
-    var resp = await scraper.getFile(pdf.remoteUrl, incoming);
-    console.log("RESP ", resp);
-    if (resp.location){
-        scraper.msg("Updating location due to REDIRECT");
-        scraper.wait(4);
-	pdf.oldUrl = pdf.remoteUrl;
-        pdf.remoteUrl = err.location;
-        return await pdf.fetch();
-       }
-    } catch (err){
-    	console.log(err);
+    try {
+        var resp = await scraper.getFile(pdf.remoteUrl, incoming);
+        console.log("RESP ", resp);
+        if (resp.location) {
+            scraper.msg("Updating location due to REDIRECT");
+            scraper.wait(4);
+            pdf.oldUrl = pdf.remoteUrl;
+            pdf.remoteUrl = err.location;
+            return await pdf.fetch();
+        }
+    } catch (err) {
+        console.log(err);
     }
     fs.renameSync(incoming, dest);
     pdf.localPath = dest;
@@ -1143,7 +1143,7 @@ Committee.prototype.getHearingIndex = function (url) {
                     }
                 } else {
                     scraper.msg("BAD PAGE REQUEST: " + url + " " + response.statusCode);
-                    return reject('fail');
+                    //           return fulfill('fail');
                 }
             }); // end request
         } catch (err) {
@@ -1153,9 +1153,11 @@ Committee.prototype.getHearingIndex = function (url) {
 
 };
 
-Committee.prototype.testNode = function () {
+Committee.prototype.testNode = async function () {
     var comm = this;
-    return new Promise(function (fulfill, reject) {
+
+    return new Promise(async function (resolve) {
+        console.log("))))))))))))))testNode");
         var options = {
             url: comm.hearingIndex,
             agentClass: Agent,
@@ -1166,53 +1168,59 @@ Committee.prototype.testNode = function () {
                 'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
             }
         };
-        request(options, function (error, response, html) {
+        var resp = await request(options, async function (error, response, html) {
             if (error) {
                 scraper.msg("CheckBlock is throwing an error: " + error);
                 return reject(error);
             }
             if (!response) {
                 console.log("dead socket");
-                return reject("dead socket");
+                return resolve({
+                    fail: "dead socket"
+                });
             }
             if (response.statusCode === 403) {
                 scraper.blocked = true;
                 scraper.msg(html, "detail");
-                scraper.msg("Access denied, Tor exit node has been blocked.");
-                fulfill("blocked");
+                scraper.msg("Access denied, Tor exit node has been blocked. //" + response.statusCode);
+                return resolve("blocked");
             } else if (response.statusCode === 200) {
                 scraper.blocked = false;
-                scraper.msg("Tor exit node is not blacklisted by Senate CDN.");
-                fulfill("allowed");
+                scraper.msg("Tor exit node is not blacklisted by Senate CDN. //" + response.statusCode);
+                return resolve("allowed");
             } else if (response.statusCode === 503) {
                 scraper.blocked = true;
                 scraper.msg("503 - Service Unavailable");
                 console.log(html);
-                setTimeout(function () {
-                    fulfill("blocked")
-                }, 5000);
+                scraper.wait(5);
+                return resolve("blocked");
             } else {
 
                 scraper.blocked = true;
                 console.log(html);
-                reject(response.statusCode);
+                return resolve({
+                    "fail": response.statusCode
+                });
             }
         });
+        return resp;
     });
 };
 
 scraper.checkBlock = async function () {
+    console.log("((((((checkblock")
     var scrape = this;
     scraper.msg("Testing for CDN block");
     try {
         var resp = await scrape.committee.testNode();
+        console.log(">>>>", resp, "<<<<<");
         if (resp === "allowed") {
             scraper.msg("No block detected.");
             return Promise.resolve();
         } else {
             scraper.msg("Attempting new identity...");
             await scraper.getNewID();
-            return Promise.resolve();
+            return await scraper.checkBlock();
         }
     } catch (err) {
         scraper.msg(err);
@@ -1220,6 +1228,7 @@ scraper.checkBlock = async function () {
 };
 
 scraper.getNewID = async function () {
+    console.log("%%%%%%%%%%%%%%getNewID");
     var cmd = '(echo AUTHENTICATE \\"' + scraper.torPass.replace(/\n/g, "") + '\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost ' + scraper.torPort;
     console.log(cmd);
     try {
