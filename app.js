@@ -25,9 +25,9 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
-    secure: true,
-    privkey: fs.readFileSync('./privkey.pem'),
-    cert: fs.readFileSync('./cert.pem'),
+    secure: false,
+    //privkey: fs.readFileSync('./privkey.pem'),
+    //cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
     /*
@@ -650,11 +650,7 @@ Committee.prototype.init = async function () {
         //await comm.queuePdfs();
         await comm.validateLocal();
         //await comm.textifyPdfs();
-<<<<<<< HEAD
-        //await comm.write();
-=======
         await comm.write();
->>>>>>> c42954bd0cc4e7382776c3f54d80f882d88e964b
         //await comm.getVideos();
         //await comm.getVidMeta();
         //await comm.write();
@@ -1089,7 +1085,7 @@ Committee.prototype.queuePdfs = async function () {
                 var a = await pdf.fetch();
                 await pdf.getMeta();
                 await pdf.textify();
-		await this.write();
+                await this.write();
                 console.log("result of scrape");
 
             }
