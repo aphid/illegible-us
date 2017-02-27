@@ -25,9 +25,9 @@ var glob = require("glob");
 var r = require("rethinkdb");
 
 var scraper = {
-    secure: false,
-    //privkey: fs.readFileSync('./privkey.pem'),
-    //cert: fs.readFileSync('./cert.pem'),
+    secure: true,
+    privkey: fs.readFileSync('./privkey.pem'),
+    cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
     /*
@@ -41,13 +41,13 @@ var scraper = {
     transcodedDir: '/var/www/html/oversee/media/transcoded/',
     webshotDir: '/var/www/html/oversee/images/',
     tempDir: "./media/temp/",*/
-    dataDir: './data/',
-    mediaDir: './media/',
+    dataDir: '/var/www/illegible.us/html/',
+    mediaDir: '/var/www/illegible.us/html/oversee/media/',
     hearingDir: './data/hearings/',
     textDir: '/var/www/illegible.us/html/oversee/media/text/',
     incomingDir: './media/incoming/',
     metaDir: '/var/www/illegible.us/html/oversee/media/metadata/',
-    videoDir: './media/video/',
+    videoDir: '/var/www/illegible.us/html/oversee/media/video/',
     transcodedDir: '/var/www/illegible.us/html/oversee/media/transcoded/',
     webshotDir: '/var/www/illegible.us/html/oversee/images/',
     tempDir: "./media/temp/",
@@ -219,7 +219,7 @@ Video.prototype.getManifest = function () {
                     console.error('ERROR: ', (err.stack || err));
                     reject(err);
                     console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!shutting down");
-                    process.exit(1);
+                    //process.exit(1);
                 })
                 .progress(function (childProcess) {
                     scraper.msg('[exec] childProcess.pid: ', childProcess.pid);
@@ -862,6 +862,7 @@ var Pdf = function (options) {
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
+        this.title = options.name || options.title;
     } else {
         for (var fld in options) {
             if (options[fld]) {
@@ -929,6 +930,10 @@ Pdf.prototype.getMeta = async function () {
             if (err) {
                 return Promise.resolve("exiftool error: " + err);
             } else {
+                if (metadata.fileSize === "0 bytes"){
+		    return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
+		    process.exit();
+		}
                 var json = JSON.stringify(metadata, undefined, 2);
                 scraper.msg(json, 'detail');
                 await pfs.writeFile(jsonpath, json);
@@ -1007,7 +1012,7 @@ Pdf.prototype.imagify = async function () {
     } else {
         console.log("does not exist?");
     }
-    var cmd = "convert -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + ".jpg'";
+    var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + ".jpg'";
     console.log(cmd);
     try {
         var nc = await cpp.exec(cmd);
@@ -1028,7 +1033,6 @@ Pdf.prototype.textify = async function () {
     this.txtpath = txtpath;
     scraper.msg("working on " + this.txtpath);
 
-
     if (fs.existsSync(txtpath)) {
         var msize = fs.statSync(txtpath).size;
         scraper.msg(txtpath + " exists! (" + msize + ")");
@@ -1042,11 +1046,15 @@ Pdf.prototype.textify = async function () {
         scraper.msg("Extracting text: " + dest);
         try {
             var data = pdftxt.getTextSync();
+            if (data){
+               console.log("DATA");
+               data = data.toString('utf8');
+            }
         } catch (err) {
             scraper.msg(err);
         }
         if (!data) {
-            scraper.msg("NO ERROR");
+            scraper.msg("ILLEGIBLE DOCUMENT");
             console.error("NO DATA");
             pdf.needsScan = true;
             return Promise.resolve();
@@ -1054,16 +1062,16 @@ Pdf.prototype.textify = async function () {
         scraper.msg("DATA");
         if (data.length > 100) {
             scraper.msg(data.substring(0, 2000) + "...", "txt");
+        } else {
+            scraper.msg(data, "ILLEGIBLE DOCUMENT");
+            pdf.needsScan = true;
+            return Promise.resolve();
         }
-        var fz = await pfs.writeFile((txtpath), data, 'utf8', function (err) {
-            scraper.msg('writing file (' + data.length + ')');
-            if (err) {
-                scraper.msg("ERROR WRITING TXT" + err);
-                reject(err);
-            }
-            scraper.msg('text extraction complete');
-            pdf.txtpath = txtpath;
-        });
+        fs.writeFileSync((txtpath), data, 'utf8')
+        scraper.msg('writing file (' + data.length + ')');
+        scraper.msg('text extraction complete');
+        pdf.txtpath = txtpath;
+        pdf.hasText = true;
         return Promise.resolve();
 
         //console.log(resp);
@@ -1145,16 +1153,19 @@ Hearing.prototype.addWitness = function (witness) {
 
 
 //from scrape
-Witness.prototype.addPdf = async function (hear, url) {
+Witness.prototype.addPdf = async function (hear, data) {
     for (var pdf of this.pdfs) {
-        if (url === pdf.remoteUrl) {
+        if (data.url === pdf.remoteUrl) {
             scraper.msg('blocking duplicate');
             return false;
         }
-    }
+    } 
+    console.dir(data);
     var thepdf = new Pdf({
         "hear": hear.shortdate,
-        "url": url
+        "url": data.url,
+        "title": data.name,
+        "needsScan": false
     });
     this.pdfs.push(thepdf);
     console.log("fetching");
@@ -1166,9 +1177,14 @@ Witness.prototype.addPdf = async function (hear, url) {
     await scraper.wait(5);
 
     console.log("image-ing");
-    await thepdf.imagify();
+    await thepdf.textify();
+    console.log(thepdf.needsScan);
+    
+    if (thepdf.needsScan){
+       console.log("needs scan");
+       await thepdf.imagify();
+    }
     await scraper.wait(5);
-    await thepdf.textify()
     return Promise.resolve();
 };
 
@@ -1243,6 +1259,14 @@ Committee.prototype.getHearingIndex = function (url, page) {
                         var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
                         hearing.date = datesplit[0];
                         hearing.time = datesplit[1];
+			if (!hearing.date) {
+			 var olddate = hearing.title.match(/(?:\()([^\)]*)(?:\))/gm).map(m => m.slice(1, m.length - 1)).pop();
+                         olddate = olddate.replace("(","").replace(")","");
+                         //multiple dates a la (February 23, April 13 and September 14, 1988)
+			 if (olddate.includes("and")){
+                            //TODO FINISH LATER
+                         }
+                        }
                         var nHear;
                         if (hearing.title.includes('Postponed')) {
                             scraper.msg("HEARING POSTPONED");
@@ -1485,6 +1509,7 @@ Hearing.prototype.fetch = function () {
                     delete wit['pdfs'];
                     var witness = new Witness(wit);
                     for (let pdf of pdfs) {
+                        console.dir(pdf);
                         await witness.addPdf(hear, pdf)
                     }
                     hear.addWitness(witness);
@@ -1557,7 +1582,7 @@ scraper.crunchHtml = function (html) {
                             pdf.url = intel.url + pdf.url;
                         }
                         scraper.msg(pdf, "detail");
-                        pdfs.push(pdf.url);
+                        pdfs.push(pdf);
                     });
                 }
                 witness.pdfs = pdfs;
@@ -1589,7 +1614,7 @@ var intel = new Committee({
 io.on("connect", function (socket) {
     scraper.connections++;
     scraper.started = true;
-    console.log('watching the watcher');
+    console.log('the eyes have it');
     if (scraper.busy) {
         setTimeout(function () {
             socket.emit("message", "PROCESS IN ACTION, MONITORING");
