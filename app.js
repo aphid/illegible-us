@@ -30,6 +30,7 @@ var scraper = {
     cert: fs.readFileSync('./cert.pem'),
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
+	minOverseers: 0,
     /*
     dataDir: './data/',
     mediaDir: './media/',
@@ -256,6 +257,36 @@ Video.prototype.fetch = function (data) {
                     vid.localPath = output;
                     return fulfill();
                 });
+	    } else if (data.type === 'm3u') {
+
+		incoming = scraper.incomingDir + vid.basename + ".mp4";
+		output = scraper.videoDir + vid.basename + ".mp4";
+		var childargs = ["--proxy", "localhost:9080", '-o', incoming, vid.url]
+		scraper.msg("downloading VOD fragments");
+		cpp.spawn("youtube-dl", childArgs).fail(function(err) {
+		  console.error('spawn error: ', err.stack || err);
+		  reject(err);
+
+		})
+		.progress(function(cP){
+		  scraper.msg('[exec] childProcess.pid', cP.pid);
+		  cP.stdout.on('data', function(data){
+			scraper.msg('>>>>>> ' + data.toString().trim());
+	          });
+		  cP.stderr.on('data', function(data){
+			scraper.msg('[spawn] stderr: ' + data.toString().trim());
+		  });
+
+	 	})
+		.then(function() {
+		  fs.renameSync(incoming, output);
+		  vid.localPath = output;
+		
+		}).then(function () {
+		  return fulfill();
+		});
+
+
 
 
             } else if (data.type === 'hds') {
@@ -647,16 +678,17 @@ Committee.prototype.init = async function () {
 
 
         }
+	/*
         //await comm.queuePdfs();
         await comm.validateLocal();
         //await comm.textifyPdfs();
         await comm.write();
-        //await comm.getVideos();
-        //await comm.getVidMeta();
-        //await comm.write();
-        //await comm.transcodeVideos();
+        await comm.getVideos();
+        await comm.getVidMeta();
+        await comm.write();
+        await comm.transcodeVideos();
         scraper.busy = false;
-
+	*/
     } catch (err) {
         scraper.msg("something terrible happened");
         scraper.msg(err);
@@ -851,9 +883,21 @@ Committee.prototype.validateLocal = function () {
 
 };
 
-Hearing.prototype.addVideo = function (video) {
+Hearing.prototype.addVideo = async function (video) {
+    var hear = this;
     video.basename = this.shortdate;
     this.video = new Video(JSON.parse(JSON.stringify(video)));
+    await this.video.fetch();
+    await this.video.getMeta();
+    await this.video.transcode();
+    var flvpath = scraper.videoDir + hear.shortdate + '.flv';
+        var mp4path = scraper.videoDir + hear.shortdate + '.mp4';
+        if (fs.existsSync(flvpath)) {
+            hear.video.localPath = flvpath;
+        } else if (fs.existsSync(mp4path)) {
+            hear.video.localPath = mp4path;
+        }
+
 };
 
 var Pdf = function (options) {
@@ -1610,6 +1654,10 @@ var intel = new Committee({
     shortname: "intel"
 });
 
+if (scraper.minOverseers === 0){
+   intel.init();
+}
+
 
 io.on("connect", function (socket) {
     scraper.connections++;
@@ -1641,7 +1689,7 @@ io.on("connect", function (socket) {
         scraper.connections--;
         scraper.msg(scraper.connections + " active connections");
         setTimeout(function () {
-            if (scraper.connections < 1) {
+            if (scraper.connections < scraper.minOverseers) {
                 scraper.msg("no quorum");
                 scraper.shutDown();
             }

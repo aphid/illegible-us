@@ -1,5 +1,5 @@
 var url = phantom.args[0];
-
+url = "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051117&auto_play=true&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg";
 var resp = {};
 var page = require('webpage').create();
 var HDS = function (url) {
@@ -46,6 +46,12 @@ var HDS = function (url) {
                 data.src = response.url;
                 page.close();
                 resolve(data);
+            } else if (response.url.includes('m3u8') && response.status === 200) {
+		data.type = "m3u";
+		data.src = response.url;
+		page.close();
+		resolve(data);
+
             }
             if (response.status === 200 && (response.url.includes('manifest')) && (!response.url.includes('gif'))) {
                 //console.log(">>>>>>>>>>  " + response.status);
