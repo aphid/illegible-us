@@ -27,11 +27,11 @@ var r = require("rethinkdb");
 var fse = require("fs-extra")
 
 var scraper = {
-    secure: false,
+    secure: true,
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
     torPort: 9051,
     minOverseers: 0,
-    mode: "dev",
+    mode: "live",
     busy: false,
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
@@ -159,8 +159,10 @@ var Hearing = function (options) {
             this[fld] = options[fld];
         }
     }
-    this.shortdate = moment(new Date(this.date)).format("YYMMDD");
-
+    this.parseDate = this.date + " " + moment(this.time, ["h:mmA"]).format("HH:mm");
+    this.shortdate = moment(new Date(this.parseDate)).format("YYMMDD");
+    this.shorttime = moment(new Date(this.parseDate)).format("hhmm");
+    this.shortname = this.shortdate + "_" + this.shorttime;
 };
 
 var Video = function (options) {
@@ -187,7 +189,7 @@ Video.prototype.getManifest = async function () {
         return Promise.resolve();
     } else {
         scraper.msg("Getting remote info about " + vid.basename);
-        scraper.msg("Requesting manifest and authentication key");
+        scraper.msg("Checking stream type");
         var url = "'" + vid.url + "'";
         url = url.replace('false', 'true');
 
@@ -263,7 +265,7 @@ Video.prototype.fetch = async function (data) {
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
-                var childargs = ["--proxy", "socks5://127.0.0.1:9050", '-o', incoming, vid.src];
+                var childargs = ["--hls-prefer-native", "--proxy", "socks5://127.0.0.1:9050", '-o', incoming, vid.src];
                 console.log("youtube-dl " + childargs.join(' '));
                 scraper.msg("downloading VOD fragments");
                 cpp.spawn("youtube-dl", childargs).fail(function (err) {
@@ -688,17 +690,17 @@ Committee.prototype.init = async function () {
 
 
         }
-        /*
-        //await comm.queuePdfs();
+        
+        await comm.queuePdfs();
         await comm.validateLocal();
-        //await comm.textifyPdfs();
+        await comm.textifyPdfs();
         await comm.write();
         await comm.getVideos();
         await comm.getVidMeta();
         await comm.write();
         await comm.transcodeVideos();
         scraper.busy = false;
-	*/
+    
     } catch (err) {
         scraper.msg("something terrible happened");
         scraper.msg(err);
@@ -712,7 +714,7 @@ Committee.prototype.transcodeVideos = async function () {
     var comm = this;
 
     for (var hear of this.hearings) {
-        scraper.msg("transcoding " + hear.shortdate);
+        scraper.msg("transcoding " + hear.shortname);
         var vid = hear.video;
         if (!vid.type) {
             await vid.getMeta();
@@ -771,7 +773,7 @@ Committee.prototype.getVideos = async function () {
 
     for (var hear of this.hearings) {
         var vid = hear.video;
-        scraper.msg("Fetching videos for " + hear.shortdate);
+        scraper.msg("Fetching videos for " + hear.shortname);
         scraper.msg(vid.localPath);
         scraper.msg("Is prototype? " + hear.video.isPrototypeOf(Video));
         try {
@@ -880,8 +882,8 @@ Committee.prototype.validateLocal = function () {
 
     });
     for (var hear of this.hearings) {
-        var flvpath = scraper.videoDir + hear.shortdate + '.flv';
-        var mp4path = scraper.videoDir + hear.shortdate + '.mp4';
+        var flvpath = scraper.videoDir + hear.shortname + '.flv';
+        var mp4path = scraper.videoDir + hear.shortname + '.mp4';
         if (fs.existsSync(flvpath)) {
             hear.video.localPath = flvpath;
         } else if (fs.existsSync(mp4path)) {
@@ -895,7 +897,7 @@ Committee.prototype.validateLocal = function () {
 
 Hearing.prototype.addVideo = async function (video) {
     var hear = this;
-    video.basename = this.shortdate;
+    video.basename = this.shortname;
     this.video = new Video(JSON.parse(JSON.stringify(video)));
     console.log("processing video");
     await scraper.wait(5);
@@ -903,8 +905,8 @@ Hearing.prototype.addVideo = async function (video) {
     await this.video.fetch();
     await this.video.getMeta();
     //await this.video.transcode();
-    var flvpath = scraper.videoDir + hear.shortdate + '.flv';
-    var mp4path = scraper.videoDir + hear.shortdate + '.mp4';
+    var flvpath = scraper.videoDir + hear.shortname + '.flv';
+    var mp4path = scraper.videoDir + hear.shortname + '.mp4';
     if (fs.existsSync(flvpath)) {
         hear.video.localPath = flvpath;
     } else if (fs.existsSync(mp4path)) {
@@ -1219,7 +1221,7 @@ Witness.prototype.addPdf = async function (hear, data) {
     }
     console.dir(data);
     var thepdf = new Pdf({
-        "hear": hear.shortdate,
+        "hear": hear.shortname,
         "url": data.url,
         "title": data.name,
         "needsScan": false
@@ -1289,7 +1291,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
         }
     };
     scraper.msg("trying " + JSON.stringify(options));
-    var imgname = "hearpage" + page + moment().format("YYYYMMDD");
+    var imgname = "hearpage" + page + moment().format("YYMMDD");
     await scraper.screenshot(url, imgname);
     scraper.url({
         'url': imgname
@@ -1505,15 +1507,18 @@ Hearing.prototype.fetch = async function () {
             'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
         }
     };
-    var ss = await scraper.screenshot(hear.hearingPage, hear.shortdate);
+    var ss = await scraper.screenshot(hear.hearingPage, hear.shortname);
     scraper.url({
-        'url': hear.shortdate,
+        'url': hear.shortname,
         'title': hear.title
     });
     if (hear.closed) {
         await scraper.wait(5);
         scraper.msg("CLOSED HEARING");
         return Promise.resolve();
+    } else {
+        scraper.msg("OPEN HEARING");
+
     }
 
     try {
@@ -1666,7 +1671,9 @@ io.on("connect", function (socket) {
         setTimeout(function () {
             if (scraper.connections < scraper.minOverseers) {
                 scraper.msg("no quorum");
-                scraper.shutDown();
+                if (scraper.minOverseers > 0){
+		    scraper.shutDown();
+		}
             }
         }, 10000);
 
