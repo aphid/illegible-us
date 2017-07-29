@@ -1,6 +1,9 @@
 var url = phantom.args[0];
-url = "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051117&auto_play=true&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg";
+//url = "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051117&auto_play=true&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg";
+var filename = new URL(url).searchParams.get('filename');
 var resp = {};
+var dir = "/var/www/html/oversee/images/";
+
 var page = require('webpage').create();
 var HDS = function (url) {
     var start = new Date().getTime() / 1000;
@@ -9,10 +12,20 @@ var HDS = function (url) {
     return new Promise(function (resolve) {
         var data = {};
         page.settings.userAgent = 'Windows / Chrome 34: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/34.0.1847.137 Safari/537.36';
-        page.open(url, function () { // executed after loading
-            //console.log("<<<<<<");
+        page.open(url, function (status) { // executed after loading
+            if (page.content.includes("Access")) {
+                page.render(dir + filename + ".denied.png");
+
+                response = {
+                    status: "denied",
+                    filename: filename + ".denied.png"
+                };
+
+                console.log(JSON.stringify(response));
+                slimer.exit();
+            }
         }).then(function () {
-            if (page.content.includes("Denied")) {
+            if (page.content.includes("Access Denied")) {
 
                 page.render(dir + filename + ".denied.png");
 
@@ -24,7 +37,6 @@ var HDS = function (url) {
                 //console.log('{"status": "denied"}');
                 console.log(JSON.stringify(response));
                 slimer.exit();
-
             }
         });
         page.onResourceReceived = function (response) {
@@ -47,10 +59,10 @@ var HDS = function (url) {
                 page.close();
                 resolve(data);
             } else if (response.url.includes('m3u8') && response.status === 200) {
-		data.type = "m3u";
-		data.src = response.url;
-		page.close();
-		resolve(data);
+                data.type = "m3u";
+                data.src = response.url;
+                page.close();
+                resolve(data);
 
             }
             if (response.status === 200 && (response.url.includes('manifest')) && (!response.url.includes('gif'))) {

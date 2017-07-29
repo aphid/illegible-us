@@ -1,11 +1,11 @@
 some packages you need:
 php-cli php-bcmath php-curl php-simplexml exiftool ffmpeg 
-
+tor
 ffmpeg probably wants x264, libopus and some other stuff
 
-slimerjs may also take some setup (you need to point it at a recent firefox install) -- it's used to get the flash injected authentication stuff from the streaming server and to take screenshots of the pages.
+slimerjs may also take some setup (you need to point it at a recent firefox install) -- pls mind slimerjs's firefox version requirements too.
 
-
+imagemagick might need more RAM to convert pdfs: https://github.com/ImageMagick/ImageMagick/issues/396
 
 
  
