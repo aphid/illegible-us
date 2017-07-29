@@ -1224,7 +1224,7 @@ Witness.prototype.addPdf = async function (hear, data) {
         "title": data.name,
         "needsScan": false
     });
-    /*
+
     this.pdfs.push(thepdf);
     console.log("fetching");
 
@@ -1239,10 +1239,9 @@ Witness.prototype.addPdf = async function (hear, data) {
     console.log(thepdf.needsScan);
 
     if (thepdf.needsScan) {
-      console.log("needs scan");
-      await thepdf.imagify();
+        console.log("needs scan");
+        await thepdf.imagify();
     }
-    */
     await scraper.wait(5);
     return Promise.resolve();
 
