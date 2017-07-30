@@ -205,7 +205,7 @@ Video.prototype.getManifest = async function () {
             scraper.msg("Ignoring vector smash detection.");
             //WHAT THE ACTUAL FUCK
             var response = result.stdout.replace("Vector smash protection is enabled.", "");
-	    if (response.includes("fault"){
+	    if (response.includes("fault")){
 	       await scraper.checkBlock();
 	       return vid.getManifest();
             }
