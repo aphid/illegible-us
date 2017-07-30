@@ -1055,12 +1055,12 @@ Pdf.prototype.imagify = async function () {
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
-    var basename = this.localName.replace(".pdf", "");
+    var basename = this.localName.replace(".pdf", "").replace("PDF","");
     var imgdir = scraper.textDir + basename;
     try {
         fs.mkdirSync(imgdir);
     } catch (e) {
-        scraper.msg("dir exists");
+        scraper.msg("dir exists... hopefully " + e);
     }
     this.imgdir = imgdir;
     var lastImg = imgdir + "/" + basename + "-" + (this.metadata.pageCount - 1) + ".jpg";
