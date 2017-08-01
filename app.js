@@ -27,11 +27,12 @@ var r = require("rethinkdb");
 var fse = require("fs-extra")
 
 var scraper = {
-    secure: true,
+    secure: false,
+    mode: "dev",
     torPass: fs.readFileSync('torpass.txt', 'utf8'),
-    torPort: 9051,
+    torPort: 9051, //control
+
     minOverseers: 0,
-    mode: "live",
     busy: false,
     connections: 0,
     slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
@@ -40,7 +41,21 @@ var scraper = {
     sockets: 5,
     current: 0,
     userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
+    reqOptions: {
+        agentClass: Agent,
+        agentOptions: {
+            socksPort: 9050
+        }
+    }
+}
+
+scraper.agent = function () {
+    this.reqOptions.headers = {
+        'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
+    }
 };
+scraper.agent();
+
 
 if (scraper.mode === "dev") {
 
@@ -205,16 +220,16 @@ Video.prototype.getManifest = async function () {
             scraper.msg("Ignoring vector smash detection.");
             //WHAT THE ACTUAL FUCK
             var response = result.stdout.replace("Vector smash protection is enabled.", "");
-	    if (response.includes("fault")){
-	       await scraper.checkBlock();
-	       return vid.getManifest();
+            if (response.includes("fault")) {
+                await scraper.checkBlock();
+                return vid.getManifest();
             }
             scraper.msg(response);
             response = JSON.parse(response);
             if (response.status === 'denied') {
                 await scraper.checkBlock();
                 return vid.getManifest();
-                
+
             }
             if (response.status === 'fail') {
                 console.log('manifest fail, retrying');
@@ -579,85 +594,50 @@ scraper.wait = function (sec) {
     });
 };
 
-Committee.prototype.scrapeRemoteAll = async function () {
-    var comm = this;
-    try {
-        var idx = await comm.getHearingIndex(comm.hearingIndex);
-        if (idx === "fail") {
-            await scraper.checkBlock();
-            await comm.getHearingIndex(comm.hearingIndex);
-        } else if (idx.lastPage) {
-            comm.lastPage = idx.lastPage;
-        }
-        for (var i = 1; i <= idx.lastPage; i++) {
-            let page = 'http://www.intelligence.senate.gov/hearings?keys=&cnum=All&page=' + i;
-            let res = await comm.getHearingIndex(page, i);
-            if (res === "fail") {
-                await scraper.checkBlock();
-                await comm.getHearingIndex(page, i);
-            }
-        }
-        await comm.fetchAll();
-        return Promise.resolve();
-    } catch (err) {
-        scraper.msg(err);
-        process.kill();
-
-        return Promise.reject(err);
-    }
-};
-
-
 Committee.prototype.scrapeRemote = async function () {
     var comm = this;
+    var curPage = 0;
+    var hearings = [];
+    var finished = false;
     try {
-        if (!comm.lastPage) {
-            var idx = await comm.getHearingIndex(comm.hearingIndex);
-            console.dir(idx);
+        while (!finished) {
+            scraper.msg("Trying index page " + curPage);
+            let url = comm.hearingIndex + curPage;
+            let res = await comm.getHearingIndex(url, curPage);
+            //console.dir(res);
 
-            if (idx === "fail") {
-                console.log("idx failed");
+            if (res === "fail") {
                 await scraper.checkBlock();
-                await comm.getHearingIndex(comm.hearingIndex);
-            } else if (idx.lastPage) {
-                comm.lastPage = idx.lastPage;
+                await comm.getHearingIndex(url, curPage);
             }
-        }
-        if (!comm.curPage) {
-            comm.curPage = 0;
-        }
+            if (res.pageHearings.length) {
+                console.log("We have", res.pageHearings.length, "hearings");
+                for (let ph of res.pageHearings) {
+                    hearings.push(ph);
+                } //end for
+            } else {
+                console.log("no more hearings");
+                finished = true;
+                for (let hear of hearings) {
+                    console.log("fetching", hear.title);
 
-        let page = 'http://www.intelligence.senate.gov/hearings?keys=&cnum=All&page=' + comm.curPage;
-        let res = await comm.getHearingIndex(page, comm.curPage);
-        //console.dir(res);
+                    let h = await hear.fetch();
+                    if (h) {
+                        console.log(h);
+                    }
 
-        if (res === "fail") {
-            await scraper.checkBlock();
-            await comm.getHearingIndex(page, comm.curPage);
-        }
-        if (res.pageHearings) {
-            console.log("We have", res.pageHearings.length, "hearings");
-            for (let ph of res.pageHearings) {
-                console.log("fetching", ph.title);
-                await scraper.wait(3);
-                let h = await ph.fetch();
-                if (h) {
-                    console.log(h);
                 }
-            } //end for
+                return Promise.resolve();
+            }
+            curPage++;
         }
-        if (comm.curPage === comm.lastPage) {
-            return Promise.resolve("finished");
-        } else {
-            return Promise.resolve();
-        }
-        //await comm.fetchAll();
     } catch (err) {
         scraper.msg(err);
         process.exit();
 
         return Promise.reject(err);
     }
+
 };
 
 
@@ -676,7 +656,8 @@ Committee.prototype.init = async function () {
         await comm.validateLocal();
         await scraper.checkBlock();
 
-        await comm.scrapeRemote(); // or comm.readLocal().
+        await comm.scrapeRemote(); // or comm.readLocal()
+        /*
         console.log(comm.curPage, " of ", comm.lastPage)
         while (comm.curPage < comm.lastPage) {
             console.log("again");
@@ -692,8 +673,8 @@ Committee.prototype.init = async function () {
             console.log("moving to page ", comm.curPage, "of", comm.lastPage);
 
 
-        }
-        
+        }*/
+
         await comm.queuePdfs();
         await comm.validateLocal();
         await comm.textifyPdfs();
@@ -703,7 +684,7 @@ Committee.prototype.init = async function () {
         await comm.write();
         await comm.transcodeVideos();
         scraper.busy = false;
-    
+
     } catch (err) {
         scraper.msg("something terrible happened");
         scraper.msg(err);
@@ -943,14 +924,8 @@ scraper.getFile = function (url, dest) {
             return resolve("file here already");
 
         }
-        var options = {
-            url: url,
-            agentClass: Agent,
-            agentOptions: {
-                socksPort: 9050
-            },
-            headers: {}
-        };
+        var options = reqOptions;
+        options.url = url;
         var stream = progress(request(url), options)
             .on('response', function (response) {
                 console.log(response.statusCode) // 200
@@ -1058,7 +1033,7 @@ Pdf.prototype.imagify = async function () {
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
-    var basename = this.localName.replace(".pdf", "").replace("PDF","");
+    var basename = this.localName.replace(".pdf", "").replace("PDF", "");
     var imgdir = scraper.textDir + basename;
     try {
         fs.mkdirSync(imgdir);
@@ -1278,21 +1253,9 @@ Committee.prototype.fetchAll = async function () {
 Committee.prototype.getHearingIndex = async function (url, page) {
     var pageHearings = [];
     var comm = this;
-    if (!page) {
-        page = 0;
-    }
-    var lastPage;
 
-    var options = {
-        url: url,
-        agentClass: Agent,
-        agentOptions: {
-            socksPort: 9050
-        },
-        headers: {
-            'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
-        }
-    };
+    var options = scraper.reqOptions;
+    options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
     var imgname = "hearpage" + page + moment().format("YYMMDD");
     await scraper.screenshot(url, imgname);
@@ -1302,10 +1265,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     try {
         var resp = await rq(options);
         var $ = cheerio.load(resp);
-        var pagerLast = $('.pager-last a').attr('href');
-        if (pagerLast) {
-            lastPage = Url.parse(pagerLast, true);
-        }
+
         //scraper.msg(lastPage.query.page);
         $('.views-row').each(async function (i, elem) {
             var hearing = {};
@@ -1346,20 +1306,15 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
             }
         });
-        if (lastPage) {
-            return Promise.resolve({
-                "lastPage": lastPage.query.page,
-                "pageHearings": pageHearings
-            });
-        } else {
-            return Promise.resolve({
-                "pageHearings": pageHearings
-            });
-        }
+        console.log(pageHearings.length + ">>???>>>");
+        return Promise.resolve({
+            "pageHearings": pageHearings
+        });
+
 
     } catch (err) {
         scraper.msg("error ");
-        //throw (err);
+        throw (err);
     } finally {
         console.log("><><><><><><>");
     }
@@ -1370,16 +1325,8 @@ Committee.prototype.testNode = async function () {
     var comm = this;
 
     console.log("))))))))))))))testNode");
-    var options = {
-        url: comm.hearingIndex,
-        agentClass: Agent,
-        agentOptions: {
-            socksPort: 9050
-        },
-        headers: {
-            'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
-        }
-    };
+    var options = scraper.reqOptions;
+    options.url = intel.hearingIndex;
     try {
         var resp = await rq(options);
         scraper.blocked = false;
@@ -1401,11 +1348,12 @@ Committee.prototype.testNode = async function () {
             console.log(err.body);
             await scraper.wait(5);
             return Promise.resolve("blocked");
+
+            scraper.msg("CheckBlock is throwing an error: " + err);
+            throw (err);
         }
-        scraper.msg("CheckBlock is throwing an error: " + err);
-        throw (err);
-    }
-    return resp;
+        return resp;
+    };
 };
 
 scraper.checkBlock = async function () {
@@ -1443,6 +1391,7 @@ scraper.getNewID = async function () {
             await scraper.getNewID();
             Promise.resolve();
         } else {
+            scraper.agent();
             Promise.resolve();
 
         }
@@ -1500,16 +1449,7 @@ Hearing.prototype.fetch = async function () {
     var panel;
     scraper.msg("getting info for: " + hear.date);
     scraper.msg(hear.hearingPage);
-    var options = {
-        url: hear.hearingPage,
-        agentClass: Agent,
-        agentOptions: {
-            socksPort: 9050
-        },
-        headers: {
-            'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
-        }
-    };
+    var options = scraper.reqOptions;
     var ss = await scraper.screenshot(hear.hearingPage, hear.shortname);
     scraper.url({
         'url': hear.shortname,
@@ -1633,7 +1573,7 @@ var intel = new Committee({
     committee: "Intelligence",
     chamber: "senate",
     url: "http://www.intelligence.senate.gov",
-    hearingIndex: "http://www.intelligence.senate.gov/hearings",
+    hearingIndex: "http://www.intelligence.senate.gov/hearings?keys=&cnum=All&page=",
     shortname: "intel"
 });
 
@@ -1674,9 +1614,9 @@ io.on("connect", function (socket) {
         setTimeout(function () {
             if (scraper.connections < scraper.minOverseers) {
                 scraper.msg("no quorum");
-                if (scraper.minOverseers > 0){
-		    scraper.shutDown();
-		}
+                if (scraper.minOverseers > 0) {
+                    scraper.shutDown();
+                }
             }
         }, 10000);
 
