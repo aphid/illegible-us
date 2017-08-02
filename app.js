@@ -1273,7 +1273,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             hearing.hearingPage = "" + $(elem).find('.views-field-title').find('a').attr('href');
             hearing.hearingPage = Url.resolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
             hearing.title = $(elem).find('.views-field-title').text().trim();
-            var datesplit = $(elem).find('.views-field-field-hearing-date').text().trim().split(' - ');
+            var datefield = $(elem).find('.views-field-field-hearing-date').text().trim();
+            var datesplit = datefield.split(' - ');
             hearing.date = datesplit[0];
             hearing.time = datesplit[1];
             if (!hearing.date) {
@@ -1287,6 +1288,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             var nHear;
             if (hearing.title.includes('Postponed')) {
                 scraper.msg("HEARING POSTPONED");
+            } else if (datefield === "N/A") {
+                console.log("date invalid, cannot process (yet)");
             } else if (hearing.title.includes('Closed')) {
                 //scraper.msg(hearing.title);
                 hearing.closed = true;
@@ -1294,7 +1297,6 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
-                await scraper.wait(5);
             } else if (hearing.hearingPage.includes('undefined')) {
                 console.log("undefined hearingpage");
                 return resolve();
