@@ -34,10 +34,10 @@ requestPage = function () {
 
         } else {
 
-            page.render(dir + filename + ".png");
+            page.render(dir + filename + ".jpg", { format: "jpeg", quality: 25});
             response = {
                 status: "success",
-                filename: filename + ".png"
+                filename: filename + ".jpg"
             };
             response.errors = errors;
             console.log(JSON.stringify(response))
@@ -45,13 +45,6 @@ requestPage = function () {
         }
     });
 };
-/*
-page.onConsoleMessage = function (message, line, file) {
-  console.log(file);
-  // Process message here
-};
-*/
-
 
 if (!url || !filename) {
     console.log('{"status": "failed"}');
