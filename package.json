@@ -9,7 +9,7 @@
     "exiftool": "git+https://github.com/aphid/exiftool.git",
     "file-exists": "^0.1.1",
     "fluent-ffmpeg": "^2.0.1",
-    "fs-extra": "^4.0.0",
+    "fs-extra": "^4.0.1",
     "fs-promise": "^0.3.1",
     "glob": "^5.0.14",
     "graceful-fs": "^4.1.2",
