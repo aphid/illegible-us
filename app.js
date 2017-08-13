@@ -23,8 +23,7 @@ var cpp = require('child-process-promise');
 var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
-var r = require("rethinkdb");
-var fse = require("fs-extra")
+var fse = require("fs-extra");
 
 var scraper = {
     secure: false,
@@ -47,12 +46,12 @@ var scraper = {
             socksPort: 9050
         }
     }
-}
+};
 
 scraper.agent = function () {
     this.reqOptions.headers = {
         'User-Agent': scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)]
-    }
+    };
 };
 scraper.agent();
 
@@ -939,8 +938,8 @@ scraper.getFile = function (url, dest) {
         options.url = url;
         var stream = progress(request(url), options)
             .on('response', function (response) {
-                console.log(response.statusCode) // 200
-                console.log(response.headers['content-type']) // 'image/png'
+                console.log(response.statusCode); // 200
+                console.log(response.headers['content-type']); // 'image/png'
             }).on('progress', function (state) {
                 if (Math.floor(state.percent > pct)) {
                     scraper.msg(state.percent.toFixed(4) * 100 + "%", state.time.remaining, "detail");
@@ -1114,7 +1113,7 @@ Pdf.prototype.textify = async function () {
             pdf.needsScan = true;
             return Promise.resolve();
         }
-        fs.writeFileSync((txtpath), data, 'utf8')
+        fs.writeFileSync((txtpath), data, 'utf8');
         scraper.msg('writing file (' + data.length + ')');
         scraper.msg('text extraction complete');
         pdf.txtpath = txtpath;
@@ -1308,9 +1307,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
                 await scraper.wait(5);
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
-            } else if (hearing.hearingPage.includes('undefined')) {
+            } else if (hearing.hearingPage === 'undefined') {
                 console.log("undefined hearingpage");
-                return resolve();
             } else {
                 nHear = new Hearing(hearing);
                 comm.hearings.push(nHear);
@@ -1374,7 +1372,7 @@ Committee.prototype.testNode = async function () {
 };
 
 scraper.checkBlock = async function () {
-    console.log("((((((checkblock")
+    console.log("((((((checkblock");
     var scrape = this;
     scraper.msg("Testing for CDN block");
     try {
@@ -1448,7 +1446,7 @@ scraper.screenshot = async function (url, filename) {
     console.log(response);
     var data = JSON.parse(response);
     console.log(data);
-    console.log("(*(*(*(*(*(*(*(*(*(*()))))))))))")
+    console.log("(*(*(*(*(*(*(*(*(*(*()))))))))))");
     if (data.status === 'denied') {
         scraper.url({
             'url': data.filename
@@ -1507,7 +1505,7 @@ Hearing.prototype.fetch = async function () {
             var witness = new Witness(wit);
             for (let pdf of pdfs) {
                 console.dir(pdf);
-                await witness.addPdf(hear, pdf)
+                await witness.addPdf(hear, pdf);
             }
             await hear.addWitness(witness);
         }
