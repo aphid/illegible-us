@@ -18,7 +18,6 @@ var pfs = require('fs-promise');
 var path = require('path');
 var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
-var http = require('http');
 var cpp = require('child-process-promise');
 var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
@@ -28,24 +27,17 @@ var fse = require("fs-extra");
 var scraper = {
     secure: false,
     mode: "dev",
-    torPass: fs.readFileSync('torpass.txt', 'utf8'),
-    torPort: 9051, //control
-
+    useTor: true,
+    slimerFlags: "",
     minOverseers: 0,
     busy: false,
     connections: 0,
-    slimerFlags: " --proxy-type=socks5 --proxy=localhost:9050 ",
     started: false,
     blocked: false,
     sockets: 5,
     current: 0,
     userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
-    reqOptions: {
-        agentClass: Agent,
-        agentOptions: {
-            socksPort: 9050
-        }
-    }
+    reqOptions: {}
 };
 
 scraper.agent = function () {
@@ -84,6 +76,21 @@ if (scraper.mode === "live") {
     scraper.tempDir = "./media/temp/";
 }
 
+if (scraper.useTor === true) {
+    scraper.slimerFlags = " --proxy-type=socks5 --proxy=localhost:9050 ";
+    scraper.torPass = fs.readFileSync('torpass.txt', 'utf8');
+    scraper.torPort = 9051; //control
+    scraper.reqOptions = {
+        agentClass: Agent,
+        agentOptions: {
+            socksPort: 9050
+        }
+    };
+
+} else {
+    scraper.slimerFlags = " ";
+}
+
 if (scraper.secure) {
     var app = require('https').createServer({
         key: fs.readFileSync('./privkey.pem'),
@@ -92,6 +99,9 @@ if (scraper.secure) {
 } else {
     app = require('http').createServer();
 }
+
+
+
 app.listen(9080);
 
 var io = require('socket.io')(app);
@@ -200,58 +210,58 @@ Video.prototype.getManifest = async function () {
     if (fs.existsSync(this.localPath)) {
         scraper.msg("nevermind, file already exists");
         return Promise.resolve();
-    } else {
-        scraper.msg("Getting remote info about " + vid.basename);
-        scraper.msg("Checking stream type");
-        var url = "'" + vid.url + "'";
-        url = url.replace('false', 'true');
-
-        //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-        var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url + '| grep -v GraphicsCriticalError';
-        console.log(command);
-        //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
-        scraper.msg(">>>> " + command.replace(__dirname, "."));
-
-        try {
-
-            var result = await cpp.exec(command);
-            scraper.msg("Ignoring vector smash detection.");
-            //WHAT THE ACTUAL FUCK
-            var response = result.stdout.replace("Vector smash protection is enabled.", "");
-            if (response.includes("fault")) {
-                await scraper.checkBlock();
-                return await vid.getManifest();
-            }
-            scraper.msg(response);
-            response = JSON.parse(response);
-            if (response.status === 'denied') {
-                await scraper.checkBlock();
-                return await vid.getManifest();
-
-            }
-            if (response.status === 'fail') {
-                console.log('manifest fail, retrying');
-                await scraper.wait(5);
-                await vid.getManifest();
-
-            }
-            if (response.type) {
-                scraper.msg("Video type: " + response.type);
-                vid.type = response.type;
-                vid.src = response.src;
-            }
-            scraper.msg("fulfilling manifest");
-
-            return Promise.resolve();
-
-        } catch (err) {
-            throw (err);
-        }
     }
+    scraper.msg("Getting remote info about " + vid.basename);
+    scraper.msg("Checking stream type");
+    var url = "'" + vid.url + "'";
+    url = url.replace('false', 'true');
+
+    //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
+    var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url + '| grep -v GraphicsCriticalError';
+    console.log(command);
+    //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
+    scraper.msg(">>>> " + command.replace(__dirname, "."));
+
+    try {
+
+        var result = await cpp.exec(command);
+        scraper.msg("Ignoring vector smash detection.");
+        //WHAT THE ACTUAL FUCK
+        var response = result.stdout.replace("Vector smash protection is enabled.", "");
+        if (response.includes("fault")) {
+            await scraper.checkBlock();
+            return await vid.getManifest();
+        }
+        scraper.msg(response);
+        response = JSON.parse(response);
+        if (response.status === 'denied') {
+            await scraper.checkBlock();
+            return await vid.getManifest();
+
+        }
+        if (response.status === 'fail') {
+            console.log('manifest fail, retrying');
+            await scraper.wait(5);
+            await vid.getManifest();
+
+        }
+        if (response.type) {
+            scraper.msg("Video type: " + response.type);
+            vid.type = response.type;
+            vid.src = response.src;
+        }
+        scraper.msg("fulfilling manifest");
+
+        return Promise.resolve();
+
+    } catch (err) {
+        throw (err);
+    }
+
 };
 
 
-Video.prototype.fetch = async function (data) {
+Video.prototype.fetch = async function (manifest) {
     console.log(this);
     //because we have probs if the spawn gets refused
     await scraper.checkBlock();
@@ -271,7 +281,7 @@ Video.prototype.fetch = async function (data) {
                 output = scraper.videoDir + vid.basename + '.' + vid.type;
 
                 scraper.msg("Will save to " + output);
-                scraper.getFile(data.src, incoming).then(function () {
+                scraper.getFile(manifest.src, incoming).then(function () {
                     fse.moveSync(incoming, output);
                     vid.localPath = output;
                     return fulfill();
@@ -326,10 +336,10 @@ Video.prototype.fetch = async function (data) {
                 output = scraper.videoDir + vid.basename + ".flv";
                 //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
                 var childArgs = [
-  path.join(__dirname, 'lib/AdobeHDS.php'), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", data.manifest, "--auth", data.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
+  path.join(__dirname, 'lib/AdobeHDS.php'), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", manifest.manifest, "--auth", manifest.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
                 scraper.msg('Requesting HDS fragments with credentials:');
-                scraper.msg(' Authentication key: ' + data.auth);
-                scraper.msg(' Manifest: ' + data.manifest);
+                scraper.msg(' Authentication key: ' + manifest.auth);
+                scraper.msg(' Manifest: ' + manifest.manifest);
                 scraper.msg(childArgs);
                 cpp.spawn("php", childArgs).fail(function (err) {
                         console.error('SPAWN ERROR: ', (err.stack || err));
@@ -409,8 +419,8 @@ Video.prototype.transcodeToMP4 = function () {
             .on('start', function (commandLine) {
                 scraper.msg('Spawned Ffmpeg with command: ' + commandLine);
             })
-            .on('progress', function (progress) {
-                var mf = Math.floor(progress.percent);
+            .on('progress', function (prog) {
+                var mf = Math.floor(prog.percent);
 
                 if (mf > lpct) {
                     scraper.msg('Processing: ' + mf + '% done');
@@ -444,7 +454,7 @@ Video.prototype.transcodeToOgg = async function () {
     scraper.msg('TRANSCODING TO OGG VORBIS AUDIO');
     var vid = this;
     var lpct = 0;
-
+    var finished = Promise.resolve();
     if (vid.mp4) {
         var input = vid.localPath;
         var temp = scraper.tempDir + vid.basename + ".ogg";
@@ -459,8 +469,8 @@ Video.prototype.transcodeToOgg = async function () {
                 .on('start', function (commandLine) {
                     scraper.msg('Spawned Ffmpeg with command: ' + commandLine);
                 })
-                .on('progress', function (progress) {
-                    var mf = Math.floor(progress.percent);
+                .on('progress', function (prog) {
+                    var mf = Math.floor(prog.percent);
 
                     if (mf > lpct) {
                         scraper.msg('Processing: ' + mf + '% done');
@@ -475,7 +485,7 @@ Video.prototype.transcodeToOgg = async function () {
                     scraper.msg('ogg end fired?');
                     scraper.msg('Processing Finished');
                     fse.moveSync(temp, output);
-                    return resolve();
+                    return finished;
                 })
                 .on('error', function (err, stdout, stderr) {
                     scraper.msg(err.message);
@@ -517,8 +527,8 @@ Video.prototype.transcodeToWebm = function () {
                 .on('start', function (commandLine) {
                     scraper.msg('Spawned Ffmpeg with command: ' + commandLine);
                 })
-                .on('progress', function (progress) {
-                    var mf = Math.floor(progress.percent);
+                .on('progress', function (prog) {
+                    var mf = Math.floor(prog.percent);
 
                     if (mf > lpct) {
                         scraper.msg('Processing: ' + mf + '% done');
@@ -616,7 +626,7 @@ Committee.prototype.scrapeRemote = async function () {
                 await comm.getHearingIndex(url, curPage);
             }
             if (res.pageHearings.length) {
-                console.log("Page has ", res.pageHearings.length, "hearings");
+                console.log("Page has", res.pageHearings.length, "hearings");
                 for (let ph of res.pageHearings) {
                     hearings.push(ph);
                     scraper.msg(hearings.length + " hearings total.");
@@ -704,7 +714,6 @@ Committee.prototype.init = async function () {
 
 Committee.prototype.transcodeVideos = async function () {
     scraper.msg("//////////////////////transcooooode");
-    var comm = this;
 
     for (var hear of this.hearings) {
         scraper.msg("transcoding " + hear.shortname);
@@ -728,7 +737,6 @@ Committee.prototype.transcodeVideos = async function () {
 
 Committee.prototype.getVidMeta = async function () {
     scraper.msg("##META META META##");
-    var comm = this;
     for (var hear of this.hearings) {
         var vid = hear.video;
         await vid.getMeta();
@@ -740,7 +748,7 @@ Committee.prototype.getVidMeta = async function () {
 Video.transcode = function () {
     var vid = this;
     return new Promise(function (fulfill) {
-        if (fs.existsSync(this.mp4) && fs.existsSync(this.ogg) && fs.existsSync(this.webm)) {
+        if (fs.existsSync(vid.mp4) && fs.existsSync(vid.ogg) && fs.existsSync(vid.webm)) {
             scraper.msg("All transcoded video files exist");
             fulfill();
         } else {
@@ -834,17 +842,6 @@ Committee.prototype.write = async function (filename) {
 };
 
 
-var Witness = function (options) {
-    this.pdfs = [];
-    for (var fld in options) {
-        if (options[fld]) {
-            this[fld] = options[fld];
-        }
-    }
-};
-
-
-
 Committee.prototype.textifyPdfs = async function () {
 
     for (let hear of this.hearings) {
@@ -870,7 +867,9 @@ Committee.prototype.validateLocal = function () {
             fs.mkdirSync(dir);
         } catch (e) {
             scraper.msg("dir exists");
-            if (e.code !== 'EEXIST') throw e;
+            if (e.code !== 'EEXIST') {
+                throw e;
+            }
         }
 
     });
@@ -936,7 +935,7 @@ scraper.getFile = function (url, dest) {
         }
         var options = scraper.reqOptions;
         options.url = url;
-        var stream = progress(request(url), options)
+        progress(request(url), options)
             .on('response', function (response) {
                 console.log(response.statusCode); // 200
                 console.log(response.headers['content-type']); // 'image/png'
@@ -967,30 +966,30 @@ Pdf.prototype.getMeta = async function () {
             var meta = fs.readFileSync(jsonpath, "utf8");
             pdf.metadata = JSON.parse(meta);
             return Promise.resolve();
-        } else {
-            return Promise.resolve();
         }
+        return Promise.resolve();
 
-    } else {
-        scraper.msg("creating metadata...");
-        var resp = await exif.metadata(input, async function (err, metadata) {
-            if (err) {
-                return Promise.resolve("exiftool error: " + err);
-            } else {
-                if (metadata.fileSize === "0 bytes") {
-                    return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
-                    process.exit();
-                }
-                var json = JSON.stringify(metadata, undefined, 2);
-                scraper.msg(json, 'detail');
-                await pfs.writeFile(jsonpath, json);
-                pdf.metadata = metadata;
 
-                return Promise.resolve();
-            }
-        }); //end metadata
-        return Promise.resolve(resp);
     }
+    scraper.msg("creating metadata...");
+    var resp = await exif.metadata(input, async function (err, metadata) {
+        if (err) {
+            return Promise.resolve("exiftool error: " + err);
+        }
+        if (metadata.fileSize === "0 bytes") {
+            return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
+            process.exit();
+        }
+        var json = JSON.stringify(metadata, undefined, 2);
+        scraper.msg(json, 'detail');
+        await pfs.writeFile(jsonpath, json);
+        pdf.metadata = metadata;
+
+        return Promise.resolve();
+
+    }); //end metadata
+    return Promise.resolve(resp);
+
 };
 
 Video.prototype.getMeta = async function () {
@@ -1038,7 +1037,6 @@ Video.prototype.getMeta = async function () {
 
 Pdf.prototype.imagify = async function () {
     console.log(this.metadata);
-    var pdf = this;
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
@@ -1055,13 +1053,13 @@ Pdf.prototype.imagify = async function () {
     if (fs.existsSync(lastImg)) {
         console.log("EXISTS");
         return Promise.resolve();
-    } else {
-        console.log("does not exist?");
     }
+    console.log("does not exist?");
+
     var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + ".jpg'";
     console.log(cmd);
     try {
-        var nc = await cpp.exec(cmd);
+        await cpp.exec(cmd);
         console.log("#################DONE IMAGES################");
         return Promise.resolve();
     } catch (e) {
@@ -1120,15 +1118,12 @@ Pdf.prototype.textify = async function () {
         pdf.hasText = true;
         return Promise.resolve();
 
-        //console.log(resp);
-        return resp;
     } catch (err) {
         throw (err);
     }
 };
 
 Committee.prototype.queuePdfs = async function () {
-    var pdfs = [];
     for (var hear of this.hearings) {
         scraper.msg(hear.title + ": ");
 
@@ -1136,7 +1131,7 @@ Committee.prototype.queuePdfs = async function () {
             for (var pdf of wit.pdfs) {
                 scraper.msg(" " + pdf.remotefileName);
                 await scraper.wait(5);
-                var a = await pdf.fetch();
+                await pdf.fetch();
                 await pdf.getMeta();
                 await pdf.textify();
                 await this.write();
@@ -1170,7 +1165,7 @@ Pdf.prototype.fetch = async function () {
             scraper.msg("Updating location due to REDIRECT");
             await scraper.wait(4);
             pdf.oldUrl = pdf.remoteUrl;
-            pdf.remoteUrl = err.location;
+            pdf.remoteUrl = resp.location;
             await pdf.fetch();
         }
     } catch (err) {
@@ -1189,11 +1184,11 @@ Hearing.prototype.addWitness = function (witness) {
         var wit = new Witness(witness);
         this.witnesses.push(wit);
         return wit;
-    } else {
-
-        this.witnesses.push(witness);
-        return witness;
     }
+
+    this.witnesses.push(witness);
+    return witness;
+
 
 };
 
@@ -1267,7 +1262,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
     var imgname = "hearpage" + page + moment().format("YYMMDD");
-    await scraper.screenshot(url, imgname);
+    var ss = await scraper.screenshot(url, imgname);
+    console.log(ss);
     scraper.url({
         'url': imgname
     });
@@ -1276,7 +1272,6 @@ Committee.prototype.getHearingIndex = async function (url, page) {
         var resp = await rq(options);
         var $ = cheerio.load(resp);
 
-        //scraper.msg(lastPage.query.page);
         $('.views-row').each(async function (i, elem) {
             var hearing = {};
             hearing.dcDate = $(elem).find('.date-display-single').attr('content');
@@ -1337,8 +1332,6 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 };
 
 Committee.prototype.testNode = async function () {
-    var comm = this;
-
     console.log("))))))))))))))testNode");
     var options = scraper.reqOptions;
     options.url = intel.hearingIndex;
@@ -1381,11 +1374,11 @@ scraper.checkBlock = async function () {
         if (resp === "allowed") {
             scraper.msg("No block detected.");
             return Promise.resolve();
-        } else {
-            scraper.msg("Attempting new identity...");
-            await scraper.getNewID();
-            return await scraper.checkBlock();
         }
+        scraper.msg("Attempting new identity...");
+        await scraper.getNewID();
+        return await scraper.checkBlock();
+
     } catch (err) {
         scraper.msg(err);
     };
@@ -1465,12 +1458,13 @@ scraper.screenshot = async function (url, filename) {
 Hearing.prototype.fetch = async function () {
     console.log(">>>>>>>>>>>>>fetching hearing" + this.title);
     var hear = this;
-    var panel;
+    //TODO panel parsing?
     scraper.msg("getting info for: " + hear.date);
     scraper.msg(hear.hearingPage);
     var options = scraper.reqOptions;
     options.url = hear.hearingPage;
-    var ss = await scraper.screenshot(hear.hearingPage, hear.shortname);
+    console.log('generating screenshot for hearing fetch');
+    await scraper.screenshot(hear.hearingPage, hear.shortname);
     scraper.url({
         'url': hear.shortname,
         'title': hear.title
@@ -1479,16 +1473,12 @@ Hearing.prototype.fetch = async function () {
         await scraper.wait(5);
         scraper.msg("CLOSED HEARING");
         return Promise.resolve();
-    } else {
-        scraper.msg("OPEN HEARING");
-
     }
+    scraper.msg("OPEN HEARING");
 
     try {
         console.log("requesting " + options.url);
         var html = await rq(options);
-        var target;
-
         var data = await scraper.crunchHtml(html);
         if (!data) {
             console.msg("PARSE FAILED");
@@ -1518,10 +1508,10 @@ Hearing.prototype.fetch = async function () {
         if (err.statusCode === 403) {
             await scraper.checkBlock();
             return Promise.resolve("blocked");
-        } else {
-            throw (err);
-            return Promise.reject();
         }
+        throw (err);
+        return Promise.reject();
+
     }
 
 };
