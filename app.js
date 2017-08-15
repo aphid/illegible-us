@@ -1475,7 +1475,8 @@ Hearing.prototype.fetch = async function () {
         return Promise.resolve();
     }
     scraper.msg("OPEN HEARING");
-
+    console.dir(hear);
+    console.dir(options);
     try {
         console.log("requesting " + options.url);
         var html = await rq(options);
