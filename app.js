@@ -25,8 +25,8 @@ var glob = require("glob");
 var fse = require("fs-extra");
 
 var scraper = {
-    secure: false,
-    mode: "dev",
+    secure: true,
+    mode: "live",
     useTor: true,
     slimerFlags: "",
     minOverseers: 0,
