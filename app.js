@@ -233,7 +233,7 @@ Video.prototype.getManifest = async function () {
             return await vid.getManifest();
         }
         scraper.msg(response);
-        response = JSON.parse(response);
+        response = JSON.parse(response.replace("Vector smash protection is enabled.",""));
         if (response.status === 'denied') {
             await scraper.checkBlock();
             return await vid.getManifest();
@@ -273,7 +273,7 @@ Video.prototype.fetch = async function (manifest) {
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
         return Promise.resolve();
     }
-    return new Promise(function (fulfill, reject) {
+    return new Promise(async function (fulfill, reject) {
         {
             scraper.msg("TYPE: " + vid.type);
             if (vid.type === 'flv' || vid.type === 'mp4') {
@@ -301,7 +301,6 @@ Video.prototype.fetch = async function (manifest) {
                 var childargs = ["--hls-prefer-native", "--proxy", "socks5://127.0.0.1:9050", '-o', incoming, vid.src];
                 console.log("youtube-dl " + childargs.join(' '));
                 scraper.msg("downloading VOD fragments");
-
                 cpp.spawn("youtube-dl", childargs).fail(function (err) {
                         console.error('spawn error: ', err.stack || err);
                         reject(err);
@@ -324,12 +323,16 @@ Video.prototype.fetch = async function (manifest) {
                     .then(function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
-                    }).then(function () {
-                        return fulfill();
+			fulfill();
+                    }).catch(async function (err) {
+                        if (err.includes("urlopen error")){
+			    scraper.msg("video scrape fail, retrying with manifest");
+			    await vid.fetch(manifest);
+			} else {
+			    scraper.msg("unknown video scrape error");
+			    await vid.fetch(manifest);
+			}
                     });
-
-
-
 
             } else if (vid.type === 'hds') {
                 incoming = scraper.incomingDir + vid.basename + ".flv";
@@ -1478,7 +1481,8 @@ Hearing.prototype.fetch = async function () {
     console.dir(hear);
     console.dir(options);
     try {
-        console.log("requesting " + options.url);
+        options.url = this.hearingPage;
+    	console.log("requesting " + options.url);
         var html = await rq(options);
         var data = await scraper.crunchHtml(html);
         if (!data) {
