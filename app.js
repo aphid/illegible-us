@@ -65,14 +65,14 @@ if (scraper.mode === "dev") {
 
 if (scraper.mode === "live") {
     scraper.dataDir = '/var/www/illegible.us/html/';
-    scraper.mediaDir = '/var/www/illegible.us/html/oversee/media/';
+    scraper.mediaDir = '/var/www/illegible.us/html/ssci/media/';
     scraper.hearingDir = './data/hearings/';
-    scraper.textDir = '/var/www/illegible.us/html/oversee/media/text/';
+    scraper.textDir = '/var/www/illegible.us/html/ssci/media/text/';
     scraper.incomingDir = './media/incoming/';
-    scraper.metaDir = '/var/www/illegible.us/html/oversee/media/metadata/';
-    scraper.videoDir = '/var/www/illegible.us/html/oversee/media/video/';
-    scraper.transcodedDir = '/var/www/illegible.us/html/oversee/media/transcoded/';
-    scraper.webshotDir = '/var/www/illegible.us/html/oversee/images/';
+    scraper.metaDir = '/var/www/illegible.us/html/ssci/media/metadata/';
+    scraper.videoDir = '/var/www/illegible.us/html/ssci/media/video/';
+    scraper.transcodedDir = '/var/www/illegible.us/html/ssci/media/transcoded/';
+    scraper.webshotDir = '/var/www/illegible.us/html/ssci/images/';
     scraper.tempDir = "./media/temp/";
 }
 
@@ -262,18 +262,25 @@ Video.prototype.getManifest = async function () {
 
 
 Video.prototype.fetch = async function (manifest) {
-    console.log(this);
     //because we have probs if the spawn gets refused
     await scraper.checkBlock();
     var vid = this,
         output, incoming;
-    if (!this.type) {
-        return Promise.reject("Problem getting filetype");
-    }
+
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
-        return Promise.resolve();
+            this.localPath = scraper.videoDir + vid.basename + ".mp4";
+	    this.type = "mp4";
+	    return Promise.resolve();
     }
-    return new Promise(async function (fulfill, reject) {
+    await this.getManifest();
+    if (!this.type) {
+	         console.dir(this);
+	         return Promise.reject("Problem getting filetype");
+	     }
+
+    
+
+	return new Promise(async function (fulfill, reject) {
         {
             scraper.msg("TYPE: " + vid.type);
             if (vid.type === 'flv' || vid.type === 'mp4') {
@@ -318,21 +325,23 @@ Video.prototype.fetch = async function (manifest) {
                         cP.stderr.on('data', function (data) {
                             scraper.msg('[spawn] stderr: ' + data.toString().trim());
                         });
-
-                    })
+		    })
+                    
                     .then(function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
 			fulfill();
-                    }).catch(async function (err) {
-                        if (err.includes("urlopen error")){
-			    scraper.msg("video scrape fail, retrying with manifest");
-			    await vid.fetch(manifest);
-			} else {
-			    scraper.msg("unknown video scrape error");
-			    await vid.fetch(manifest);
-			}
-                    });
+		    })
+		.catch(async function (err) {
+                                                        if (err.includes("urlopen error")){
+					                                                                                        scraper.msg("video scrape fail, retrying with manifest");
+					                                                                                        await vid.fetch(manifest);
+					                                                                                    } else {
+					                                                                                        scraper.msg("unknown video scrape error");
+					                                                                                        await vid.fetch(manifest);
+					                                                                                    }
+                                           });
+			    
 
             } else if (vid.type === 'hds') {
                 incoming = scraper.incomingDir + vid.basename + ".flv";
@@ -388,6 +397,7 @@ Video.prototype.transcodeToMP4 = function () {
         scraper.msg("transcoding " + input + " to " + output);
         if (fs.existsSync(output)) {
             scraper.msg("Video file already exists " + output);
+	    vid.localPath = output;
             return fulfill();
         }
         scraper.msg(vid.type + " --> " + input);
@@ -612,10 +622,9 @@ scraper.wait = function (sec) {
     });
 };
 
-Committee.prototype.scrapeRemote = async function () {
+Committee.prototype.scrapeRemote = async function (page) {
     var comm = this;
-    var curPage = 0;
-    var hearings = [];
+    var curPage = page || 0;
     var finished = false;
     try {
         while (!finished) {
@@ -630,14 +639,13 @@ Committee.prototype.scrapeRemote = async function () {
             }
             if (res.pageHearings.length) {
                 console.log("Page has", res.pageHearings.length, "hearings");
-                for (let ph of res.pageHearings) {
-                    hearings.push(ph);
-                    scraper.msg(hearings.length + " hearings total.");
-                } //end for
+                scraper.msg(comm.hearings.length + " hearings total.");
+                
             } else {
                 console.log("no more hearings");
                 finished = true;
-                for (let hear of hearings) {
+                for (let hear of comm.hearings.reverse()) {
+		    if (!hear.closed){
                     console.log("fetching", hear.title);
                     await scraper.wait(3);
                     let h = await hear.fetch();
@@ -646,8 +654,10 @@ Committee.prototype.scrapeRemote = async function () {
                     if (h) {
                         console.log(h);
                     }
+	            }
 
                 }
+		console.log("Finished with page", curPage);
                 return Promise.resolve();
             }
             curPage++;
@@ -883,7 +893,9 @@ Committee.prototype.validateLocal = function () {
             hear.video.localPath = flvpath;
         } else if (fs.existsSync(mp4path)) {
             hear.video.localPath = mp4path;
-        }
+        } else {
+	    console.log("NO LOCALPATH FOR ", hear);
+ 	}
     }
 
     return Promise.resolve();
@@ -893,11 +905,10 @@ Committee.prototype.validateLocal = function () {
 Hearing.prototype.addVideo = async function (video) {
     var hear = this;
     video.basename = this.shortname;
-    this.video = new Video(JSON.parse(JSON.stringify(video)));
+    this.video = await new Video(JSON.parse(JSON.stringify(video)));
     console.log("processing video");
     await scraper.wait(5);
     scraper.msg(JSON.stringify(this.video), "detail");
-    await this.video.getManifest();
     await this.video.fetch();
     await this.video.getMeta();
     //await this.video.transcode();
@@ -959,7 +970,7 @@ scraper.getFile = function (url, dest) {
 Pdf.prototype.getMeta = async function () {
     var pdf = this;
     var input = this.localPath;
-    var jsonpath = scraper.metaDir + pdf.localName + ".json";
+    var jsonpath = scraper.textDir + pdf.localName + ".json";
     scraper.msg("pdf meta for " + input + " " + jsonpath);
     if (fs.existsSync(jsonpath)) {
         var msize = fs.statSync(jsonpath).size;
@@ -996,26 +1007,30 @@ Pdf.prototype.getMeta = async function () {
 };
 
 Video.prototype.getMeta = async function () {
+    await scraper.wait(10);
     var vid = this;
     var input = this.localPath;
+    if (!input){
+	console.log(":-/");
+	
+    }
     //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
 
-    var etpath = scraper.metaDir + vid.basename + ".json";
-
+    var etpath = scraper.videoDir + vid.basename + ".json"; 
+    console.log(vid);
+    console.log("* * * * * * ", input, "* * * * * *");
+    console.log("^ ^ ^ ^ ^ ^ ", vid.localPath, "^ ^ ^ ^ ^ ^");
     if (fs.existsSync(etpath)) {
         vid.metapath = etpath;
+	scraper.msg("Video metadata exists.");
         return Promise.resolve();
     }
-    var resp = await exif.metadata(input, async function (err, metadata) {
-        console.dir(vid);
-        scraper.msg("metadata for: ", vid.localPath);
-        var vcode;
-        if (err) {
-            console.log("boo, err in metadata");
-            return Promise.reject(err);
-        }
-        if (metadata.videoEncoding) {
-            vcode = metadata.videoEncoding;
+    console.log("trying metadata");
+    var metadata = await scraper.metadata(input);
+    console.log(metadata, undefined, 2);
+    scraper.msg("metadata for: ", vid.localPath);
+    if (metadata.videoEncoding) {
+            let vcode = metadata.videoEncoding;
             if (vcode === "On2 VP6") {
                 vid.type = "flv";
             } else if (metadata.fileType === "FLV" && vcode === "H.264") {
@@ -1023,19 +1038,35 @@ Video.prototype.getMeta = async function () {
             } else if (metadata.fileType === "MP4" && vcode === "H.264") {
                 vid.type = "h264";
             }
-        } else if (metadata.fileType === "MP4" && !vcode) {
+    } else if (metadata.fileType === "MP4") {
             vid.type = "mp4";
-        } else {
-            scraper.msg(JSON.stringify(metadata), 'detail');
-        }
+    }
+        scraper.msg(JSON.stringify(metadata), 'detail');
         scraper.msg(vid.type);
-        scraper.msg(JSON.stringify(metadata));
         await pfs.writeFile(etpath, JSON.stringify(metadata));
         vid.metapath = etpath;
         scraper.msg('metadata written');
         return Promise.resolve();
+    
+};
+
+
+//TODO make promisified metadata function based on input file.
+scraper.metadata = function(input){
+   return new Promise(function(resolve,reject){
+      	exif.metadata(input, async function (err, metadata) {
+	         if (err) {
+		     console.log("exiftool err " + err);
+		     reject("exiftool err: " + err);
+			        }
+	         if (metadata.fileSize === "0 bytes") {
+			            return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
+			        }
+	         //var json = JSON.stringify(metadata, undefined, 2);
+		 resolve(metadata);
+	     }); //end metadata
     });
-    return resp;
+
 };
 
 Pdf.prototype.imagify = async function () {
@@ -1260,11 +1291,11 @@ Committee.prototype.fetchAll = async function () {
 Committee.prototype.getHearingIndex = async function (url, page) {
     var pageHearings = [];
     var comm = this;
-
+    var closeds = 0, opens = 0;
     var options = scraper.reqOptions;
     options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
-    var imgname = "hearpage" + page + moment().format("YYMMDD");
+    var imgname = "hearpage" + page + moment().format("YYMM");
     var ss = await scraper.screenshot(url, imgname);
     console.log(ss);
     scraper.url({
@@ -1302,19 +1333,21 @@ Committee.prototype.getHearingIndex = async function (url, page) {
                 //scraper.msg(hearing.title);
                 hearing.closed = true;
                 nHear = new Hearing(hearing);
-                await scraper.wait(5);
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
+		closeds++;
             } else if (hearing.hearingPage === 'undefined') {
                 console.log("undefined hearingpage");
             } else {
                 nHear = new Hearing(hearing);
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
+		opens++;
                 //scraper.msg(JSON.stringify(comm.hearings), 'detail');
 
             }
         });
+	console.log("Open: ", opens, " Closed: ", closeds);
         console.log(pageHearings.length + ">>???>>>");
         return Promise.resolve({
             "pageHearings": pageHearings
@@ -1500,14 +1533,14 @@ Hearing.prototype.fetch = async function () {
             var witness = new Witness(wit);
             for (let pdf of pdfs) {
                 console.dir(pdf);
-                await witness.addPdf(hear, pdf);
+                //await witness.addPdf(hear, pdf);
             }
-            await hear.addWitness(witness);
+            //await hear.addWitness(witness);
         }
 
         console.log("ok this should resolve");
-        return Promise.resolve();
         scraper.msg("done with " + hear.title);
+        return Promise.resolve();
 
     } catch (err) {
         if (err.statusCode === 403) {
