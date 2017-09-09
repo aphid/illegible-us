@@ -240,9 +240,8 @@ Video.prototype.getManifest = async function () {
 
         }
         if (response.status === 'fail') {
-            console.log('manifest fail, retrying');
-            await scraper.wait(5);
-            await vid.getManifest();
+            console.log('manifest fail');
+	    vid.broken = true;
 
         }
         if (response.type) {
@@ -266,7 +265,9 @@ Video.prototype.fetch = async function (manifest) {
     await scraper.checkBlock();
     var vid = this,
         output, incoming;
-
+    if (this.fail){
+	return Promise.resolve();
+    }
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
             this.localPath = scraper.videoDir + vid.basename + ".mp4";
 	    this.type = "mp4";
@@ -274,10 +275,11 @@ Video.prototype.fetch = async function (manifest) {
     }
     await this.getManifest();
     if (!this.type) {
+	    this.fail = true;
 	         console.dir(this);
-	         return Promise.reject("Problem getting filetype");
-	     }
-
+	         return Promise.resolve("Problem getting filetype");
+    }
+ 
     
 
 	return new Promise(async function (fulfill, reject) {
@@ -345,7 +347,7 @@ Video.prototype.fetch = async function (manifest) {
 
             } else if (vid.type === 'hds') {
                 incoming = scraper.incomingDir + vid.basename + ".flv";
-                output = scraper.videoDir + vid.basename + ".flv";
+		    output = scraper.videoDir + vid.basename + ".flv";
                 //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
                 var childArgs = [
   path.join(__dirname, 'lib/AdobeHDS.php'), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", manifest.manifest, "--auth", manifest.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
@@ -904,12 +906,22 @@ Committee.prototype.validateLocal = function () {
 
 Hearing.prototype.addVideo = async function (video) {
     var hear = this;
+    
+    if (!video.url || video.url === 'undefined'){
+       this.videos = false;
+       return false;
+    }
     video.basename = this.shortname;
     this.video = await new Video(JSON.parse(JSON.stringify(video)));
     console.log("processing video");
     await scraper.wait(5);
     scraper.msg(JSON.stringify(this.video), "detail");
     await this.video.fetch();
+    if (this.brokenVideo || this.video.fail ){
+       this.video = false;
+       this.brokenVideo = true;
+       return false;
+    }
     await this.video.getMeta();
     //await this.video.transcode();
     var flvpath = scraper.videoDir + hear.shortname + '.flv';

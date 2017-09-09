@@ -3,7 +3,8 @@ var url = phantom.args[0];
 var filename = new URL(url).searchParams.get('filename');
 var resp = {};
 var dir = "/var/www/html/oversee/images/";
-
+var start = new Date().getTime() / 1000;
+var done = false;
 var page = require('webpage').create();
 var HDS = function (url) {
     var start = new Date().getTime() / 1000;
@@ -15,7 +16,7 @@ var HDS = function (url) {
         page.open(url, function (status) { // executed after loading
             if (page.content.includes("Access")) {
                 page.render(dir + filename + ".denied.png");
-
+                done = true;
                 response = {
                     status: "denied",
                     filename: filename + ".denied.png"
@@ -26,7 +27,7 @@ var HDS = function (url) {
             }
         }).then(function () {
             if (page.content.includes("Access Denied")) {
-
+		done = true;
                 page.render(dir + filename + ".denied.png");
 
                 response = {
@@ -42,34 +43,37 @@ var HDS = function (url) {
         page.onResourceReceived = function (response) {
             //console.log(response.url);
             var current = new Date().getTime() / 1000;
-            if (current - start > 45) {
+            if (current - start > 20 && resp.status !== "fail") {
                 resp.status = "fail";
+		done = true;
                 console.log(JSON.stringify(resp));
                 slimer.exit();
             }
-
-            if (response.url.includes('flv')) {
-                data.type = "flv";
-                data.src = response.url;
-                page.close();
-                resolve(data);
-            } else if (response.url.includes('mp4?v') && response.status === 200) {
+             if (response.url.includes('mp4?v') && response.status === 200) {
                 data.type = "mp4";
+		done = true;
                 data.src = response.url;
                 page.close();
                 resolve(data);
-            } else if (response.url.includes('m3u8') && response.status === 200) {
+            } else if (response.url.includes('m3u') && response.status === 200) {
                 data.type = "m3u";
+		done = true;
                 data.src = response.url;
                 page.close();
                 resolve(data);
-
-            }
+	    }	    /*
+            } else if (response.url.includes('flv')) {
+		                    data.type = "flv";
+		                    data.src = response.url;
+		                    page.close();
+		                    resolve(data);
+	     }*/
             if (response.status === 200 && (response.url.includes('manifest')) && (!response.url.includes('gif'))) {
                 //console.log(">>>>>>>>>>  " + response.status);
                 url = response.url;
                 //console.log(url);
                 data.type = "hds";
+		done = true;
                 data.manifest = url;
             }
             if (response.status === 200 && response.url.includes('Frag')) {
@@ -91,3 +95,8 @@ HDS(url).then(function (resolve) {
     console.log(JSON.stringify(reason));
     slimer.exit();
 });
+slimer.wait(20000);
+if (!done){
+console.log('{"status": "fail"}');
+}
+slimer.exit();
