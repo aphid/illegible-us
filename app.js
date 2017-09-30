@@ -1545,7 +1545,7 @@ Hearing.prototype.fetch = async function () {
             var witness = new Witness(wit);
             for (let pdf of pdfs) {
                 console.dir(pdf);
-                //await witness.addPdf(hear, pdf);
+                await witness.addPdf(hear, pdf);
             }
             //await hear.addWitness(witness);
         }
