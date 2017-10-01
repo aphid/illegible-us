@@ -646,7 +646,7 @@ Committee.prototype.scrapeRemote = async function (page) {
             } else {
                 console.log("no more hearings");
                 finished = true;
-                for (let hear of comm.hearings.reverse()) {
+                for (let hear of comm.hearings) {
 		    if (!hear.closed){
                     console.log("fetching", hear.title);
                     await scraper.wait(3);
@@ -851,8 +851,11 @@ Committee.prototype.write = async function (filename) {
         filename = "data.json";
     }
     var comm = this;
+    comm.processed = moment().format();
     var json = JSON.stringify(comm, undefined, 2);
     var resp = await pfs.writeFile((scraper.dataDir + filename), json);
+    console.log("writing: ", scraper.dataDir + filename);
+    await scraper.wait(5);
     return resp;
 };
 
@@ -1272,6 +1275,7 @@ Witness.prototype.addPdf = async function (hear, data) {
         console.log("needs scan");
         await thepdf.imagify();
     }
+    
     await scraper.wait(5);
     return Promise.resolve();
 
