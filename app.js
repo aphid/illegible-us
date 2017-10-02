@@ -14,7 +14,7 @@ var cheerio = require('cheerio');
 var moment = require('moment');
 var Url = require('url');
 var fs = require('graceful-fs');
-var pfs = require('fs-promise');
+var pfs = require('mz/fs');
 var path = require('path');
 var exif = require('exiftool');
 var pdftotext = require('pdftotextjs');
@@ -23,11 +23,13 @@ var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
 var fse = require("fs-extra");
+var settings = pfs.readFileSync("settings.json");
+settings = JSON.parse(settings);
 
 var scraper = {
-    secure: true,
-    mode: "live",
-    useTor: true,
+    secure: settings.secure,
+    mode: settings.mode,
+    useTor: settings.useTor,
     slimerFlags: "",
     minOverseers: 0,
     busy: false,
@@ -36,7 +38,7 @@ var scraper = {
     blocked: false,
     sockets: 5,
     current: 0,
-    userAgents: ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'],
+    userAgents: settings.userAgents,
     reqOptions: {}
 };
 
@@ -48,33 +50,17 @@ scraper.agent = function () {
 scraper.agent();
 
 
-if (scraper.mode === "dev") {
+scraper.dataDir = settings[settings.mode + "Paths"].dataDir;
+scraper.mediaDir = settings[settings.mode + "Paths"].mediaDir;
+scraper.hearingDir = settings[settings.mode + "Paths"].mediaDir;
+scraper.textDir = settings[settings.mode + "Paths"].textDir;
+scraper.incomingDir = settings[settings.mode + "Paths"].incomingDir;
+scraper.metaDir = settings[settings.mode + "Paths"].metaDir;
+scraper.videoDir = settings[settings.mode + "Paths"].videoDir;
+scraper.transcodedDir = settings[settings.mode + "Paths"].transcodedDir;
+scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
+scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 
-    scraper.dataDir = './data/';
-    scraper.mediaDir = './media/';
-    scraper.hearingDir = './data/hearings/';
-    scraper.textDir = '/var/www/html/oversee/media/text/';
-    scraper.incomingDir = './media/incoming/';
-    scraper.metaDir = '/var/www/html/oversee/media/metadata/';
-    scraper.videoDir = './media/video/';
-    scraper.transcodedDir = '/var/www/html/oversee/media/transcoded/';
-    scraper.webshotDir = '/var/www/html/oversee/images/';
-    scraper.tempDir = "./media/temp/";
-
-}
-
-if (scraper.mode === "live") {
-    scraper.dataDir = '/var/www/illegible.us/html/';
-    scraper.mediaDir = '/var/www/illegible.us/html/ssci/media/';
-    scraper.hearingDir = './data/hearings/';
-    scraper.textDir = '/var/www/illegible.us/html/ssci/media/text/';
-    scraper.incomingDir = './media/incoming/';
-    scraper.metaDir = '/var/www/illegible.us/html/ssci/media/metadata/';
-    scraper.videoDir = '/var/www/illegible.us/html/ssci/media/video/';
-    scraper.transcodedDir = '/var/www/illegible.us/html/ssci/media/transcoded/';
-    scraper.webshotDir = '/var/www/illegible.us/html/ssci/images/';
-    scraper.tempDir = "./media/temp/";
-}
 
 if (scraper.useTor === true) {
     scraper.slimerFlags = " --proxy-type=socks5 --proxy=localhost:9050 ";
@@ -204,7 +190,8 @@ var Video = function (options) {
 
 
 Video.prototype.getManifest = async function () {
-
+    console.log("..........................................................");
+    await scraper.wait(8);
     //scraper.msg("ADOBE HDS STREAM DETECTED");
     var vid = this;
     if (fs.existsSync(this.localPath)) {
@@ -233,7 +220,7 @@ Video.prototype.getManifest = async function () {
             return await vid.getManifest();
         }
         scraper.msg(response);
-        response = JSON.parse(response.replace("Vector smash protection is enabled.",""));
+        response = JSON.parse(response.replace("Vector smash protection is enabled.", ""));
         if (response.status === 'denied') {
             await scraper.checkBlock();
             return await vid.getManifest();
@@ -241,7 +228,7 @@ Video.prototype.getManifest = async function () {
         }
         if (response.status === 'fail') {
             console.log('manifest fail');
-	    vid.broken = true;
+            vid.broken = true;
 
         }
         if (response.type) {
@@ -265,24 +252,24 @@ Video.prototype.fetch = async function (manifest) {
     await scraper.checkBlock();
     var vid = this,
         output, incoming;
-    if (this.fail){
-	return Promise.resolve();
+    if (this.fail) {
+        return Promise.resolve();
     }
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
-            this.localPath = scraper.videoDir + vid.basename + ".mp4";
-	    this.type = "mp4";
-	    return Promise.resolve();
+        this.localPath = scraper.videoDir + vid.basename + ".mp4";
+        this.type = "mp4";
+        return Promise.resolve();
     }
     await this.getManifest();
     if (!this.type) {
-	    this.fail = true;
-	         console.dir(this);
-	         return Promise.resolve("Problem getting filetype");
+        this.fail = true;
+        console.dir(this);
+        return Promise.resolve("Problem getting filetype");
     }
- 
-    
 
-	return new Promise(async function (fulfill, reject) {
+
+
+    return new Promise(async function (fulfill, reject) {
         {
             scraper.msg("TYPE: " + vid.type);
             if (vid.type === 'flv' || vid.type === 'mp4') {
@@ -299,11 +286,11 @@ Video.prototype.fetch = async function (manifest) {
                 vid.protocol = "m3u8";
                 incoming = scraper.incomingDir + vid.basename + '.mp4';
                 output = scraper.videoDir + vid.basename + '.mp4';
-                if (scraper.mode === "dev") {
+                /* if (scraper.mode === "dev") {
                     console.log("writing placeholder to " + output);
                     fs.writeFileSync(output, "placeholder");
                     return fulfill();
-                }
+                }*/
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
@@ -327,27 +314,27 @@ Video.prototype.fetch = async function (manifest) {
                         cP.stderr.on('data', function (data) {
                             scraper.msg('[spawn] stderr: ' + data.toString().trim());
                         });
-		    })
-                    
+                    })
+
                     .then(function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
-			fulfill();
-		    })
-		.catch(async function (err) {
-                                                        if (err.includes("urlopen error")){
-					                                                                                        scraper.msg("video scrape fail, retrying with manifest");
-					                                                                                        await vid.fetch(manifest);
-					                                                                                    } else {
-					                                                                                        scraper.msg("unknown video scrape error");
-					                                                                                        await vid.fetch(manifest);
-					                                                                                    }
-                                           });
-			    
+                        fulfill();
+                    })
+                    .catch(async function (err) {
+                        if (err.includes("urlopen error")) {
+                            scraper.msg("video scrape fail, retrying with manifest");
+                            await vid.fetch(manifest);
+                        } else {
+                            scraper.msg("unknown video scrape error");
+                            await vid.fetch(manifest);
+                        }
+                    });
+
 
             } else if (vid.type === 'hds') {
                 incoming = scraper.incomingDir + vid.basename + ".flv";
-		    output = scraper.videoDir + vid.basename + ".flv";
+                output = scraper.videoDir + vid.basename + ".flv";
                 //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
                 var childArgs = [
   path.join(__dirname, 'lib/AdobeHDS.php'), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", manifest.manifest, "--auth", manifest.auth, '--outdir', scraper.incomingDir, '--outfile', vid.basename];
@@ -399,7 +386,7 @@ Video.prototype.transcodeToMP4 = function () {
         scraper.msg("transcoding " + input + " to " + output);
         if (fs.existsSync(output)) {
             scraper.msg("Video file already exists " + output);
-	    vid.localPath = output;
+            vid.localPath = output;
             return fulfill();
         }
         scraper.msg(vid.type + " --> " + input);
@@ -580,6 +567,7 @@ var Committee = function (options) {
             this[fld] = options[fld];
         }
     }
+    this.processed = "";
     this.hearings = [];
     this.meta = [];
     return this;
@@ -642,24 +630,24 @@ Committee.prototype.scrapeRemote = async function (page) {
             if (res.pageHearings.length) {
                 console.log("Page has", res.pageHearings.length, "hearings");
                 scraper.msg(comm.hearings.length + " hearings total.");
-                
+
             } else {
                 console.log("no more hearings");
                 finished = true;
                 for (let hear of comm.hearings) {
-		    if (!hear.closed){
-                    console.log("fetching", hear.title);
-                    await scraper.wait(3);
-                    let h = await hear.fetch();
-                    await comm.write();
+                    if (!hear.closed) {
+                        console.log("fetching", hear.title);
+                        await scraper.wait(3);
+                        let h = await hear.fetch();
+                        await comm.write();
 
-                    if (h) {
-                        console.log(h);
+                        if (h) {
+                            console.log(h);
+                        }
                     }
-	            }
 
                 }
-		console.log("Finished with page", curPage);
+                console.log("Finished with page", curPage);
                 return Promise.resolve();
             }
             curPage++;
@@ -899,8 +887,8 @@ Committee.prototype.validateLocal = function () {
         } else if (fs.existsSync(mp4path)) {
             hear.video.localPath = mp4path;
         } else {
-	    console.log("NO LOCALPATH FOR ", hear);
- 	}
+            console.log("NO LOCALPATH FOR ", hear);
+        }
     }
 
     return Promise.resolve();
@@ -909,10 +897,10 @@ Committee.prototype.validateLocal = function () {
 
 Hearing.prototype.addVideo = async function (video) {
     var hear = this;
-    
-    if (!video.url || video.url === 'undefined'){
-       this.videos = false;
-       return false;
+
+    if (!video.url || video.url === 'undefined') {
+        this.videos = false;
+        return false;
     }
     video.basename = this.shortname;
     this.video = await new Video(JSON.parse(JSON.stringify(video)));
@@ -920,10 +908,10 @@ Hearing.prototype.addVideo = async function (video) {
     await scraper.wait(5);
     scraper.msg(JSON.stringify(this.video), "detail");
     await this.video.fetch();
-    if (this.brokenVideo || this.video.fail ){
-       this.video = false;
-       this.brokenVideo = true;
-       return false;
+    if (this.brokenVideo || this.video.fail) {
+        this.video = false;
+        this.brokenVideo = true;
+        return false;
     }
     await this.video.getMeta();
     //await this.video.transcode();
@@ -1025,19 +1013,19 @@ Video.prototype.getMeta = async function () {
     await scraper.wait(10);
     var vid = this;
     var input = this.localPath;
-    if (!input){
-	console.log(":-/");
-	
+    if (!input) {
+        console.log(":-/");
+
     }
     //var mipath = scraper.metaDir + vid.basename + ".mediainfo.json";
 
-    var etpath = scraper.videoDir + vid.basename + ".json"; 
+    var etpath = scraper.videoDir + vid.basename + ".json";
     console.log(vid);
     console.log("* * * * * * ", input, "* * * * * *");
     console.log("^ ^ ^ ^ ^ ^ ", vid.localPath, "^ ^ ^ ^ ^ ^");
     if (fs.existsSync(etpath)) {
         vid.metapath = etpath;
-	scraper.msg("Video metadata exists.");
+        scraper.msg("Video metadata exists.");
         return Promise.resolve();
     }
     console.log("trying metadata");
@@ -1045,41 +1033,41 @@ Video.prototype.getMeta = async function () {
     console.log(metadata, undefined, 2);
     scraper.msg("metadata for: ", vid.localPath);
     if (metadata.videoEncoding) {
-            let vcode = metadata.videoEncoding;
-            if (vcode === "On2 VP6") {
-                vid.type = "flv";
-            } else if (metadata.fileType === "FLV" && vcode === "H.264") {
-                vid.type = "hds";
-            } else if (metadata.fileType === "MP4" && vcode === "H.264") {
-                vid.type = "h264";
-            }
+        let vcode = metadata.videoEncoding;
+        if (vcode === "On2 VP6") {
+            vid.type = "flv";
+        } else if (metadata.fileType === "FLV" && vcode === "H.264") {
+            vid.type = "hds";
+        } else if (metadata.fileType === "MP4" && vcode === "H.264") {
+            vid.type = "h264";
+        }
     } else if (metadata.fileType === "MP4") {
-            vid.type = "mp4";
+        vid.type = "mp4";
     }
-        scraper.msg(JSON.stringify(metadata), 'detail');
-        scraper.msg(vid.type);
-        await pfs.writeFile(etpath, JSON.stringify(metadata));
-        vid.metapath = etpath;
-        scraper.msg('metadata written');
-        return Promise.resolve();
-    
+    scraper.msg(JSON.stringify(metadata), 'detail');
+    scraper.msg(vid.type);
+    await pfs.writeFile(etpath, JSON.stringify(metadata));
+    vid.metapath = etpath;
+    scraper.msg('metadata written');
+    return Promise.resolve();
+
 };
 
 
 //TODO make promisified metadata function based on input file.
-scraper.metadata = function(input){
-   return new Promise(function(resolve,reject){
-      	exif.metadata(input, async function (err, metadata) {
-	         if (err) {
-		     console.log("exiftool err " + err);
-		     reject("exiftool err: " + err);
-			        }
-	         if (metadata.fileSize === "0 bytes") {
-			            return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
-			        }
-	         //var json = JSON.stringify(metadata, undefined, 2);
-		 resolve(metadata);
-	     }); //end metadata
+scraper.metadata = function (input) {
+    return new Promise(function (resolve, reject) {
+        exif.metadata(input, async function (err, metadata) {
+            if (err) {
+                console.log("exiftool err " + err);
+                reject("exiftool err: " + err);
+            }
+            if (metadata.fileSize === "0 bytes") {
+                return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
+            }
+            //var json = JSON.stringify(metadata, undefined, 2);
+            resolve(metadata);
+        }); //end metadata
     });
 
 };
@@ -1275,7 +1263,7 @@ Witness.prototype.addPdf = async function (hear, data) {
         console.log("needs scan");
         await thepdf.imagify();
     }
-    
+
     await scraper.wait(5);
     return Promise.resolve();
 
@@ -1307,7 +1295,8 @@ Committee.prototype.fetchAll = async function () {
 Committee.prototype.getHearingIndex = async function (url, page) {
     var pageHearings = [];
     var comm = this;
-    var closeds = 0, opens = 0;
+    var closeds = 0,
+        opens = 0;
     var options = scraper.reqOptions;
     options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
@@ -1351,19 +1340,19 @@ Committee.prototype.getHearingIndex = async function (url, page) {
                 nHear = new Hearing(hearing);
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
-		closeds++;
+                closeds++;
             } else if (hearing.hearingPage === 'undefined') {
                 console.log("undefined hearingpage");
             } else {
                 nHear = new Hearing(hearing);
                 comm.hearings.push(nHear);
                 pageHearings.push(nHear);
-		opens++;
+                opens++;
                 //scraper.msg(JSON.stringify(comm.hearings), 'detail');
 
             }
         });
-	console.log("Open: ", opens, " Closed: ", closeds);
+        console.log("Open: ", opens, " Closed: ", closeds);
         console.log(pageHearings.length + ">>???>>>");
         return Promise.resolve({
             "pageHearings": pageHearings
@@ -1531,7 +1520,7 @@ Hearing.prototype.fetch = async function () {
     console.dir(options);
     try {
         options.url = this.hearingPage;
-    	console.log("requesting " + options.url);
+        console.log("requesting " + options.url);
         var html = await rq(options);
         var data = await scraper.crunchHtml(html);
         if (!data) {
@@ -1551,7 +1540,7 @@ Hearing.prototype.fetch = async function () {
                 console.dir(pdf);
                 await witness.addPdf(hear, pdf);
             }
-            //await hear.addWitness(witness);
+            await hear.addWitness(witness);
         }
 
         console.log("ok this should resolve");

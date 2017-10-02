@@ -1,8 +1,15 @@
+var fs = require('fs');
 var url = phantom.args[0];
-var dir = "/var/www/illegible.us/html/ssci/images/";
+var settings = fs.read("settings.json");
+var dir;
+settings = JSON.parse(settings);
+if (settings.mode == "dev") {
+    dir = settings.devPaths.webshotDir;
+} else {
+    dir = settings.livePaths.webshotDir;
+}
 var filename = phantom.args[1];
-var userAgents = ['Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:42.0) Gecko/20100101 Firefox/42.0', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9', 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'];
-var uA = userAgents[Math.floor(Math.random() * userAgents.length)];
+var uA = settings.userAgents[Math.floor(Math.random() * settings.userAgents.length)];
 var page;
 var errors = [];
 var response;
@@ -34,7 +41,10 @@ requestPage = function () {
 
         } else {
 
-            page.render(dir + filename + ".jpg", { format: "jpeg", quality: 25});
+            page.render(dir + filename + ".jpg", {
+                format: "jpeg",
+                quality: 25
+            });
             response = {
                 status: "success",
                 filename: filename + ".jpg"
