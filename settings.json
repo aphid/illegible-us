@@ -1,0 +1,30 @@
+{
+    "useTor": true,
+    "secure": false,
+    "mode": "dev",
+    "userAgents": ["Mozilla/5.0 (Windows NT 6.1, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36", "Mozilla/5.0 (Windows NT 6.1, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36", "Mozilla/5.0 (Windows NT 6.1, WOW64, rv:42.0) Gecko/20100101 Firefox/42.0", "Mozilla/5.0 (Macintosh, Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9", "Mozilla/5.0 (Windows NT 10.0, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36"],
+    "devPaths": {
+        "dataDir": "./data/",
+        "mediaDir": "./media/",
+        "hearingDir": "./data/hearings/",
+        "textDir": "/var/www/html/oversee/media/text/",
+        "incomingDir": "./media/incoming/",
+        "metaDir": "/var/www/html/oversee/media/metadata/",
+        "videoDir": "./media/video/",
+        "transcodedDir": "/var/www/html/oversee/media/transcoded/",
+        "webshotDir": "/var/www/html/oversee/images/",
+        "tempDir": "./media/temp/"
+    },
+    "livePaths": {
+        "dataDir": "/var/www/illegible.us/html/",
+        "mediaDir": "/var/www/illegible.us/html/ssci/media/",
+        "hearingDir": "./data/hearings/",
+        "textDir": "/var/www/illegible.us/html/ssci/media/text/",
+        "incomingDir": "./media/incoming/",
+        "metaDir": "/var/www/illegible.us/html/ssci/media/metadata/",
+        "videoDir": "/var/www/illegible.us/html/ssci/media/video/",
+        "transcodedDir": "/var/www/illegible.us/html/ssci/media/transcoded/",
+        "webshotDir": "/var/www/illegible.us/html/ssci/images/",
+        "tempDir": "./media/temp/"
+    }
+}
