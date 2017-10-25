@@ -23,15 +23,18 @@ var ffmpeg = require('fluent-ffmpeg');
 var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
 var fse = require("fs-extra");
-var settings = pfs.readFileSync("settings.json");
+var settings = pfs.readFileSync(__dirname + "/settings.json").toString();
+settings = settings.replace(/\.\//g 	, __dirname + "\/");
 settings = JSON.parse(settings);
+
+
 
 var scraper = {
     secure: settings.secure,
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -64,7 +67,7 @@ scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 
 if (scraper.useTor === true) {
     scraper.slimerFlags = " --proxy-type=socks5 --proxy=localhost:9050 ";
-    scraper.torPass = fs.readFileSync('torpass.txt', 'utf8');
+    scraper.torPass = fs.readFileSync(__dirname + '/torpass.txt', 'utf8');
     scraper.torPort = 9051; //control
     scraper.reqOptions = {
         agentClass: Agent,
@@ -79,8 +82,8 @@ if (scraper.useTor === true) {
 
 if (scraper.secure) {
     var app = require('https').createServer({
-        key: fs.readFileSync('./privkey.pem'),
-        cert: fs.readFileSync('./cert.pem')
+        key: fs.readFileSync(__dirname + '/privkey.pem'),
+        cert: fs.readFileSync(__dirname + '/cert.pem')
     });
 } else {
     app = require('http').createServer();
@@ -838,10 +841,13 @@ Committee.prototype.write = async function (filename) {
     if (!filename) {
         filename = "data.json";
     }
+    var archive = scraper.dataDir + moment().format("YYMMDD_hh") + ".json";
+
     var comm = this;
     comm.processed = moment().format();
     var json = JSON.stringify(comm, undefined, 2);
     var resp = await pfs.writeFile((scraper.dataDir + filename), json);
+    resp = await pfs.writeFile((archive),json);
     console.log("writing: ", scraper.dataDir + filename);
     await scraper.wait(5);
     return resp;

@@ -107,7 +107,7 @@ HDS(url).then(function (resolve) {
     console.log(JSON.stringify(reason));
     slimer.exit();
 });
-slimer.wait(20000);
+slimer.wait(45000);
 if (!done) {
     console.log('{"status": "fail"}');
 }
