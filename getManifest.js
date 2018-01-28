@@ -54,7 +54,7 @@ var HDS = function (url) {
         page.onResourceReceived = function (response) {
             //console.log(response.url);
             var current = new Date().getTime() / 1000;
-            if (current - start > 20 && resp.status !== "fail") {
+            if (current - start > 40 && resp.status !== "fail") {
                 resp.status = "fail";
                 done = true;
                 console.log(JSON.stringify(resp));
@@ -66,12 +66,14 @@ var HDS = function (url) {
                 data.src = response.url;
                 page.close();
                 resolve(data);
+		slimer.exit();
             } else if (response.url.includes('m3u') && response.status === 200) {
                 data.type = "m3u";
                 done = true;
                 data.src = response.url;
                 page.close();
                 resolve(data);
+		slimer.exit();
             }
             /*
             } else if (response.url.includes('flv')) {

@@ -28,7 +28,6 @@ settings = settings.replace(/\.\//g 	, __dirname + "\/");
 settings = JSON.parse(settings);
 
 
-
 var scraper = {
     secure: settings.secure,
     mode: settings.mode,
@@ -88,8 +87,6 @@ if (scraper.secure) {
 } else {
     app = require('http').createServer();
 }
-
-
 
 app.listen(9080);
 
@@ -1306,7 +1303,9 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     var options = scraper.reqOptions;
     options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
-    var imgname = "hearpage" + page + moment().format("YYMM");
+    let now = moment().format("YYMM");
+    var imgname = "hearpage" + page + now;
+    console.log("OK WHAT", now);
     var ss = await scraper.screenshot(url, imgname);
     console.log(ss);
     scraper.url({

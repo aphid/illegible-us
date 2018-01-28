@@ -16,15 +16,15 @@
         "tempDir": "./media/temp/"
     },
     "livePaths": {
-        "dataDir": "/var/www/illegible.us/html/ssci/data/",
-        "mediaDir": "/var/www/illegible.us/html/ssci/media/",
+        "dataDir": "/var/www/illegible.us/html/oversee/data/",
+        "mediaDir": "/var/www/illegible.us/html/oversee/media/",
         "hearingDir": "./data/hearings/",
-        "textDir": "/var/www/illegible.us/html/ssci/media/text/",
+        "textDir": "/var/www/illegible.us/html/oversee/media/text/",
         "incomingDir": "./media/incoming/",
-        "metaDir": "/var/www/illegible.us/html/ssci/media/metadata/",
-        "videoDir": "/var/www/illegible.us/html/ssci/media/video/",
-        "transcodedDir": "/var/www/illegible.us/html/ssci/media/transcoded/",
-        "webshotDir": "/var/www/illegible.us/html/ssci/images/",
+        "metaDir": "/var/www/illegible.us/html/oversee/media/metadata/",
+        "videoDir": "/var/www/illegible.us/html/oversee/media/video/",
+        "transcodedDir": "/var/www/illegible.us/html/oversee/media/transcoded/",
+        "webshotDir": "/var/www/illegible.us/html/oversee/images/",
         "tempDir": "./media/temp/"
     }
 }
