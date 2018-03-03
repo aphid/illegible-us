@@ -24,7 +24,7 @@ var Agent = require('socks5-http-client/lib/Agent');
 var glob = require("glob");
 var fse = require("fs-extra");
 var settings = pfs.readFileSync(__dirname + "/settings.json").toString();
-settings = settings.replace(/\.\//g 	, __dirname + "\/");
+settings = settings.replace(/\.\//g, __dirname + "\/");
 settings = JSON.parse(settings);
 
 
@@ -33,7 +33,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 1,
+    minOverseers: 0,
     busy: false,
     connections: 0,
     started: false,
@@ -62,7 +62,7 @@ scraper.videoDir = settings[settings.mode + "Paths"].videoDir;
 scraper.transcodedDir = settings[settings.mode + "Paths"].transcodedDir;
 scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
-
+scraper.slimerPath = settings.slimerPath;
 
 if (scraper.useTor === true) {
     scraper.slimerFlags = " --proxy-type=socks5 --proxy=localhost:9050 ";
@@ -78,6 +78,8 @@ if (scraper.useTor === true) {
 } else {
     scraper.slimerFlags = " ";
 }
+
+scraper.slimerFlags += "--headless ";
 
 if (scraper.secure) {
     var app = require('https').createServer({
@@ -204,7 +206,7 @@ Video.prototype.getManifest = async function () {
     url = url.replace('false', 'true');
 
     //INCOMPATIBLE WITH FRESHPLAYER PLUGIN
-    var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url + '| grep -v GraphicsCriticalError';
+    var command = scraper.slimerPath + " " + scraper.slimerFlags + path.join(__dirname, 'getManifest.js') + " " + url + '| grep -v GraphicsCriticalError';
     console.log(command);
     //var command = 'slimerjs ' + path.join(__dirname, 'getManifest.js') + " " + url;
     scraper.msg(">>>> " + command.replace(__dirname, "."));
@@ -844,7 +846,7 @@ Committee.prototype.write = async function (filename) {
     comm.processed = moment().format();
     var json = JSON.stringify(comm, undefined, 2);
     var resp = await pfs.writeFile((scraper.dataDir + filename), json);
-    resp = await pfs.writeFile((archive),json);
+    resp = await pfs.writeFile((archive), json);
     console.log("writing: ", scraper.dataDir + filename);
     await scraper.wait(5);
     return resp;
@@ -1474,7 +1476,7 @@ scraper.screenshot = async function (url, filename) {
     }
 
     console.log("capturing " + url + " to " + filename);
-    var command = 'xvfb-run -a -e xv.log node_modules/slimerjs/src/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
+    var command = scraper.slimerPath + " " + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'" + '| grep -v GraphicsCriticalError';
     // var command = '/home/aphid/bin/slimerjs ' + scraper.slimerFlags + path.join(__dirname, 'screenshot.js') + " '" + url + "' '" + filename + "'";
     console.log(command);
     var result = await cpp.exec(command, {

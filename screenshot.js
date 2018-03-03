@@ -58,7 +58,7 @@ requestPage = function () {
 
 if (!url || !filename) {
     console.log('{"status": "failed"}');
-    slimer.exit();
+    phantom.exit();
 } else {
     page = require('webpage').create();
 
