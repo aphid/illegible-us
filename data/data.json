@@ -2,438 +2,1161 @@
   "committee": "Intelligence",
   "chamber": "senate",
   "url": "http://www.intelligence.senate.gov",
-  "hearingIndex": "http://www.intelligence.senate.gov/hearings/open",
+  "hearingIndex": "http://www.intelligence.senate.gov/hearings",
   "shortname": "intel",
   "hearings": [
     {
-      "dcDate": "2015-07-08T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/counterterrorism-counterintelligence-and-challenges-going-dark",
-      "title": "Counterterrorism, Counterintelligence, and the Challenges of \"Going Dark\"",
-      "date": "07/08/2015",
-      "time": "2:30pm",
-      "shortdate": "150708",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel070815&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "150708"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2015-02-12T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-intelligence-matters",
-      "title": "Open Hearing: Intelligence Matters",
-      "date": "02/12/2015",
-      "time": "2:30pm",
-      "shortdate": "150212",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021215&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "150212",
-        "type": "hds",
-        "raw": "./media/video/150212.flv"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2014-11-20T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-nicholas-j-rasmussen-be-director-national-counterterrorism-center",
-      "title": "Open Hearing: Nomination of Nicholas J. Rasmussen to be the Director of the National Counterterrorism Center",
-      "date": "11/20/2014",
-      "time": "2:30pm",
-      "shortdate": "141120",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel112014&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "141120"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2014-06-05T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-usa-freedom-act-hr-3361",
-      "title": "Open Hearing: USA FREEDOM Act (H.R. 3361)",
-      "date": "06/05/2014",
-      "time": "2:30pm",
-      "shortdate": "140605",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel060514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "140605"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2014-02-25T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-john-p-carlin-be-assistant-attorney-general-national-security",
-      "title": "Open Hearing: Nomination of John P. Carlin to be Assistant Attorney General for National Security at the Department of Justice, and Nomination of Francis X. Taylor to be the Under Secretary for Intelligence and Analysis at the Department of Homeland...",
-      "date": "02/25/2014",
-      "time": "2:30pm",
-      "shortdate": "140225",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel022514&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "140225"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2014-02-13T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/undefined",
-      "title": "Open Hearing: Nomination of John Carlin to be Assistant Attorney General for National Security -- Postponed",
-      "date": "02/13/2014",
-      "time": "2:30pm",
-      "shortdate": "140213",
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2014-01-29T10:00:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-against-united-states",
-      "title": "Open Hearing: Current and Projected National Security Threats Against the United States",
-      "date": "01/29/2014",
-      "time": "10:00am",
-      "shortdate": "140129",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012914&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "140129"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2013-12-17T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-daniel-bennett-smith-be-assistant-secretary-state-intelligence-and",
-      "title": "Open Hearing: Nomination of Daniel Bennett Smith to be an Assistant Secretary of State (Intelligence and Research) and Caroline Diane Krass to be General Counsel of the Central Intelligence Agency",
-      "date": "12/17/2013",
-      "time": "2:30pm",
-      "shortdate": "131217",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel121713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "131217"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2013-09-26T14:00:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-fisa-legislation",
-      "title": "Open Hearing: FISA Legislation",
-      "date": "09/26/2013",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-03-02T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-134",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "03/02/2017",
       "time": "2:00pm",
-      "shortdate": "130926",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092613&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "130926"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170302"
     },
     {
-      "dcDate": "2013-03-12T10:00:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states-1",
-      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
-      "date": "03/12/2013",
-      "time": "10:00am",
-      "shortdate": "130312",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031213&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "130312"
-      },
-      "witnesses": ""
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-28T16:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-133",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "4:00pm",
+      "closed": true,
+      "shortdate": "170228"
     },
     {
-      "dcDate": "2013-02-07T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-john-o-brennan-be-director-central-intelligence-agency",
-      "title": "Open Hearing: Nomination of John O. Brennan to be the Director of the Central Intelligence Agency",
-      "date": "02/07/2013",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-28T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-intelligence-matters-0",
+      "title": "Open Hearing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "2:00pm",
+      "shortdate": "170228"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-16T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-132",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/16/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170216"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-14T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-129",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/14/2017",
       "time": "2:30pm",
-      "shortdate": "130207",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020713&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "130207"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170214"
     },
     {
-      "dcDate": "2012-01-31T10:00:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states-0",
-      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
-      "date": "01/31/2012",
-      "time": "10:00am",
-      "shortdate": "120131",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel013112&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "120131",
-        "type": "mp4",
-        "raw": "./media/video/120131.mp4"
-      },
-      "witnesses": ""
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-09T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-131",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/09/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170209"
     },
     {
-      "dcDate": "2011-09-22T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-irvin-charles-mccullough-be-inspector-general-intelligence",
-      "title": "Open Hearing: Nomination of Irvin Charles McCullough to be Inspector General for the Intelligence Community",
-      "date": "09/22/2011",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-07T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-130",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/07/2017",
       "time": "2:30pm",
-      "shortdate": "110922",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092211&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110922",
-        "type": "mp4",
-        "raw": "./media/video/110922.mp4"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170207"
     },
     {
-      "dcDate": "2011-09-13T09:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-house-permanent-select-committee-intelligence-regarding-anniversary-911",
-      "title": "Open Hearing with the House Permanent Select Committee on Intelligence regarding the Anniversary of the 9/11 Attacks",
-      "date": "09/13/2011",
-      "time": "9:30am",
-      "shortdate": "110913",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel091311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110913",
-        "type": "mp4",
-        "raw": "./media/video/110913.mp4"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2011-07-26T10:00:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-matthew-olsen-be-director-national-counterterrorism-center",
-      "title": "Open Hearing: Nomination of Matthew Olsen to be Director of the National Counterterrorism Center",
-      "date": "07/26/2011",
-      "time": "10:00am",
-      "shortdate": "110726",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel072611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110726",
-        "type": "flv",
-        "raw": "./media/video/110726.flv"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2011-06-23T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-general-david-h-petraeus-be-director-central-intelligence-agency",
-      "title": "Open Hearing: Nomination of General David H. Petraeus to be the Director of the Central Intelligence Agency",
-      "date": "06/23/2011",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-31T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-128",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/31/2017",
       "time": "2:30pm",
-      "shortdate": "110623",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel062311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110623",
-        "type": "flv",
-        "raw": "./media/video/110623.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170131"
     },
     {
-      "dcDate": "2011-05-17T15:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-lisa-monaco-be-assistant-attorney-general-national-security",
-      "title": "Open Hearing: Nomination of Lisa Monaco to be Assistant Attorney General for National Security",
-      "date": "05/17/2011",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-24T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-127",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/24/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170124"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-12T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-125",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/12/2017",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "170112"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-12T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-mike-pompeo-be-director-central-intelligence-agency-cia",
+      "title": "Open Hearing:  Nomination of Mike Pompeo to be Director of the Central Intelligence Agency (CIA)",
+      "date": "01/12/2017",
+      "time": "10:00am",
+      "shortdate": "170112"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-10T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-126",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/10/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170110"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-10T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-russian-intelligence-activities",
+      "title": "Open Hearing:  Russian Intelligence Activities",
+      "date": "01/10/2017",
+      "time": "1:00pm",
+      "shortdate": "170110"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-05T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-123",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/05/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170105"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-12-07T15:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-124",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "12/07/2016",
       "time": "3:30pm",
-      "shortdate": "110517",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel051711&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110517",
-        "type": "flv",
-        "raw": "./media/video/110517.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "161207"
     },
     {
-      "dcDate": "2011-02-16T10:00:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-worldwide-threat",
-      "title": "Open Hearing: Worldwide Threat",
-      "date": "02/16/2011",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-11-17T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-122",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "11/17/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "161117"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-27T10:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-director-robert-cardillo-nga",
+      "title": "Open Hearing:  Director Robert Cardillo, NGA",
+      "date": "09/27/2016",
       "time": "10:00am",
-      "shortdate": "110216",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021611&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110216",
-        "type": "flv",
-        "raw": "./media/video/110216.flv"
-      },
-      "witnesses": ""
+      "shortdate": "160927"
     },
     {
-      "dcDate": "2011-02-03T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-stephanie-osullivan-be-principal-deputy-director-national",
-      "title": "Open Hearing: Nomination of Stephanie O'Sullivan to be the Principal Deputy Director of National Intelligence",
-      "date": "02/03/2011",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-22T14:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-121",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/22/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "160922"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-21T13:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-120",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/21/2016",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "160921"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-20T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-119",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/20/2016",
       "time": "2:30pm",
-      "shortdate": "110203",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020311&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "110203",
-        "type": "flv",
-        "raw": "./media/video/110203.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "160920"
     },
     {
-      "dcDate": "2010-09-21T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-buckley-be-inspector-general-central-intelligence-agency",
-      "title": "Open Hearing: Nomination of David Buckley to be Inspector General of the Central Intelligence Agency",
-      "date": "09/21/2010",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-03-02T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-134",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "03/02/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170302"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-28T16:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-133",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "4:00pm",
+      "closed": true,
+      "shortdate": "170228"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "undefined",
+        "basename": "170228"
+      },
+      "witnesses": [],
+      "dcDate": "2017-02-28T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-intelligence-matters-0",
+      "title": "Open Hearing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "2:00pm",
+      "shortdate": "170228"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-16T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-132",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/16/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170216"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-14T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-129",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/14/2017",
       "time": "2:30pm",
-      "shortdate": "100921",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092110&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "100921",
-        "type": "flv",
-        "raw": "./media/video/100921.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170214"
     },
     {
-      "dcDate": "2010-07-20T14:45:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-james-r-clapper-jr-be-director-national-intelligence",
-      "title": "Open Hearing: Nomination of James R. Clapper, Jr., to be Director of National Intelligence",
-      "date": "07/20/2010",
-      "time": "2:45pm",
-      "shortdate": "100720",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel72010&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "100720",
-        "type": "flv",
-        "raw": "./media/video/100720.flv"
-      },
-      "witnesses": ""
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-09T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-131",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/09/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170209"
     },
     {
-      "dcDate": "2010-02-02T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-threats-united-states",
-      "title": "Open Hearing: Current and Projected Threats to the United States",
-      "date": "02/02/2010",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-07T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-130",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/07/2017",
       "time": "2:30pm",
-      "shortdate": "100202",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020210&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "100202",
-        "type": "flv",
-        "raw": "./media/video/100202.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170207"
     },
     {
-      "dcDate": "2009-12-01T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-philip-s-goldberg-be-assistant-secretary-state-intelligence-and",
-      "title": "Open Hearing: Nomination of Philip S. Goldberg to be Assistant Secretary of State for Intelligence and Research and Caryn A. Wagner to be Under Secretary for Intelligence and Analysis, Department of Homeland Security",
-      "date": "12/01/2009",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-31T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-128",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/31/2017",
       "time": "2:30pm",
-      "shortdate": "091201",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel120109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "091201",
-        "type": "flv",
-        "raw": "./media/video/091201.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170131"
     },
     {
-      "dcDate": "2009-10-13T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-gompert-be-principal-deputy-director-national-intelligence",
-      "title": "Open Hearing: Nomination of David Gompert to be Principal Deputy Director of National Intelligence",
-      "date": "10/13/2009",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-24T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-127",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/24/2017",
       "time": "2:30pm",
-      "shortdate": "091013",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel101309&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "091013",
-        "type": "flv",
-        "raw": "./media/video/091013.flv"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170124"
     },
     {
-      "dcDate": "2009-05-21T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-stephen-w-preston-be-general-counsel-central-intelligence-agency",
-      "title": "Open Hearing: Nomination of Stephen W. Preston to be General Counsel of the Central Intelligence Agency and Robert S. Litt to be General Counsel of the Office of the Director of National Intelligence",
-      "date": "05/21/2009",
-      "time": "2:30pm",
-      "shortdate": "090521",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel052109&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090521",
-        "type": "flv",
-        "raw": "./media/video/090521.flv"
-      },
-      "witnesses": ""
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-12T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-125",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/12/2017",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "170112"
     },
     {
-      "dcDate": "2009-03-10T14:30:00-04:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-david-s-kris-be-assistant-attorney-general-national-security",
-      "title": "Open Hearing: Nomination of David S. Kris to be Assistant Attorney General for National Security",
-      "date": "03/10/2009",
-      "time": "2:30pm",
-      "shortdate": "090310",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel031009&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090310",
-        "type": "flv",
-        "raw": "./media/video/090310.flv"
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel011217&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "170112"
       },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2009-02-12T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-current-and-projected-national-security-threats-united-states",
-      "title": "Open Hearing: Current and Projected National Security Threats to the United States",
-      "date": "02/12/2009",
-      "time": "2:30pm",
-      "shortdate": "090212",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel021209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090212",
-        "type": "flv",
-        "raw": "./media/video/090212.flv",
-        "meta": "./media/video/090212.flv.json"
-      },
-      "witnesses": ""
-    },
-    {
-      "dcDate": "2009-02-06T10:00:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-leon-panetta-be-director-central-intelligence-agency-0",
-      "title": "Open Hearing: Nomination of Leon Panetta to be Director of Central Intelligence Agency",
-      "date": "02/06/2009",
+      "witnesses": [
+        {
+          "pdfs": [
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/statement-pompeo-011217.pdf",
+              "remotefileName": "statement-pompeo-011217.pdf",
+              "localName": "170112_statement-pompeo-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_statement-pompeo-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_statement-pompeo-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "260 kB",
+                "fileModificationDate/Time": "2017:01:19 19:17:04+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:22:13+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:04+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.5,
+                "linearized": "Yes",
+                "author": "Thompson, Reagan",
+                "createDate": "2017:01:11 18:42:07-05:00",
+                "modifyDate": "2017:01:12 08:29:37-05:00",
+                "language": "en-US",
+                "taggedPDF": "Yes",
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "format": "application/pdf",
+                "creator": "Thompson, Reagan",
+                "creatorTool": "Microsoft® Word 2016",
+                "metadataDate": "2017:01:12 08:29:37-05:00",
+                "producer": "Microsoft® Word 2016",
+                "documentID": "uuid:d1d3e060-aa88-464f-88f4-010cefbe0c2a",
+                "instanceID": "uuid:8a6d5134-a1ec-48ef-aec5-0c5cfe648065",
+                "pageCount": 12
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_statement-pompeo-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/questionnaire-011217.pdf",
+              "remotefileName": "questionnaire-011217.pdf",
+              "localName": "170112_questionnaire-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_questionnaire-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_questionnaire-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "310 kB",
+                "fileModificationDate/Time": "2017:01:19 19:17:10+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:22:50+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:10+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.4,
+                "linearized": "No",
+                "pageCount": 15,
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "format": "application/pdf",
+                "createDate": "2017:01:12 20:13:38-05:00",
+                "creatorTool": "Hewlett-Packard MFP",
+                "modifyDate": "2017:01:12 20:13:38-05:00",
+                "metadataDate": "2017:01:12 20:13:38-05:00",
+                "documentID": "uuid:a1a00c9b-b1f1-4fc9-8242-1997178aed82",
+                "instanceID": "uuid:f8e77e06-ca59-4d18-959d-76fd1ddd96bd",
+                "creator": "Hewlett-Packard MFP"
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_questionnaire-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/pre-hearing-011217.pdf",
+              "remotefileName": "pre-hearing-011217.pdf",
+              "localName": "170112_pre-hearing-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_pre-hearing-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "12 MB",
+                "fileModificationDate/Time": "2017:01:19 19:17:17+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:23:29+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:17+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.7,
+                "linearized": "Yes",
+                "hasXFA": "No",
+                "pageCount": 40
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/pre-hearing-b-011217.pdf",
+              "remotefileName": "pre-hearing-b-011217.pdf",
+              "localName": "170112_pre-hearing-b-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-b-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_pre-hearing-b-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "11 MB",
+                "fileModificationDate/Time": "2017:01:18 09:52:32+00:00",
+                "fileAccessDate/Time": "2017:02:22 10:02:41+00:00",
+                "fileInodeChangeDate/Time": "2017:01:18 09:52:32+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.7,
+                "linearized": "Yes",
+                "hasXFA": "No",
+                "pageCount": 21
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-b-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/qfr-011217.pdf",
+              "remotefileName": "qfr-011217.pdf",
+              "localName": "170112_qfr-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_qfr-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_qfr-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "1867 kB",
+                "fileModificationDate/Time": "2017:01:27 09:37:52+00:00",
+                "fileAccessDate/Time": "2017:02:22 10:03:38+00:00",
+                "fileInodeChangeDate/Time": "2017:01:27 09:37:52+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.6,
+                "linearized": "No",
+                "createDate": "2017:01:22 16:46:39-05:00",
+                "modifyDate": "2017:01:22 16:46:39-05:00",
+                "hasXFA": "No",
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "metadataDate": "2017:01:22 16:46:39-05:00",
+                "format": "application/pdf",
+                "documentID": "uuid:69ebab12-828b-4375-9af1-c72b09c80e81",
+                "instanceID": "uuid:2f42ce94-4e34-4a9c-b8c2-f1a34d009082",
+                "pageCount": 12
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_qfr-011217.pdf.txt",
+              "needsScan": true
+            }
+          ],
+          "firstName": "Mike",
+          "lastName": "Pompeo",
+          "title": "Director of the Central Intelligence Agency",
+          "org": "CIA"
+        }
+      ],
+      "dcDate": "2017-01-12T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-mike-pompeo-be-director-central-intelligence-agency-cia",
+      "title": "Open Hearing:  Nomination of Mike Pompeo to be Director of the Central Intelligence Agency (CIA)",
+      "date": "01/12/2017",
       "time": "10:00am",
-      "shortdate": "090206",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020609&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090206",
-        "type": "flv",
-        "raw": "./media/video/090206.flv",
-        "meta": "./media/video/090206.flv.json"
-      },
-      "witnesses": ""
+      "shortdate": "170112"
     },
     {
-      "dcDate": "2009-02-05T14:30:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-leon-panetta-be-director-central-intelligence-agency",
-      "title": "Open Hearing: Nomination of Leon Panetta to be Director of Central Intelligence Agency",
-      "date": "02/05/2009",
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-10T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-126",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/10/2017",
       "time": "2:30pm",
-      "shortdate": "090205",
-      "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel020509&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090205",
-        "type": "flv",
-        "raw": "./media/video/090205.flv",
-        "meta": "./media/video/090205.flv.json"
-      },
-      "witnesses": ""
+      "closed": true,
+      "shortdate": "170110"
     },
     {
-      "dcDate": "2009-01-22T10:00:00-05:00",
-      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-admiral-dennis-blair-be-director-national-intelligence",
-      "title": "Open Hearing: Nomination of Admiral Dennis Blair to be Director of National Intelligence",
-      "date": "01/22/2009",
-      "time": "10:00am",
-      "shortdate": "090122",
       "video": {
-        "url": "http://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel012209&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
-        "basename": "090122",
-        "type": "flv",
-        "raw": "./media/video/090122.flv"
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel011017&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "170110"
       },
-      "witnesses": ""
+      "witnesses": [
+        {
+          "pdfs": [],
+          "firstName": "James",
+          "lastName": "Clapper",
+          "title": "Director of the National Intelligence",
+          "org": "DNI"
+        },
+        {
+          "pdfs": [],
+          "firstName": "John",
+          "lastName": "Brennan",
+          "title": "Director of the Central Intelligence Agency",
+          "org": "CIA"
+        },
+        {
+          "pdfs": [],
+          "firstName": "ADM Michael",
+          "lastName": "Rogers",
+          "title": "Director of the National Security Agency",
+          "org": "NSA"
+        },
+        {
+          "pdfs": [],
+          "firstName": "James",
+          "lastName": "Comey",
+          "title": "Director of the Federal Bureau of Investigation",
+          "org": "FBI"
+        }
+      ],
+      "dcDate": "2017-01-10T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-russian-intelligence-activities",
+      "title": "Open Hearing:  Russian Intelligence Activities",
+      "date": "01/10/2017",
+      "time": "1:00pm",
+      "shortdate": "170110"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-05T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-123",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/05/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170105"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-12-07T15:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-124",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "12/07/2016",
+      "time": "3:30pm",
+      "closed": true,
+      "shortdate": "161207"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-11-17T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-122",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "11/17/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "161117"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092716&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "160927"
+      },
+      "witnesses": [
+        {
+          "pdfs": [
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/rcardillo_92716.pdf",
+              "remotefileName": "rcardillo_92716.pdf",
+              "localName": "160927_rcardillo_92716.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/160927_rcardillo_92716.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "160927_rcardillo_92716.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "288 kB",
+                "fileModificationDate/Time": "2017:01:18 09:52:37+00:00",
+                "fileAccessDate/Time": "2017:02:22 09:21:53+00:00",
+                "fileInodeChangeDate/Time": "2017:01:18 09:52:37+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.5,
+                "linearized": "No",
+                "pageCount": 21,
+                "language": "en-US",
+                "taggedPDF": "Yes",
+                "createDate": "2016:09:27 09:55:45-04:00",
+                "modifyDate": "2016:09:27 09:55:45-04:00"
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/160927_rcardillo_92716.pdf.txt",
+              "needsScan": true
+            }
+          ],
+          "firstName": "Robert",
+          "lastName": "Cardillo",
+          "title": "Director of the National Geospatial-Intelligence Agency",
+          "org": "NGA"
+        }
+      ],
+      "dcDate": "2016-09-27T10:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-director-robert-cardillo-nga",
+      "title": "Open Hearing:  Director Robert Cardillo, NGA",
+      "date": "09/27/2016",
+      "time": "10:00am",
+      "shortdate": "160927"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-22T14:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-121",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/22/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "160922"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-21T13:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-120",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/21/2016",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "160921"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-20T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-119",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/20/2016",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "160920"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-03-02T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-134",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "03/02/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170302"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-28T16:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-133",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "4:00pm",
+      "closed": true,
+      "shortdate": "170228"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "undefined",
+        "basename": "170228"
+      },
+      "witnesses": [],
+      "dcDate": "2017-02-28T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-intelligence-matters-0",
+      "title": "Open Hearing:  Intelligence Matters",
+      "date": "02/28/2017",
+      "time": "2:00pm",
+      "shortdate": "170228"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-16T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-132",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/16/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170216"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-14T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-129",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/14/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170214"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-09T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-131",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/09/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170209"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-02-07T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-130",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "02/07/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170207"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-31T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-128",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/31/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170131"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-24T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-127",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/24/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170124"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-12T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-125",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/12/2017",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "170112"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel011217&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "170112"
+      },
+      "witnesses": [
+        {
+          "pdfs": [
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/statement-pompeo-011217.pdf",
+              "remotefileName": "statement-pompeo-011217.pdf",
+              "localName": "170112_statement-pompeo-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_statement-pompeo-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_statement-pompeo-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "260 kB",
+                "fileModificationDate/Time": "2017:01:19 19:17:04+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:22:13+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:04+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.5,
+                "linearized": "Yes",
+                "author": "Thompson, Reagan",
+                "createDate": "2017:01:11 18:42:07-05:00",
+                "modifyDate": "2017:01:12 08:29:37-05:00",
+                "language": "en-US",
+                "taggedPDF": "Yes",
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "format": "application/pdf",
+                "creator": "Thompson, Reagan",
+                "creatorTool": "Microsoft® Word 2016",
+                "metadataDate": "2017:01:12 08:29:37-05:00",
+                "producer": "Microsoft® Word 2016",
+                "documentID": "uuid:d1d3e060-aa88-464f-88f4-010cefbe0c2a",
+                "instanceID": "uuid:8a6d5134-a1ec-48ef-aec5-0c5cfe648065",
+                "pageCount": 12
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_statement-pompeo-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/questionnaire-011217.pdf",
+              "remotefileName": "questionnaire-011217.pdf",
+              "localName": "170112_questionnaire-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_questionnaire-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_questionnaire-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "310 kB",
+                "fileModificationDate/Time": "2017:01:19 19:17:10+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:22:50+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:10+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.4,
+                "linearized": "No",
+                "pageCount": 15,
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "format": "application/pdf",
+                "createDate": "2017:01:12 20:13:38-05:00",
+                "creatorTool": "Hewlett-Packard MFP",
+                "modifyDate": "2017:01:12 20:13:38-05:00",
+                "metadataDate": "2017:01:12 20:13:38-05:00",
+                "documentID": "uuid:a1a00c9b-b1f1-4fc9-8242-1997178aed82",
+                "instanceID": "uuid:f8e77e06-ca59-4d18-959d-76fd1ddd96bd",
+                "creator": "Hewlett-Packard MFP"
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_questionnaire-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/pre-hearing-011217.pdf",
+              "remotefileName": "pre-hearing-011217.pdf",
+              "localName": "170112_pre-hearing-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_pre-hearing-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "12 MB",
+                "fileModificationDate/Time": "2017:01:19 19:17:17+00:00",
+                "fileAccessDate/Time": "2017:02:22 08:23:29+00:00",
+                "fileInodeChangeDate/Time": "2017:01:19 19:17:17+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.7,
+                "linearized": "Yes",
+                "hasXFA": "No",
+                "pageCount": 40
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/pre-hearing-b-011217.pdf",
+              "remotefileName": "pre-hearing-b-011217.pdf",
+              "localName": "170112_pre-hearing-b-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-b-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_pre-hearing-b-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "11 MB",
+                "fileModificationDate/Time": "2017:01:18 09:52:32+00:00",
+                "fileAccessDate/Time": "2017:02:22 10:02:41+00:00",
+                "fileInodeChangeDate/Time": "2017:01:18 09:52:32+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.7,
+                "linearized": "Yes",
+                "hasXFA": "No",
+                "pageCount": 21
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_pre-hearing-b-011217.pdf.txt",
+              "needsScan": true
+            },
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/qfr-011217.pdf",
+              "remotefileName": "qfr-011217.pdf",
+              "localName": "170112_qfr-011217.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/170112_qfr-011217.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "170112_qfr-011217.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "1867 kB",
+                "fileModificationDate/Time": "2017:01:27 09:37:52+00:00",
+                "fileAccessDate/Time": "2017:02:22 10:03:38+00:00",
+                "fileInodeChangeDate/Time": "2017:01:27 09:37:52+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.6,
+                "linearized": "No",
+                "createDate": "2017:01:22 16:46:39-05:00",
+                "modifyDate": "2017:01:22 16:46:39-05:00",
+                "hasXFA": "No",
+                "xmpToolkit": "Adobe XMP Core 5.4-c005 78.147326, 2012/08/23-13:03:03",
+                "metadataDate": "2017:01:22 16:46:39-05:00",
+                "format": "application/pdf",
+                "documentID": "uuid:69ebab12-828b-4375-9af1-c72b09c80e81",
+                "instanceID": "uuid:2f42ce94-4e34-4a9c-b8c2-f1a34d009082",
+                "pageCount": 12
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/170112_qfr-011217.pdf.txt",
+              "needsScan": true
+            }
+          ],
+          "firstName": "Mike",
+          "lastName": "Pompeo",
+          "title": "Director of the Central Intelligence Agency",
+          "org": "CIA"
+        }
+      ],
+      "dcDate": "2017-01-12T10:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-nomination-mike-pompeo-be-director-central-intelligence-agency-cia",
+      "title": "Open Hearing:  Nomination of Mike Pompeo to be Director of the Central Intelligence Agency (CIA)",
+      "date": "01/12/2017",
+      "time": "10:00am",
+      "shortdate": "170112"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-10T14:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-126",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/10/2017",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "170110"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel011017&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "170110"
+      },
+      "witnesses": [
+        {
+          "pdfs": [],
+          "firstName": "James",
+          "lastName": "Clapper",
+          "title": "Director of the National Intelligence",
+          "org": "DNI"
+        },
+        {
+          "pdfs": [],
+          "firstName": "John",
+          "lastName": "Brennan",
+          "title": "Director of the Central Intelligence Agency",
+          "org": "CIA"
+        },
+        {
+          "pdfs": [],
+          "firstName": "ADM Michael",
+          "lastName": "Rogers",
+          "title": "Director of the National Security Agency",
+          "org": "NSA"
+        },
+        {
+          "pdfs": [],
+          "firstName": "James",
+          "lastName": "Comey",
+          "title": "Director of the Federal Bureau of Investigation",
+          "org": "FBI"
+        }
+      ],
+      "dcDate": "2017-01-10T13:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-russian-intelligence-activities",
+      "title": "Open Hearing:  Russian Intelligence Activities",
+      "date": "01/10/2017",
+      "time": "1:00pm",
+      "shortdate": "170110"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2017-01-05T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-123",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "01/05/2017",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "170105"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-12-07T15:30:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-124",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "12/07/2016",
+      "time": "3:30pm",
+      "closed": true,
+      "shortdate": "161207"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-11-17T14:00:00-05:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-122",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "11/17/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "161117"
+    },
+    {
+      "video": {
+        "localPath": "",
+        "mp4": "",
+        "ogg": "",
+        "url": "https://www.senate.gov/isvp/?type=arch&comm=intel&filename=intel092716&auto_play=false&poster=http://www.intelligence.senate.gov/sites/default/files/video-poster-flash-fit.jpg",
+        "basename": "160927"
+      },
+      "witnesses": [
+        {
+          "pdfs": [
+            {
+              "remoteUrl": "http://www.intelligence.senate.gov/sites/default/files/documents/rcardillo_92716.pdf",
+              "remotefileName": "rcardillo_92716.pdf",
+              "localName": "160927_rcardillo_92716.pdf",
+              "localPath": "/var/www/illegible.us/html/oversee/media/text/160927_rcardillo_92716.pdf",
+              "metadata": {
+                "exiftoolVersionNumber": 10.23,
+                "fileName": "160927_rcardillo_92716.pdf",
+                "directory": "/var/www/illegible.us/html/oversee/media/text",
+                "fileSize": "288 kB",
+                "fileModificationDate/Time": "2017:01:18 09:52:37+00:00",
+                "fileAccessDate/Time": "2017:02:22 09:21:53+00:00",
+                "fileInodeChangeDate/Time": "2017:01:18 09:52:37+00:00",
+                "filePermissions": "rw-rw-r--",
+                "fileType": "PDF",
+                "fileTypeExtension": "pdf",
+                "mimeType": "application/pdf",
+                "pdfVersion": 1.5,
+                "linearized": "No",
+                "pageCount": 21,
+                "language": "en-US",
+                "taggedPDF": "Yes",
+                "createDate": "2016:09:27 09:55:45-04:00",
+                "modifyDate": "2016:09:27 09:55:45-04:00"
+              },
+              "txtpath": "/var/www/illegible.us/html/oversee/media/text/160927_rcardillo_92716.pdf.txt",
+              "needsScan": true
+            }
+          ],
+          "firstName": "Robert",
+          "lastName": "Cardillo",
+          "title": "Director of the National Geospatial-Intelligence Agency",
+          "org": "NGA"
+        }
+      ],
+      "dcDate": "2016-09-27T10:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/open-hearing-director-robert-cardillo-nga",
+      "title": "Open Hearing:  Director Robert Cardillo, NGA",
+      "date": "09/27/2016",
+      "time": "10:00am",
+      "shortdate": "160927"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-22T14:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-121",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/22/2016",
+      "time": "2:00pm",
+      "closed": true,
+      "shortdate": "160922"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-21T13:00:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-120",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/21/2016",
+      "time": "1:00pm",
+      "closed": true,
+      "shortdate": "160921"
+    },
+    {
+      "video": {},
+      "witnesses": [],
+      "dcDate": "2016-09-20T14:30:00-04:00",
+      "hearingPage": "http://www.intelligence.senate.gov/hearings/closed-briefing-intelligence-matters-119",
+      "title": "Closed Briefing:  Intelligence Matters",
+      "date": "09/20/2016",
+      "time": "2:30pm",
+      "closed": true,
+      "shortdate": "160920"
     }
   ],
-  "meta": []
+  "meta": [],
+  "lastPage": "30",
+  "curPage": 1
 }
