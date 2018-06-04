@@ -12,7 +12,7 @@
     "fs-extra": "^4.0.3",
     "glob": "^5.0.14",
     "graceful-fs": "^4.1.2",
-    "moment": "^2.22.1",
+    "moment": "^2.22.2",
     "mz": "^2.7.0",
     "node-slimerjs": "^1.0.1",
     "pdftotextjs": "^0.3.1",
@@ -23,7 +23,7 @@
     "rethinkdb": "^2.2.0",
     "slimerjs": "^0.10.2",
     "socket.io": "^2.1.1",
-    "socks5-http-client": "^1.0.3",
+    "socks5-http-client": "git+https://github.com/qix/socks5-http-client.git",
     "url": "^0.10.3"
   },
   "devDependencies": {},

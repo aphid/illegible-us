@@ -33,7 +33,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -588,7 +588,7 @@ var Witness = function (options) {
 
 
 
-Committee.prototype.addHearing = function (options) {
+Committee.prototype.addHearing = async function (options) {
     options.baseUrl = this.url;
     var hearing = new Hearing(options);
     for (var hear of this.hearings) {
@@ -599,7 +599,9 @@ Committee.prototype.addHearing = function (options) {
     }
     this.hearings.push(hearing);
     scraper.hearing(hearing);
-    return hearing;
+    await hearing.fetch();
+
+    return Promise.resolve(hearing);
 };
 
 scraper.hearing = function (hearing) {
@@ -614,6 +616,7 @@ scraper.wait = function (sec) {
     });
 };
 
+//this gets all of the pages
 Committee.prototype.scrapeRemote = async function (page) {
     var comm = this;
     var curPage = page || 0;
@@ -636,6 +639,7 @@ Committee.prototype.scrapeRemote = async function (page) {
             } else {
                 console.log("no more hearings");
                 finished = true;
+                /*
                 for (let hear of comm.hearings) {
                     if (!hear.closed) {
                         console.log("fetching", hear.title);
@@ -648,7 +652,7 @@ Committee.prototype.scrapeRemote = async function (page) {
                         }
                     }
 
-                }
+                } */
                 console.log("Finished with page", curPage);
                 return Promise.resolve();
             }
@@ -1139,7 +1143,7 @@ Pdf.prototype.textify = async function () {
         } catch (err) {
             scraper.msg(err);
         }
-        if (!data) {
+        if (!data || data.length < 300) {
             scraper.msg("ILLEGIBLE DOCUMENT");
             console.error("NO DATA");
             pdf.needsScan = true;
@@ -1285,8 +1289,8 @@ Witness.prototype.readPdf = function (options) {
 
 Committee.prototype.getPages = async function (pages) {
     var comm = this;
-    return Promise.all(pages.map(function (a) {
-        return comm.getHearingIndex(a);
+    return Promise.all(pages.map(async function (a) {
+        return await comm.getHearingIndex(a);
     }));
 };
 
@@ -1317,7 +1321,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     try {
         var resp = await rq(options);
         var $ = cheerio.load(resp);
-
+        var tempHearings = [];
         $('.views-row').each(async function (i, elem) {
             var hearing = {};
             hearing.dcDate = $(elem).find('.date-display-single').attr('content');
@@ -1344,21 +1348,24 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             } else if (hearing.title.includes('Closed')) {
                 //scraper.msg(hearing.title);
                 hearing.closed = true;
-                nHear = new Hearing(hearing);
-                comm.hearings.push(nHear);
-                pageHearings.push(nHear);
+                tempHearings.push(hearing)
+                //comm.hearings.push(nHear);
+                pageHearings.push(hearing);
                 closeds++;
             } else if (hearing.hearingPage === 'undefined') {
                 console.log("undefined hearingpage");
             } else {
-                nHear = new Hearing(hearing);
-                comm.hearings.push(nHear);
-                pageHearings.push(nHear);
+                tempHearings.push(hearing);
+                //comm.hearings.push(nHear);
+                pageHearings.push(hearing);
                 opens++;
                 //scraper.msg(JSON.stringify(comm.hearings), 'detail');
 
             }
         });
+        for (let h of tempHearings) {
+            await comm.addHearing(h);
+        }
         console.log("Open: ", opens, " Closed: ", closeds);
         console.log(pageHearings.length + ">>???>>>");
         return Promise.resolve({
@@ -1535,9 +1542,7 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
-        await hear.addVideo({
-            url: data.video
-        });
+
 
         for (let wit of data.witnesses) {
             var pdfs = wit.pdfs;
@@ -1549,7 +1554,9 @@ Hearing.prototype.fetch = async function () {
             }
             await hear.addWitness(witness);
         }
-
+        await hear.addVideo({
+            url: data.video
+        });
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
         return Promise.resolve();
