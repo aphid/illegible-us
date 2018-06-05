@@ -602,7 +602,7 @@ Committee.prototype.addHearing = async function (options) {
     this.hearings.push(hearing);
     scraper.hearing(hearing);
     await hearing.fetch();
-
+    this.write();
     return Promise.resolve(hearing);
 };
 
@@ -1102,9 +1102,8 @@ Pdf.prototype.imagify = async function () {
     if (fs.existsSync(lastImg)) {
         console.log("EXISTS");
         this.pageImages = [];
-        console.log("WOOF", fs.readdirSync(imgdir));
         for (let im of fs.readdirSync(imgdir)) {
-            console.log(im);
+            scraper.msg(im);
             this.pageImages.push(scraper.txtpath + basename);
         }
         return Promise.resolve();
