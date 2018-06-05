@@ -1316,7 +1316,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     options.url = url;
     scraper.msg("trying " + JSON.stringify(options));
     let now = moment().format("YYMM");
-    var imgname = "hearpage" + page + now;
+    var imgname = "hearpage" + page + "_" + now;
     console.log("OK WHAT", now);
     var ss = await scraper.screenshot(url, imgname);
     console.log(ss);
