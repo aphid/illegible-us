@@ -991,7 +991,7 @@ Pdf.prototype.getMeta = async function () {
         var msize = fs.statSync(jsonpath).size;
         scraper.msg(jsonpath + " exists! (" + msize + ")");
         if (msize) {
-            scraper.msg("meta's already here, moving on");
+            scraper.msg("meta's already on disk");
             var meta = fs.readFileSync(jsonpath, "utf8");
             pdf.metadata = JSON.parse(meta);
             return Promise.resolve();
@@ -1094,13 +1094,19 @@ Pdf.prototype.imagify = async function () {
     try {
         fs.mkdirSync(imgdir);
     } catch (e) {
-        scraper.msg("dir exists... hopefully " + e);
+        scraper.msg("dir exists..." + e);
     }
     this.imgdir = imgdir;
     var lastImg = imgdir + "/" + basename + "-" + (this.metadata.pageCount - 1) + ".jpg";
     console.log("checking for ", lastImg);
     if (fs.existsSync(lastImg)) {
         console.log("EXISTS");
+        this.pageImages = [];
+        console.log("WOOF", fs.readdirSync(imgdir));
+        for (let im of fs.readdirSync(imgdir)) {
+            console.log(im);
+            this.pageImages.push(scraper.txtpath + basename);
+        }
         return Promise.resolve();
     }
     console.log("does not exist?");
@@ -1110,7 +1116,7 @@ Pdf.prototype.imagify = async function () {
     try {
         await cpp.exec(cmd);
         this.pageImages = [];
-        for (let im of fs.readdirSync(imgdir)){
+        for (let im of fs.readdirSync(imgdir)) {
             this.pageImages.push(scraper.txtpath + basename);
         }
         console.log("#################DONE IMAGES################");
@@ -1133,7 +1139,7 @@ Pdf.prototype.textify = async function () {
     if (fs.existsSync(txtpath)) {
         var msize = fs.statSync(txtpath).size;
         scraper.msg(txtpath + " exists! (" + msize + ")");
-        scraper.msg("txt's already here, moving on");
+        scraper.msg("txt already on disk");
         return Promise.resolve();
 
     }
