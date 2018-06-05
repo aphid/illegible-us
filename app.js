@@ -62,6 +62,8 @@ scraper.videoDir = settings[settings.mode + "Paths"].videoDir;
 scraper.transcodedDir = settings[settings.mode + "Paths"].transcodedDir;
 scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
+scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
+
 scraper.slimerPath = settings.slimerPath;
 
 if (scraper.useTor === true) {
@@ -940,6 +942,7 @@ var Pdf = function (options) {
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
+
         this.title = options.name || options.title;
     } else {
         for (var fld in options) {
@@ -1086,7 +1089,7 @@ Pdf.prototype.imagify = async function () {
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
-    var basename = this.localName.replace(".pdf", "").replace("PDF", "");
+    var basename = this.localName.replace(".pdf", "").replace(".PDF", "");
     var imgdir = scraper.textDir + basename;
     try {
         fs.mkdirSync(imgdir);
@@ -1106,6 +1109,10 @@ Pdf.prototype.imagify = async function () {
     console.log(cmd);
     try {
         await cpp.exec(cmd);
+        this.pageImages = [];
+        for (let im of fs.readdirSync(imgdir)){
+            this.pageImages.push(scraper.txtpath + basename);
+        }
         console.log("#################DONE IMAGES################");
         return Promise.resolve();
     } catch (e) {
@@ -1267,7 +1274,6 @@ Witness.prototype.addPdf = async function (hear, data) {
     console.log("image-ing");
     await thepdf.textify();
     console.log(thepdf.needsScan);
-
     if (thepdf.needsScan) {
         console.log("needs scan");
         await thepdf.imagify();
