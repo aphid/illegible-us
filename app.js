@@ -1104,19 +1104,28 @@ Pdf.prototype.imagify = async function () {
         this.pageImages = [];
         for (let im of fs.readdirSync(imgdir)) {
             scraper.msg(im);
-            this.pageImages.push(scraper.txtpath + basename);
-        }
+            let imgpath = scraper.txtPath + basename + "/" + im;
+            this.pageImages.push(imgpath);
+            scraper.url({ url: imgpath});
+            await scraper.wait(5);
+
+	}
         return Promise.resolve();
     }
     console.log("does not exist?");
 
-    var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + ".jpg'";
+    var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
     console.log(cmd);
     try {
         await cpp.exec(cmd);
         this.pageImages = [];
         for (let im of fs.readdirSync(imgdir)) {
-            this.pageImages.push(scraper.txtpath + basename);
+	    scraper.msg(im);
+	    let imgpath = scraper.txtPath + basename + "/" + im;
+            this.pageImages.push(imgpath);
+ 	    scraper.url({url: imgpath});
+	    await scraper.wait(5);
+
         }
         console.log("#################DONE IMAGES################");
         return Promise.resolve();
@@ -1155,7 +1164,8 @@ Pdf.prototype.textify = async function () {
         } catch (err) {
             scraper.msg(err);
         }
-        if (!data || data.length < 300) {
+        if (!data || data.length < 100) {
+	    console.log(data);
             scraper.msg("ILLEGIBLE DOCUMENT");
             console.error("NO DATA");
             pdf.needsScan = true;
@@ -1166,6 +1176,7 @@ Pdf.prototype.textify = async function () {
             scraper.msg(data.substring(0, 2000) + "...", "txt");
         } else {
             scraper.msg(data, "ILLEGIBLE DOCUMENT");
+            console.log(data);
             pdf.needsScan = true;
             return Promise.resolve();
         }
