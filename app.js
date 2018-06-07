@@ -28,6 +28,7 @@ settings = settings.replace(/\.\//g, __dirname + "\/");
 settings = JSON.parse(settings);
 
 
+
 var scraper = {
     secure: settings.secure,
     mode: settings.mode,
@@ -43,6 +44,15 @@ var scraper = {
     userAgents: settings.userAgents,
     reqOptions: {}
 };
+
+var rando = Math.floor(Math.random() * 2);
+if (rando) {
+    scraper.nextAct = "video";
+} else {
+    scraper.nextAct = "pdf";
+}
+console.log(scraper.nextAct);
+
 
 scraper.agent = function () {
     this.reqOptions.headers = {
@@ -262,6 +272,7 @@ Video.prototype.fetch = async function (manifest) {
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
         this.localPath = scraper.videoDir + vid.basename + ".mp4";
         this.type = "mp4";
+        await this.scenes();
         return Promise.resolve();
     }
     await this.getManifest();
@@ -298,7 +309,7 @@ Video.prototype.fetch = async function (manifest) {
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
-                var childargs = ["--hls-prefer-native", "--proxy", "socks5://127.0.0.1:9050", '-o', incoming, vid.src];
+                var childargs = ["--hls-prefer-native", '-o', incoming, vid.src];
                 console.log("youtube-dl " + childargs.join(' '));
                 scraper.msg("downloading VOD fragments");
                 cpp.spawn("youtube-dl", childargs).fail(function (err) {
@@ -323,6 +334,7 @@ Video.prototype.fetch = async function (manifest) {
                     .then(function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
+                        await vid.scenes();
                         fulfill();
                     })
                     .catch(async function (err) {
@@ -373,6 +385,11 @@ Video.prototype.fetch = async function (manifest) {
         }
     });
 };
+
+Video.prototype.scenes = async function () {
+
+};
+}
 
 Video.prototype.transcodeToMP4 = function () {
 
@@ -934,6 +951,7 @@ Hearing.prototype.addVideo = async function (video) {
         hear.video.localPath = mp4path;
     }
 
+
 };
 
 var Pdf = function (options) {
@@ -980,6 +998,16 @@ scraper.getFile = function (url, dest) {
                 });
             });
     });
+};
+
+Pdf.prototype.checkOCR = async function () {
+    let ocrfile = this.localPath + ".ocr.json";
+    if (fs.existsSync()) {
+        scraper.msg("has been OCRd");
+    } else {
+        this.startOCR();
+    }
+
 };
 
 Pdf.prototype.getMeta = async function () {
@@ -1106,10 +1134,12 @@ Pdf.prototype.imagify = async function () {
             scraper.msg(im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-            scraper.url({
+            /* scraper.url({
                 url: imgpath
             });
-            await scraper.wait(5);
+            */
+
+            await scraper.wait(1);
 
         }
         return Promise.resolve();
@@ -1300,6 +1330,7 @@ Witness.prototype.addPdf = async function (hear, data) {
     if (thepdf.needsScan) {
         console.log("needs scan");
         await thepdf.imagify();
+        await thepdf.checkOCR();
     }
 
     await scraper.wait(5);
@@ -1573,23 +1604,25 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
-
-
-        for (let wit of data.witnesses) {
-            var pdfs = wit.pdfs;
-            delete wit['pdfs'];
-            var witness = new Witness(wit);
-            for (let pdf of pdfs) {
-                console.dir(pdf);
-                await witness.addPdf(hear, pdf);
+        if (scraper.nextAct = "video") {
+            await hear.addVideo({
+                url: data.video
+            });
+        } else if (scraper.netAct = "pdf")
+            for (let wit of data.witnesses) {
+                var pdfs = wit.pdfs;
+                delete wit['pdfs'];
+                var witness = new Witness(wit);
+                for (let pdf of pdfs) {
+                    console.dir(pdf);
+                    await witness.addPdf(hear, pdf);
+                }
+                await hear.addWitness(witness);
             }
-            await hear.addWitness(witness);
-        }
-        await hear.addVideo({
-            url: data.video
-        });
+
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
+        location.reload();
         return Promise.resolve();
 
     } catch (err) {
@@ -1601,6 +1634,7 @@ Hearing.prototype.fetch = async function () {
         return Promise.reject();
 
     }
+
 
 };
 
