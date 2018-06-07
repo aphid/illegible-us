@@ -1106,10 +1106,12 @@ Pdf.prototype.imagify = async function () {
             scraper.msg(im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-            scraper.url({ url: imgpath});
+            scraper.url({
+                url: imgpath
+            });
             await scraper.wait(5);
 
-	}
+        }
         return Promise.resolve();
     }
     console.log("does not exist?");
@@ -1120,11 +1122,13 @@ Pdf.prototype.imagify = async function () {
         await cpp.exec(cmd);
         this.pageImages = [];
         for (let im of fs.readdirSync(imgdir)) {
-	    scraper.msg(im);
-	    let imgpath = scraper.txtPath + basename + "/" + im;
+            scraper.msg(im);
+            let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
- 	    scraper.url({url: imgpath});
-	    await scraper.wait(5);
+            scraper.url({
+                url: imgpath
+            });
+            await scraper.wait(5);
 
         }
         console.log("#################DONE IMAGES################");
@@ -1152,11 +1156,14 @@ Pdf.prototype.textify = async function () {
 
     }
     scraper.msg("Attempting to create text: " + txtpath);
+    console.log(dest);
     var pdftxt = new pdftotext(dest);
+    console.dir(pdftxt);
     try {
         scraper.msg("Extracting text: " + dest);
         try {
-            var data = pdftxt.getTextSync();
+            var data = await pdftxt.getText();
+            console.log("*(*(*(*(*(*(**(*(*()))))))))", data);
             if (data) {
                 console.log("DATA");
                 data = data.toString('utf8');
@@ -1165,7 +1172,7 @@ Pdf.prototype.textify = async function () {
             scraper.msg(err);
         }
         if (!data || data.length < 100) {
-	    console.log(data);
+            console.log(data);
             scraper.msg("ILLEGIBLE DOCUMENT");
             console.error("NO DATA");
             pdf.needsScan = true;
@@ -1386,7 +1393,9 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             }
         });
         for (let h of tempHearings) {
-            await comm.addHearing(h);
+            if (h.title.includes("Haspel")) {
+                await comm.addHearing(h);
+            }
         }
         console.log("Open: ", opens, " Closed: ", closeds);
         console.log(pageHearings.length + ">>???>>>");
