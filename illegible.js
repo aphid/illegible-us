@@ -41,6 +41,7 @@ var scraper = {
     blocked: false,
     sockets: 5,
     current: 0,
+    mdocs: false,
     userAgents: settings.userAgents,
     reqOptions: {}
 };
@@ -120,6 +121,11 @@ scraper.msg = function (thing, kind) {
         io.to('oversight').emit(kind, JSON.stringify(thing));
     }
 };
+
+scraper.load = function (url) {
+    console.log("sendingurl");
+    io.to('oversight').emit('load',url);
+}
 
 scraper.url = function (url) {
     console.log('sending url');
@@ -270,8 +276,10 @@ Video.prototype.fetch = async function (manifest) {
         return Promise.resolve();
     }
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
+	scraper.msg("video " + vid.basename + " on local disk");
         this.localPath = scraper.videoDir + vid.basename + ".mp4";
         this.type = "mp4";
+	await this.getMeta();
         await this.scenes();
         return Promise.resolve();
     }
@@ -331,7 +339,7 @@ Video.prototype.fetch = async function (manifest) {
                         });
                     })
 
-                    .then(function () {
+                    .then(async function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
                         await vid.scenes();
@@ -387,9 +395,9 @@ Video.prototype.fetch = async function (manifest) {
 };
 
 Video.prototype.scenes = async function () {
-
+      console.log(this);
+      scraper.load("/smallest-procedural-utterance/?v=" + this.basename);
 };
-}
 
 Video.prototype.transcodeToMP4 = function () {
 
@@ -827,7 +835,7 @@ Committee.prototype.readLocal = function () {
     return new Promise(function (fulfill, reject) {
 
         var json = scraper.dataDir + "data.json";
-        pfs.readFile(json, 'utf-8').then(function (data) {
+        pfs.readFile(json, 'utf-8').then(async function (data) {
             data = JSON.parse(data);
             for (var hear of data.hearings) {
                 var theHearing = new Hearing(hear);
@@ -847,7 +855,7 @@ Committee.prototype.readLocal = function () {
                     theHearing.addWitness(theWit);
 
                 }
-                comm.addHearing(theHearing);
+                await comm.addHearing(theHearing);
 
             }
             return fulfill();
@@ -960,7 +968,7 @@ var Pdf = function (options) {
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
-
+        this.shortName = this.localName.replace(".PDF","").replace(".pdf","");
         this.title = options.name || options.title;
     } else {
         for (var fld in options) {
@@ -1001,13 +1009,16 @@ scraper.getFile = function (url, dest) {
 };
 
 Pdf.prototype.checkOCR = async function () {
-    let ocrfile = this.localPath + ".ocr.json";
-    if (fs.existsSync()) {
-        scraper.msg("has been OCRd");
-    } else {
-        this.startOCR();
-    }
-
+     for (var i = 0; i < this.metadata.pageCount; i++){
+	if (fs.existsSync("/var/www/oversightmachin.es/html/mdocs/" + this.shortName + "_" + i + ".json")){
+	   console.log("YAAAAAAS");
+	}
+		else {
+        scraper.load("/ocr/?title=" + this.shortName + "&page=" + i);
+			console.log("loading", this.shortName);
+  process.exit();
+		}
+     }
 };
 
 Pdf.prototype.getMeta = async function () {
@@ -1117,7 +1128,7 @@ Pdf.prototype.imagify = async function () {
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
-    var basename = this.localName.replace(".pdf", "").replace(".PDF", "");
+    var basename = this.shortName;
     var imgdir = scraper.textDir + basename;
     try {
         fs.mkdirSync(imgdir);
@@ -1301,7 +1312,8 @@ Hearing.prototype.addWitness = function (witness) {
 
 //from scrape
 Witness.prototype.addPdf = async function (hear, data) {
-    for (var pdf of this.pdfs) {
+     console.log("adding pdfs");
+	for (var pdf of this.pdfs) {
         if (data.url === pdf.remoteUrl) {
             scraper.msg('blocking duplicate');
             return false;
@@ -1424,9 +1436,9 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             }
         });
         for (let h of tempHearings) {
-            if (h.title.includes("Haspel")) {
+            //if (h.title.includes("Haspel"))
                 await comm.addHearing(h);
-            }
+		scraper.msg("Processed hearing", h.title);
         }
         console.log("Open: ", opens, " Closed: ", closeds);
         console.log(pageHearings.length + ">>???>>>");
@@ -1604,11 +1616,12 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
-        if (scraper.nextAct = "video") {
+	if (scraper.mdocs) {
+        if (scraper.nextAct === "video") {
             await hear.addVideo({
                 url: data.video
             });
-        } else if (scraper.netAct = "pdf")
+        } else if (scraper.nextAct === "pdf")
             for (let wit of data.witnesses) {
                 var pdfs = wit.pdfs;
                 delete wit['pdfs'];
@@ -1619,10 +1632,22 @@ Hearing.prototype.fetch = async function () {
                 }
                 await hear.addWitness(witness);
             }
-
+        }
+	else {
+	  for (let wit of data.witnesses) {
+                var pdfs = wit.pdfs;
+                delete wit['pdfs'];
+                var witness = new Witness(wit);
+                for (let pdf of pdfs) {
+                    console.dir(pdf);
+                    await witness.addPdf(hear, pdf);
+                }
+                await hear.addWitness(witness);
+            }
+	  await hear.addVideo({ url: data.video });
+	}
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
-        location.reload();
         return Promise.resolve();
 
     } catch (err) {
