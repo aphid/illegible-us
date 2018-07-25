@@ -280,7 +280,7 @@ Video.prototype.fetch = async function (manifest) {
         this.localPath = scraper.videoDir + vid.basename + ".mp4";
         this.type = "mp4";
 	await this.getMeta();
-        await this.scenes();
+        //await this.scenes();
         return Promise.resolve();
     }
     await this.getManifest();
@@ -1187,6 +1187,7 @@ Pdf.prototype.textify = async function () {
     var dest = this.localPath;
     var txtpath = scraper.textDir + this.localName + ".txt";
     this.txtpath = txtpath;
+    this.txturl = scraper.txtPath + this.localName + ".txt";
     scraper.msg("working on " + this.txtpath);
 
     if (fs.existsSync(txtpath)) {
@@ -1342,7 +1343,7 @@ Witness.prototype.addPdf = async function (hear, data) {
     if (thepdf.needsScan) {
         console.log("needs scan");
         await thepdf.imagify();
-        await thepdf.checkOCR();
+        //await thepdf.checkOCR();
     }
 
     await scraper.wait(5);
