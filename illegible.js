@@ -342,7 +342,7 @@ Video.prototype.fetch = async function (manifest) {
                     .then(async function () {
                         fse.moveSync(incoming, output);
                         vid.localPath = output;
-                        await vid.scenes();
+                        //await vid.scenes();
                         fulfill();
                     })
                     .catch(async function (err) {
@@ -478,7 +478,10 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 
-
+Video.prototype.transcode = async function(){
+   await this.transcodeToOgg();
+   return Promise.resolve();
+}
 
 
 Video.prototype.transcodeToOgg = async function () {
@@ -780,7 +783,7 @@ Committee.prototype.getVidMeta = async function () {
     return Promise.resolve();
 };
 
-
+/*
 Video.transcode = function () {
     var vid = this;
     return new Promise(function (fulfill) {
@@ -803,8 +806,8 @@ Video.transcode = function () {
             }
         }
     });
-};
-
+}; */
+/*
 Committee.prototype.getVideos = async function () {
     scraper.msg("SCRAPING VIDEOS");
 
@@ -827,7 +830,7 @@ Committee.prototype.getVideos = async function () {
         }
     }
     return Promise.resolve();
-};
+};*/
 
 
 Committee.prototype.readLocal = function () {
@@ -1135,7 +1138,7 @@ Pdf.prototype.imagify = async function () {
         scraper.msg("dir exists..." + e);
     }
     this.imgdir = imgdir;
-    var lastImg = imgdir + "/" + basename + "-" + (this.metadata.pageCount - 1) + ".jpg";
+    var lastImg = imgdir + "/" + basename + "_" + (this.metadata.pageCount - 1).toString().padStart(3, "0") + ".jpg";
     console.log("checking for ", lastImg);
     if (fs.existsSync(lastImg)) {
         console.log("EXISTS");
@@ -1344,7 +1347,7 @@ Witness.prototype.addPdf = async function (hear, data) {
         await thepdf.imagify();
         //await thepdf.checkOCR();
     }
-
+    await thepdf.imagify();
     await scraper.wait(5);
     return Promise.resolve();
 
