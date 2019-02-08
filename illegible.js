@@ -45,7 +45,7 @@ var scraper = {
     userAgents: settings.userAgents,
     reqOptions: {}
 };
-
+/*
 var rando = Math.floor(Math.random() * 2);
 if (rando) {
     scraper.nextAct = "video";
@@ -53,7 +53,7 @@ if (rando) {
     scraper.nextAct = "pdf";
 }
 console.log(scraper.nextAct);
-
+*/
 
 scraper.agent = function () {
     this.reqOptions.headers = {
@@ -479,7 +479,7 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 Video.prototype.transcode = async function(){
-   await this.transcodeToOgg();
+   //await this.transcodeToOgg();
    return Promise.resolve();
 }
 
@@ -490,6 +490,9 @@ Video.prototype.transcodeToOgg = async function () {
     var lpct = 0;
     var finished = Promise.resolve();
     if (vid.mp4) {
+	return new Promise(async function(resolve,reject){
+
+
         var input = vid.localPath;
         var temp = scraper.tempDir + vid.basename + ".ogg";
         var output = scraper.transcodedDir + vid.basename + ".ogg";
@@ -519,12 +522,12 @@ Video.prototype.transcodeToOgg = async function () {
                     scraper.msg('ogg end fired?');
                     scraper.msg('Processing Finished');
                     fse.moveSync(temp, output);
-                    return finished;
+                    resolve();
                 })
                 .on('error', function (err, stdout, stderr) {
                     scraper.msg(err.message);
                     scraper.msg(stderr);
-                    return Promise.reject(err);
+                    reject(err);
                 })
                 .run();
             return asdf;
@@ -532,7 +535,7 @@ Video.prototype.transcodeToOgg = async function () {
             scraper.msg(err);
             throw (err);
         }
-
+	});
     } else {
         return Promise.reject("no vidtype?");
     }
@@ -952,16 +955,17 @@ Hearing.prototype.addVideo = async function (video) {
         this.brokenVideo = true;
         return false;
     }
-    await this.video.getMeta();
-    //await this.video.transcode();
     var flvpath = scraper.videoDir + hear.shortname + '.flv';
     var mp4path = scraper.videoDir + hear.shortname + '.mp4';
     if (fs.existsSync(flvpath)) {
         hear.video.localPath = flvpath;
     } else if (fs.existsSync(mp4path)) {
         hear.video.localPath = mp4path;
+	hear.video.mp4 = true;
     }
-
+       await this.video.getMeta();
+       await this.video.transcode();
+   return Promise.resolve();
 
 };
 
@@ -970,7 +974,7 @@ var Pdf = function (options) {
         var url = options.url;
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split('/').pop();
-        this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
+        this.localName = (options.hear + "_" + this.remotefileName).replace("'", "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
     } else {
@@ -1619,7 +1623,8 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
-        if (scraper.mdocs) {
+	//retune this for hooking up to other machines for installation
+        /* if (scraper.mdocs) { 
             if (scraper.nextAct === "video") {
                 await hear.addVideo({
                     url: data.video
@@ -1635,8 +1640,8 @@ Hearing.prototype.fetch = async function () {
                     }
                     await hear.addWitness(witness);
                 }
-        } else {
-            for (let wit of data.witnesses) {
+        } else { */ 
+        for (let wit of data.witnesses) {
                 var pdfs = wit.pdfs;
                 delete wit['pdfs'];
                 var witness = new Witness(wit);
@@ -1645,11 +1650,11 @@ Hearing.prototype.fetch = async function () {
                     await witness.addPdf(hear, pdf);
                 }
                 await hear.addWitness(witness);
-            }
+         }
             await hear.addVideo({
                 url: data.video
             });
-        }
+        
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
         return Promise.resolve();
