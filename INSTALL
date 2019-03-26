@@ -1,6 +1,6 @@
 some packages you need:
-php-cli php-bcmath php-curl php-simplexml exiftool ffmpeg 
-tor
+ffmpeg 
+tor, optionally
 ffmpeg probably wants x264, libopus and some other stuff
 
 slimerjs may also take some setup (you need to point it at a recent firefox install) -- pls mind slimerjs's firefox version requirements too.
