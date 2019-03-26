@@ -55,14 +55,6 @@ scraper.setup = async function(){
     scraper.page.setUserAgent(scraper.scraperAgent);
 };
 
-var rando = Math.floor(Math.random() * 2);
-if (rando) {
-    scraper.nextAct = "video";
-} else {
-    scraper.nextAct = "pdf";
-}
-console.log(scraper.nextAct);
-
 
 scraper.agent = function () {
     this.scraperAgent = scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)];
@@ -221,7 +213,6 @@ Video.prototype.getManifest = async function () {
     console.log("..........................................................");
     await scraper.wait(8);
     //scraper.msg("ADOBE HDS STREAM DETECTED");
-    var vid = this;
     if (fs.existsSync(this.localPath)) {
         scraper.msg("nevermind, file already exists");
         return Promise.resolve();
@@ -246,7 +237,7 @@ Video.prototype.getManifest = async function () {
                     vid.src = rUrl;
                     interceptedRequest.abort();
                     console.log("FOUND IT", data);
-                    scraper.page.removeAllListeners() 
+                    scraper.page.removeAllListeners(); 
                     resolve();
                 } else if (rUrl.includes("m3u8")) {
                     console.log("match", rUrl);
@@ -254,7 +245,7 @@ Video.prototype.getManifest = async function () {
                     vid.type = "m3u";
                     vid.src = rUrl;
                     interceptedRequest.abort();
-                    scraper.page.removeAllListeners() 
+                    scraper.page.removeAllListeners(); 
 
                     console.log("FOUND IT", data);
                     resolve();
@@ -263,7 +254,7 @@ Video.prototype.getManifest = async function () {
                     interceptedRequest.continue();
                 }
             });
-            var response = await scraper.page.goto(url, { timeout: 120000 });
+            await scraper.page.goto(url, { timeout: 120000 });
 
             
             var content = await scraper.page.content();
@@ -282,7 +273,7 @@ Video.prototype.getManifest = async function () {
 
         } catch(e){
             console.log("errored out with", e);
-            throw(e);
+            reject(e);
         }
     });
 };
@@ -509,51 +500,53 @@ Video.prototype.transcodeToOgg = async function () {
     scraper.msg("TRANSCODING TO OGG VORBIS AUDIO");
     var vid = this;
     var lpct = 0;
-    var finished = Promise.resolve();
     if (vid.mp4) {
-        var input = vid.localPath;
-        var temp = scraper.tempDir + vid.basename + ".ogg";
-        var output = scraper.transcodedDir + vid.basename + ".ogg";
-        if (fs.existsSync(output)) {
-            scraper.msg("ogg already exists! " + output);
-            return Promise.resolve();
-        }
-        try {
-            var asdf = await ffmpeg(input)
-                .output(temp)
-                .on("start", function (commandLine) {
-                    scraper.msg("Spawned Ffmpeg with command: " + commandLine);
-                })
-                .on("progress", function (prog) {
-                    var mf = Math.floor(prog.percent);
+        return new Promise(async function(resolve,reject){
 
-                    if (mf > lpct) {
-                        scraper.msg("Processing: " + mf + "% done");
-                        lpct = mf;
 
-                    }
-                })
-                .audioCodec("libvorbis")
-                .audioChannels(2)
-                .noVideo()
-                .on("end", function () {
-                    scraper.msg("ogg end fired?");
-                    scraper.msg("Processing Finished");
-                    fse.moveSync(temp, output);
-                    return finished;
-                })
-                .on("error", function (err, stdout, stderr) {
-                    scraper.msg(err.message);
-                    scraper.msg(stderr);
-                    return Promise.reject(err);
-                })
-                .run();
-            return asdf;
-        } catch (err) {
-            scraper.msg(err);
-            throw (err);
-        }
+            var input = vid.localPath;
+            var temp = scraper.tempDir + vid.basename + ".ogg";
+            var output = scraper.transcodedDir + vid.basename + ".ogg";
+            if (fs.existsSync(output)) {
+                scraper.msg("ogg already exists! " + output);
+                return Promise.resolve();
+            }
+            try {
+                var asdf = await ffmpeg(input)
+                    .output(temp)
+                    .on("start", function (commandLine) {
+                        scraper.msg("Spawned Ffmpeg with command: " + commandLine);
+                    })
+                    .on("progress", function (prog) {
+                        var mf = Math.floor(prog.percent);
 
+                        if (mf > lpct) {
+                            scraper.msg("Processing: " + mf + "% done");
+                            lpct = mf;
+
+                        }
+                    })
+                    .audioCodec("libvorbis")
+                    .audioChannels(2)
+                    .noVideo()
+                    .on("end", function () {
+                        scraper.msg("ogg end fired?");
+                        scraper.msg("Processing Finished");
+                        fse.moveSync(temp, output);
+                        resolve();
+                    })
+                    .on("error", function (err, stdout, stderr) {
+                        scraper.msg(err.message);
+                        scraper.msg(stderr);
+                        reject(err);
+                    })
+                    .run();
+                return asdf;
+            } catch (err) {
+                scraper.msg(err);
+                throw (err);
+            }
+        });
     } else {
         return Promise.reject("no vidtype?");
     }
@@ -989,8 +982,11 @@ Hearing.prototype.addVideo = async function (video) {
         hear.video.localPath = flvpath;
     } else if (fs.existsSync(mp4path)) {
         hear.video.localPath = mp4path;
+        hear.video.mp4 = true;
     }
-
+    await this.video.getMeta();
+    await this.video.transcode();
+    return Promise.resolve();
 
 };
 
@@ -999,7 +995,7 @@ var Pdf = function (options) {
         var url = options.url;
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
-        this.localName = (options.hear + "_" + this.remotefileName).replace(" ", "");
+        this.localName = (options.hear + "_" + this.remotefileName).replace("'", "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
     } else {
@@ -1645,7 +1641,8 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
-        if (scraper.mdocs) {
+        //retune this for hooking up to other machines for installation
+        /* if (scraper.mdocs) { 
             if (scraper.nextAct === "video") {
                 await hear.addVideo({
                     url: data.video
@@ -1661,21 +1658,21 @@ Hearing.prototype.fetch = async function () {
                     }
                     await hear.addWitness(witness);
                 }
-        } else {
-            for (let wit of data.witnesses) {
-                pdfs = wit.pdfs;
-                delete wit["pdfs"];
-                witness = new Witness(wit);
-                for (let pdf of pdfs) {
-                    console.dir(pdf);
-                    await witness.addPdf(hear, pdf);
-                }
-                await hear.addWitness(witness);
+        } else { */ 
+        for (let wit of data.witnesses) {
+            var pdfs = wit.pdfs;
+            delete wit["pdfs"];
+            var witness = new Witness(wit);
+            for (let pdf of pdfs) {
+                console.dir(pdf);
+                await witness.addPdf(hear, pdf);
             }
-            await hear.addVideo({
-                url: data.video
-            });
+            await hear.addWitness(witness);
         }
+        await hear.addVideo({
+            url: data.video
+        });
+        
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
         return Promise.resolve();
