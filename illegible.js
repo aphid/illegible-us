@@ -1579,7 +1579,7 @@ scraper.screenshot = async function (url, filename) {
     data.filename = filename;
     console.log("capturing " + url + " to " + filename);
     try {
-        var response = await scraper.page.goto(url, { timeout: 120000 });
+        var response = await scraper.page.goto(url, {waitUntil: 'networkidle0', timeout: 120000 });
         scraper.msg(await response.status());
         var content = await scraper.page.content();
         if  (content.includes("Denied")){
