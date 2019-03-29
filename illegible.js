@@ -2,9 +2,11 @@
 /*jslint node: true */
 /*jshint -W105 */
 /*global __dirname,  process */
-//TODO = scrape all hearings, show the closed ones.
 //when you find a pdf or video, break of and analyze.
 //this should pause scrape.
+//in UI parse "[download] 8.0% of ~344.71MiB at 1.66MiB/s ETA 06:43"
+//youtube-dl --hls-prefer-native --proxy -o /home/aphid/projects/illegible-us/media/incoming/190129_0930.mp4 https://intel-f.akamaihd.net/i/intel012919_1@76456/master.m3u8?
+
 
 "use strict";
 
@@ -26,7 +28,7 @@ var Agent = require("socks5-http-client/lib/Agent");
 var glob = require("glob");
 var fse = require("fs-extra");
 var settings = pfs.readFileSync(__dirname + "/settings.json").toString();
-settings = settings.replace(/\.\//g, __dirname + "\/");
+settings = settings.replace(/\.\//g, __dirname + "/");
 settings = JSON.parse(settings);
 
 
@@ -77,9 +79,11 @@ scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
 scraper.scraperFlags = ["--window-size=1270,1116"];
+scraper.ytdlFlag = "";
 
 if (scraper.useTor === true) {
     scraper.scraperFlags.push("--proxy-server=socks5://localhost:9050");
+    scraper.ytdlFlags = "--proxy socks5://localhost:9050";
     scraper.torPass = fs.readFileSync(__dirname + "/torpass.txt", "utf8");
     scraper.torPort = 9051; //control
     scraper.reqOptions = {
@@ -329,7 +333,8 @@ Video.prototype.fetch = async function (manifest) {
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
-                var childargs = ["--hls-prefer-native", "-o", incoming, vid.src];
+                var childargs = [ytdlFlags, "--hls-prefer-native", "-o", incoming, vid.src];
+
                 console.log("youtube-dl " + childargs.join(" "));
                 scraper.msg("downloading VOD fragments");
                 cpp.spawn("youtube-dl", childargs).fail(function (err) {
@@ -1121,20 +1126,15 @@ Video.prototype.getMeta = async function () {
 
 
 //TODO make promisified metadata function based on input file.
-scraper.metadata = function (input) {
-    return new Promise(function (resolve, reject) {
-        exif.metadata(input, async function (err, metadata) {
-            if (err) {
-                console.log("exiftool err " + err);
-                reject("exiftool err: " + err);
-            }
-            if (metadata.fileSize === "0 bytes") {
-                return Promise.resolve("file error 0 size?" + await pfs.fileSize(input));
-            }
-            //var json = JSON.stringify(metadata, undefined, 2);
-            resolve(metadata);
-        }); //end metadata
-    });
+scraper.metadata = async function (input) {
+
+    try {
+        var tags = await exif.read(input);
+        scraper.msg(JSON.stringify(tags,undefined,2));
+        return Promise.resolve(tags);
+    } catch(e){
+        throw("metadata error", e);
+    }
 
 };
 
@@ -1425,7 +1425,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             hearing.date = datesplit[0];
             hearing.time = datesplit[1];
             if (!hearing.date) {
-                var olddate = hearing.title.match(/(?:\()([^\)]*)(?:\))/gm).map(m => m.slice(1, m.length - 1)).pop();
+                var olddate = hearing.title.match(/(?:\()([^)]*)(?:\))/gm).map(m => m.slice(1, m.length - 1)).pop();
                 olddate = olddate.replace("(", "").replace(")", "");
                 //multiple dates a la (February 23, April 13 and September 14, 1988)
                 if (olddate.includes("and")) {
