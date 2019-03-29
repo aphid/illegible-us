@@ -5,7 +5,7 @@
 //when you find a pdf or video, break of and analyze.
 //this should pause scrape.
 //in UI parse "[download] 8.0% of ~344.71MiB at 1.66MiB/s ETA 06:43"
-//youtube-dl --hls-prefer-native --proxy -o /home/aphid/projects/illegible-us/media/incoming/190129_0930.mp4 https://intel-f.akamaihd.net/i/intel012919_1@76456/master.m3u8?
+//youtube-dl --proxy socks5://localhost:9050 --hls-prefer-native -o /home/aphid/projects/illegible-us/media/incoming/190129_0930.mp4 https://intel-f.akamaihd.net/i/intel012919_1@76456/master.m3u8?
 
 
 "use strict";
@@ -333,7 +333,7 @@ Video.prototype.fetch = async function (manifest) {
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
-                var childargs = [ytdlFlags, "--hls-prefer-native", "-o", incoming, vid.src];
+                var childargs = [scraper.ytdlFlags, "--hls-prefer-native", "-o", incoming, vid.src];
 
                 console.log("youtube-dl " + childargs.join(" "));
                 scraper.msg("downloading VOD fragments");
