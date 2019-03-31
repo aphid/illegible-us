@@ -38,7 +38,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -83,7 +83,7 @@ scraper.ytdlFlag = "";
 
 if (scraper.useTor === true) {
     scraper.scraperFlags.push("--proxy-server=socks5://localhost:9050");
-    scraper.ytdlFlags = "--proxy socks5://localhost:9050";
+    scraper.ytdlFlags = "--proxy 'socks5://localhost:9050'";
     scraper.torPass = fs.readFileSync(__dirname + "/torpass.txt", "utf8");
     scraper.torPort = 9051; //control
     scraper.reqOptions = {
@@ -333,12 +333,13 @@ Video.prototype.fetch = async function (manifest) {
                 incoming = scraper.incomingDir + vid.basename + ".mp4";
                 output = scraper.videoDir + vid.basename + ".mp4";
 
-                var childargs = [scraper.ytdlFlags, "--hls-prefer-native", "-o", incoming, vid.src];
+                var childargs = ["--hls-prefer-native", "-o", incoming, scraper.ytdlFlags, vid.src];
 
                 console.log("youtube-dl " + childargs.join(" "));
                 scraper.msg("downloading VOD fragments");
-                cpp.spawn("youtube-dl", childargs).fail(function (err) {
-                    console.error("spawn error: ", err.stack || err);
+
+                cpp.spawn("youtube-dl", childargs, {shell: true}).fail(function (err) {
+                    console.error("spawn error: ", err.stack || err, childargs);
                     reject(err);
 
                 })
@@ -347,6 +348,7 @@ Video.prototype.fetch = async function (manifest) {
                         cP.stdout.on("data", function (data) {
                             if (data.toString().includes("Connection refused")) {
                                 console.log("Blocked");
+                                throw("blocked, deal with this");
                                 //todo: deal with this.
                             }
                             scraper.msg(data.toString().trim(), "detail");
@@ -374,6 +376,8 @@ Video.prototype.fetch = async function (manifest) {
 
 
             } else if (vid.type === "hds") {
+                throw("yikes HDS");
+                /*
                 incoming = scraper.incomingDir + vid.basename + ".flv";
                 output = scraper.videoDir + vid.basename + ".flv";
                 //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
@@ -405,6 +409,7 @@ Video.prototype.fetch = async function (manifest) {
                     }).then(function () {
                         return fulfill();
                     });
+                    */
             }
 
         }
@@ -514,7 +519,7 @@ Video.prototype.transcodeToOgg = async function () {
             var output = scraper.transcodedDir + vid.basename + ".ogg";
             if (fs.existsSync(output)) {
                 scraper.msg("ogg already exists! " + output);
-                return Promise.resolve();
+                return resolve();
             }
             try {
                 var asdf = await ffmpeg(input)
