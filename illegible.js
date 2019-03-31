@@ -732,6 +732,8 @@ Committee.prototype.scrapeRemote = async function (page) {
 
 
 Committee.prototype.init = async function () {
+    await scraper.setup();
+
     var comm = this;
     scraper.committee = this;
     scraper.busy = true;
@@ -743,6 +745,8 @@ Committee.prototype.init = async function () {
     console.log("here we go...");
     try {
         await comm.validateLocal();
+        await scraper.getNewID();
+
         await scraper.checkBlock();
 
         await comm.scrapeRemote(); // or comm.readLocal()
@@ -1503,7 +1507,7 @@ Committee.prototype.testNode = async function () {
             scraper.blocked = true;
             scraper.msg(err.body, "detail");
             scraper.msg("Access denied, Tor exit node has been blocked. //" + err.statusCode);
-
+            scraper.recordBlocked();
             return Promise.resolve("blocked");
         } else if (err.statusCode === 503) {
             scraper.blocked = true;
@@ -1515,6 +1519,11 @@ Committee.prototype.testNode = async function () {
         }
         return resp;
     }
+};
+
+scraper.recordBlocked = function(){
+    //save blocked ips here and maybe get a nslookup on them or something;
+    
 };
 
 scraper.checkBlock = async function () {
@@ -1538,6 +1547,23 @@ scraper.checkBlock = async function () {
 };
 
 scraper.getNewID = async function () {
+    
+    try {
+        var response = await scraper.page.goto("https://check.torproject.org/", {waitUntil: 'networkidle0', timeout: 120000 });
+        scraper.msg(await response.status());
+        await scraper.page.waitForSelector("strong");
+        var content = await scraper.page.content();
+        var ip = await scraper.page.evaluate(() => {
+            console.log("evaluating");
+            return document.querySelector("strong").textContent
+        });
+        scraper.currentIP = ip;
+        console.log("((((((((((", ip, "))))))))))");
+    } catch(e) {
+        throw(e);
+    }
+
+
     console.log("%%%%%%%%%%%%%%getNewID");
     var cmd = "(echo AUTHENTICATE \\\"" + scraper.torPass.replace(/\n/g, "") + "\\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost " + scraper.torPort;
     console.log(cmd);
