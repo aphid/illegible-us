@@ -80,6 +80,8 @@ scraper.metaDir = settings[settings.mode + "Paths"].metaDir;
 scraper.videoDir = settings[settings.mode + "Paths"].videoDir;
 scraper.transcodedDir = settings[settings.mode + "Paths"].transcodedDir;
 scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
+scraper.webshotPath = settings[settings.mode + "Paths"].webshotPath;
+
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
 scraper.scraperFlags = ["--window-size=1270,1116"];
@@ -136,7 +138,7 @@ scraper.msg = function (thing, kind) {
 };
 
 scraper.progress = function (id, pct) {
-    id = id.replace(".","_");
+    id = id.replace(".", "_");
     console.log(id, "at", pct);
     io.to("oversight").emit("progress", {
         id: id,
@@ -250,7 +252,7 @@ Video.prototype.getManifest = async function () {
         try {
             await scraper.page.setRequestInterception(true);
 
-            scraper.page.on("request", interceptedRequest => {
+            scraper.page.on("request", async interceptedRequest => {
                 //console.log(interceptedRequest);
                 //process.exit();
                 var rUrl = interceptedRequest.url();
@@ -274,6 +276,12 @@ Video.prototype.getManifest = async function () {
                     console.log("FOUND IT", data);
                     resolve();
                 } else {
+                    if (rUrl.includes("apology")){
+                        interceptedRequest.abort();
+                        scraper.page.removeAllListeners();
+                        await scraper.getNewID();
+                        return await vid.getManifest();
+                    }
                     console.log("nope", rUrl);
                     interceptedRequest.continue();
                 }
@@ -359,7 +367,8 @@ Video.prototype.fetch = async function (manifest) {
 
             console.log("youtube-dl " + childargs.join(" "));
             scraper.msg("downloading VOD fragments");
-            var highest = 0;
+            var last = new Date().getTime();
+            var lastSS = new Date().getTime();
             cpp.spawn("youtube-dl", childargs, {
                     shell: true
                 }).fail(function (err) {
@@ -377,11 +386,22 @@ Video.prototype.fetch = async function (manifest) {
                         }
                         if (data.includes("[download]") && data.includes("ETA")) {
                             var progress = data.toString().trim();
-                            var pct = progress.split("   ")[1].split("%")[0];
-                            if (parseInt(pct,10) > highest){
+                            try {
+                                var pct = progress.split("  ")[1].split("%")[0];
+                            } catch {
+                                console.log(progress, "this failed the parse thing");
+                            }
+                            let now = new Date().getTime();
+                            if (now - last > 8135) {
                                 scraper.msg(progress, "detail");
                                 scraper.progress("hearing_" + vid.basename, parseFloat(pct));
-                                highest = parseInt(pct,10);
+                                last = new Date().getTime();
+
+                                if (now - lastSS > 7575) {
+                                    scraper.vidSS(incoming);
+                                    lastSS = now;
+                                }
+
                                 //get an ffmpeg screenshot here?
                             }
 
@@ -1200,10 +1220,10 @@ Pdf.prototype.imagify = async function () {
             scraper.msg("  /" + im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-           /* scraper.url({
-                url: imgpath
-            }); */
-            
+            /* scraper.url({
+                 url: imgpath
+             }); */
+
 
             await scraper.wait(1);
 
@@ -1629,6 +1649,29 @@ scraper.getNewID = async function () {
         return Promise.reject();
     }
 };
+
+scraper.vidSS = async function (filename) {
+    filename = filename + ".part";
+
+    console.log("attempting to ss", filename);
+    return new Promise(function (resolve, reject) {
+        ffmpeg(filename)
+            .screenshot({
+                timestamps: ["98%"],
+                filename: "tmp_screenshot.jpg",
+                folder: scraper.webshotDir,
+            })
+            .on("end", function(){
+                console.log("thumbnail saved")
+                scraper.url({ url: "tmp_screenshot", title: "download_thumbnail"} )
+                resolve();
+            })
+            .on("error", function(e){
+                throw(e);
+            });
+    });
+};
+
 
 scraper.screenshot = async function (url, filename) {
     console.log(filename);
