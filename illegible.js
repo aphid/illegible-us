@@ -80,7 +80,6 @@ scraper.metaDir = settings[settings.mode + "Paths"].metaDir;
 scraper.videoDir = settings[settings.mode + "Paths"].videoDir;
 scraper.transcodedDir = settings[settings.mode + "Paths"].transcodedDir;
 scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
-scraper.webshotPath = settings[settings.mode + "Paths"].webshotPath;
 
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
