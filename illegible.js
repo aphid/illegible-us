@@ -305,7 +305,7 @@ Video.prototype.getManifest = async function () {
             scraper.msg("fulfilling manifest");
 
         } catch (e) {
-            console.log("errored out with", e);
+            scraper.msg("errored out with" + e,"err");
             reject(e);
         }
     });
@@ -419,7 +419,7 @@ Video.prototype.fetch = async function (manifest) {
                 })
                 .catch(async function (err) {
                     if (err.includes("urlopen error")) {
-                        scraper.msg("video scrape fail, retrying with manifest");
+                        scraper.msg("video scrape fail, retrying with manifest","err");
                         await vid.fetch(manifest);
                     } else {
                         scraper.msg("unknown video scrape error");
@@ -606,7 +606,7 @@ Video.prototype.transcodeToOgg = async function () {
                     .run();
                 return asdf;
             } catch (err) {
-                scraper.msg(err);
+                scraper.msg(err,"err");
                 throw (err);
             }
         });
@@ -774,7 +774,7 @@ Committee.prototype.scrapeRemote = async function (page) {
             curPage++;
         }
     } catch (err) {
-        scraper.msg(err);
+        scraper.msg(err,"err");
         process.exit();
 
         return Promise.reject(err);
@@ -1206,7 +1206,7 @@ Pdf.prototype.imagify = async function () {
     try {
         fs.mkdirSync(imgdir);
     } catch (e) {
-        scraper.msg("dir exists..." + e);
+        scraper.msg("dir exists..." + e, "err");
     }
     this.imgdir = imgdir;
     var lastImg = imgdir + "/" + basename + "_" + (this.metadata.PageCount - 1).toString().padStart(3, "0") + ".jpg";
@@ -1472,9 +1472,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     try {
         var resp = await fetch(url, scraper.fetchOptions);
         console.log("&&&&&&", resp.statusText);
-
         if (!resp.ok) {
-            scraper.msg("bad statuscode", resp.statusText);
+            scraper.msg("bad statuscode " + resp.statusText,"err");
             await scraper.getNewID();
             return await this.getHearingIndex(url, page);
         }
@@ -1563,7 +1562,7 @@ Committee.prototype.testNode = async function () {
         if (err.statusCode === 403) {
             scraper.blocked = true;
             scraper.msg(err.body, "detail");
-            scraper.msg("Access denied, Tor exit node has been blocked. //" + err.statusCode);
+            scraper.msg("Access denied, Tor exit node has been blocked. //" + err.statusCode, "err");
             scraper.recordBlocked();
             return Promise.resolve("blocked");
         } else if (err.statusCode === 503) {
@@ -1608,7 +1607,7 @@ scraper.getNewID = async function () {
     try {
         var response = await scraper.page.goto("https://check.torproject.org/", {
             waitUntil: 'networkidle0',
-            timeout: 120000
+            timeout: 190000
         });
         scraper.msg("new id status..." + await response.status());
         await scraper.page.waitForSelector("strong");
@@ -1666,7 +1665,8 @@ scraper.vidSS = async function (filename) {
                 resolve();
             })
             .on("error", function(e){
-                throw(e);
+                //throw(e);
+		scraper.msg(e,"err");
             });
     });
 };
