@@ -36,7 +36,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 1,
+    minOverseers: 0,
     busy: false,
     connections: 0,
     started: false,
@@ -46,13 +46,15 @@ var scraper = {
     mdocs: false,
     userAgents: settings.userAgents,
     reqOptions: {},
-    fetchOptions: {}
+    fetchOptions: {},
 };
 
 scraper.setup = async function () {
-    scraper.browser = await puppeteer.launch({
-        args: scraper.scraperFlags
-    });
+    var launchObj = {args: scraper.scraperFlags}; 
+    if (process.arch === "arm64"){
+        launchObj.executablePath = '/usr/bin/chromium-browser';
+    }
+    scraper.browser = await puppeteer.launch(launchObj);
     scraper.page = await scraper.browser.newPage();
     await scraper.page.setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1");
     await scraper.page._client.send("Emulation.clearDeviceMetricsOverride");
@@ -83,7 +85,7 @@ scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
 
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
-scraper.scraperFlags = ["--window-size=1270,1116"];
+scraper.scraperFlags = ["--window-size=1270,1116", "--no-sandbox"];
 scraper.ytdlFlag = "";
 
 if (scraper.useTor === true) {
@@ -1603,7 +1605,10 @@ scraper.checkBlock = async function () {
 };
 
 scraper.getNewID = async function () {
-
+    if (!scraper.useTor){
+	scraper.msg("tor disabled, continuing...");
+        return Promise.resolve();
+    }
     try {
         var response = await scraper.page.goto("https://check.torproject.org/", {
             waitUntil: 'networkidle0',

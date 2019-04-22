@@ -5,7 +5,9 @@ ffmpeg probably wants x264, libopus and some other stuff
 
 slimerjs may also take some setup (you need to point it at a recent firefox install) -- pls mind slimerjs's firefox version requirements too.
 
-imagemagick might need more RAM to convert pdfs: https://github.com/ImageMagick/ImageMagick/issues/396
+imagemagick might need more RAM to convert pdfs: https://github.com/ImageMagick/ImageMagick/issues/396; also having policy issue with pdfs, see
+https://stackoverflow.com/questions/42928765/convertnot-authorized-aaaa-error-constitute-c-readimage-453
+
 
 
  
