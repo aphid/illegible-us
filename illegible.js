@@ -1926,22 +1926,21 @@ io.on("connect", async function (socket) {
         await intel.init();
     }
     socket.on("reconnect", function () {
-        scraper.connections++;
+        //scraper.connections++;
         scraper.msg(scraper.connections + " active connections");
     });
 
-    socket.on("disconnect", function () {
+    socket.on("disconnect", async function (reason) {
+	console.log(reason);
+	console.log("DISCONNECT");
         scraper.connections--;
-        scraper.msg(scraper.connections + " active connections");
-        setTimeout(function () {
-            if (scraper.connections < scraper.minOverseers) {
-                scraper.msg("no quorum");
-                if (scraper.minOverseers > 0) {
-                    scraper.shutDown();
-                }
+        scraper.msg("one disconnect, " + scraper.connections + " active connections");
+        if (scraper.connections < scraper.minOverseers) {
+            scraper.msg("no quorum");
+            if (scraper.minOverseers > 0) {
+                scraper.shutDown();
             }
-        }, 10000);
-
+        }
 
     });
 
