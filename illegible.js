@@ -23,7 +23,8 @@ var exif = require("exiftool-vendored").exiftool;
 var pdftotext = require("pdftotextjs");
 var cpp = require("child-process-promise");
 var ffmpeg = require("fluent-ffmpeg");
-var SPA = require('socks-proxy-agent');
+var SPA = require("socks-proxy-agent");
+var glob = require("glob");
 //var fse = require("fs-extra");
 var settings = fs.readFileSync(__dirname + "/settings.json").toString();
 settings = settings.replace(/\.\//g, __dirname + "/");
@@ -36,7 +37,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -52,7 +53,7 @@ var scraper = {
 scraper.setup = async function () {
     var launchObj = {args: scraper.scraperFlags}; 
     if (process.arch === "arm64"){
-        launchObj.executablePath = '/usr/bin/chromium-browser';
+        launchObj.executablePath = "/usr/bin/chromium-browser";
     }
     scraper.browser = await puppeteer.launch(launchObj);
     scraper.page = await scraper.browser.newPage();
@@ -97,7 +98,7 @@ if (scraper.useTor === true) {
     scraper.Agent = new SPA("socks5://localhost:9050");
     scraper.fetchOptions = {
         agent: scraper.Agent
-    }
+    };
     scraper.reqOptions = {
         agentClass: scraper.Agent,
         agentOptions: {
@@ -145,7 +146,7 @@ scraper.progress = function (id, pct) {
         id: id,
         pct: pct
     });
-}
+};
 
 scraper.load = function (url) {
     console.log("sendingurl");
@@ -159,19 +160,21 @@ scraper.url = function (url) {
 };
 //hopefully not needed anymore
 scraper.cleanupFrags = async function () {
-    //var result = await glob("*Frag*", function (er, files) {
-    if (files.length) {
-        scraper.msg("deleting " + files.length + " temp fragments");
-    }
-    for (var file of files) {
-        fs.unlinkSync(file);
-    }
-    if (fs.existsSync("Cookies.txt")) {
-        fs.unlinkSync("Cookies.txt");
+    try {
+        var files = await glob("*Frag*");
+        if (files.length) {
+            scraper.msg("deleting " + files.length + " temp fragments");
+        }
+        for (var file of files) {
+            fs.unlinkSync(file);
+        }
+        if (fs.existsSync("Cookies.txt")) {
+            fs.unlinkSync("Cookies.txt");
+        }
+    } catch(e){
+        throw(e);
     }
     return Promise.resolve();
-    //});
-    return result;
 };
 
 
@@ -371,12 +374,12 @@ Video.prototype.fetch = async function (manifest) {
             var last = new Date().getTime();
             var lastSS = new Date().getTime();
             cpp.spawn("youtube-dl", childargs, {
-                    shell: true
-                }).fail(function (err) {
-                    console.error("spawn error: ", err.stack || err, childargs);
-                    reject(err);
+                shell: true
+            }).fail(function (err) {
+                console.error("spawn error: ", err.stack || err, childargs);
+                reject(err);
 
-                })
+            })
                 .progress(async function (cP) {
                     scraper.msg("[exec] childProcess.pid" + cP.pid);
                     cP.stdout.on("data", function (data) {
@@ -389,7 +392,7 @@ Video.prototype.fetch = async function (manifest) {
                             var progress = data.toString().trim();
                             try {
                                 var pct = progress.split("  ")[1].split("%")[0];
-                            } catch {
+                            } catch(e) {
                                 console.log(progress, "this failed the parse thing");
                             }
                             let now = new Date().getTime();
@@ -927,7 +930,7 @@ Committee.prototype.getVideos = async function () {
 Committee.prototype.readLocal = async function () {
     var comm = this;
     var json = scraper.dataDir + "data.json";
-    var data = fs.readFileSync(json, "utf-8")
+    var data = fs.readFileSync(json, "utf-8");
     data = JSON.parse(data);
     for (var hear of data.hearings) {
         var theHearing = new Hearing(hear);
@@ -1073,7 +1076,7 @@ var Pdf = function (options) {
 scraper.getFile = async function (url, dest) {
     console.log("Getting", url, "to", dest);
     if (fs.existsSync(dest)) {
-        return resolve("file here already");
+        return Promise.resolve("file here already");
 
     }
 
@@ -1084,9 +1087,9 @@ scraper.getFile = async function (url, dest) {
     progress.on("progress", (p) => {
         scraper.msg(
             `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${
-                  p.rateh
-                } - ${p.etah}`, "detail");
-        scraper.progress(url.substring(url.lastIndexOf('/') + 1), Math.floor(p.progress * 100));
+                p.rateh
+            } - ${p.etah}`, "detail");
+        scraper.progress(url.substring(url.lastIndexOf("/") + 1), Math.floor(p.progress * 100));
     });
 
     await new Promise((resolve, reject) => {
@@ -1096,7 +1099,7 @@ scraper.getFile = async function (url, dest) {
             reject(err);
         });
         fileStream.on("finish", function () {
-            scraper.msg("file's done!")
+            scraper.msg("file's done!");
             resolve();
         });
     });
@@ -1474,7 +1477,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
     try {
         var resp = await fetch(url, scraper.fetchOptions);
         console.log("&&&&&&", resp.statusText);
-        if (!resp.ok) {
+        if (!resp.ok || resp.statusText === "Forbidden") {
             scraper.msg("bad statuscode " + resp.statusText,"err");
             await scraper.getNewID();
             return await this.getHearingIndex(url, page);
@@ -1606,20 +1609,20 @@ scraper.checkBlock = async function () {
 
 scraper.getNewID = async function () {
     if (!scraper.useTor){
-	scraper.msg("tor disabled, continuing...");
+        scraper.msg("tor disabled, continuing...");
         return Promise.resolve();
     }
     try {
         var response = await scraper.page.goto("https://check.torproject.org/", {
-            waitUntil: 'networkidle0',
+            waitUntil: "networkidle0",
             timeout: 190000
         });
         scraper.msg("new id status..." + await response.status());
         await scraper.page.waitForSelector("strong");
-        var content = await scraper.page.content();
+        //var content = await scraper.page.content();
         var ip = await scraper.page.evaluate(() => {
             console.log("evaluating");
-            return document.querySelector("strong").textContent
+            return document.querySelector("strong").textContent;
         });
         scraper.currentIP = ip;
         console.log("((((((((((", ip, "))))))))))");
@@ -1657,7 +1660,7 @@ scraper.vidSS = async function (filename) {
     filename = filename + ".part";
 
     console.log("attempting to ss", filename);
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve) {
         ffmpeg(filename)
             .screenshot({
                 timestamps: ["98%"],
@@ -1665,13 +1668,13 @@ scraper.vidSS = async function (filename) {
                 folder: scraper.webshotDir,
             })
             .on("end", function(){
-                console.log("thumbnail saved")
-                scraper.url({ url: "tmp_screenshot", title: "download_thumbnail"} )
+                console.log("thumbnail saved");
+                scraper.url({ url: "tmp_screenshot", title: "download_thumbnail"} );
                 resolve();
             })
             .on("error", function(e){
                 //throw(e);
-		scraper.msg(e,"err");
+                scraper.msg(e,"err");
             });
     });
 };
@@ -1697,7 +1700,7 @@ scraper.screenshot = async function (url, filename) {
     console.log("capturing " + url + " to " + filename);
     try {
         var response = await scraper.page.goto(url, {
-            waitUntil: 'networkidle0',
+            waitUntil: "networkidle0",
             timeout: 120000
         });
         scraper.msg(await response.status());
@@ -1916,6 +1919,25 @@ io.on("connect", async function (socket) {
     scraper.started = true;
     console.log("the eyes have it");
 
+
+    socket.once("disconnect", async function (reason) {
+        console.log("DISCONNECT", reason);
+        await scraper.wait(10);
+        scraper.connections--;
+        scraper.msg("one disconnect, " + scraper.connections + " active connections");
+        if (scraper.connections < scraper.minOverseers) {
+            scraper.msg("no quorum");
+            if (scraper.minOverseers > 0) {
+                scraper.shutDown();
+            }
+        }
+
+    });
+
+    socket.on("error", function(err){
+        throw (err);
+    });
+
     if (scraper.busy) {
         await scraper.wait(3);
         socket.emit("message", "PROCESS IN ACTION, MONITORING");
@@ -1934,20 +1956,7 @@ io.on("connect", async function (socket) {
         //scraper.connections++;
         scraper.msg(scraper.connections + " active connections");
     });
-
-    socket.on("disconnect", async function (reason) {
-	console.log(reason);
-	console.log("DISCONNECT");
-        scraper.connections--;
-        scraper.msg("one disconnect, " + scraper.connections + " active connections");
-        if (scraper.connections < scraper.minOverseers) {
-            scraper.msg("no quorum");
-            if (scraper.minOverseers > 0) {
-                scraper.shutDown();
-            }
-        }
-
-    });
+    
 
 });
 
