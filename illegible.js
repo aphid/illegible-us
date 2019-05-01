@@ -36,7 +36,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -121,7 +121,8 @@ if (scraper.secure) {
 
 app.listen(9080);
 
-var io = require("socket.io")(app);
+var io = require("socket.io")(app, { cookie: false });
+
 
 //paths should have trailing slash
 
