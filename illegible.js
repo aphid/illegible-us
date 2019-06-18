@@ -122,7 +122,7 @@ if (scraper.secure) {
 
 app.listen(9080);
 
-var io = require("socket.io")(app, { cookie: false });
+var io = require("socket.io")(app, { cookie: false, upgradeTimeout: 30000 });
 
 
 //paths should have trailing slash
@@ -1225,12 +1225,12 @@ Pdf.prototype.imagify = async function () {
             scraper.msg("  /" + im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-            /* scraper.url({
+             scraper.url({
                  url: imgpath
-             }); */
+             }); 
 
 
-            await scraper.wait(1);
+            await scraper.wait(7);
 
         }
         return Promise.resolve();
