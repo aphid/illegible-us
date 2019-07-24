@@ -124,9 +124,8 @@ if (scraper.secure) {
 
 app.listen(9080);
 
-var io = require("socket.io")(app, {
-    cookie: false
-});
+var io = require("socket.io")(app, { cookie: false, upgradeTimeout: 30000 });
+
 
 //paths should have trailing slash
 
@@ -346,7 +345,7 @@ Video.prototype.fetch = async function (manifest) {
 
 
 
-    return new Promise(async function (fulfill, reject) {
+    return new Promise(async function (fulfill) {
 
         scraper.msg("TYPE: " + vid.type);
         if (vid.type === "flv" || vid.type === "mp4") {
@@ -378,12 +377,12 @@ Video.prototype.fetch = async function (manifest) {
             var last = new Date().getTime();
             var lastSS = new Date().getTime();
             cpp.spawn("youtube-dl", childargs, {
-                    shell: true
-                }).fail(function (err) {
-                    console.error("spawn error: ", err.stack || err, childargs);
-                    //reject(err);
+                shell: true
+            }).fail(function (err) {
+                console.error("spawn error: ", err.stack || err, childargs);
+                //reject(err);
 
-                })
+            })
                 .progress(async function (cP) {
                     scraper.msg("[exec] childProcess.pid" + cP.pid);
                     cP.stdout.on("data", function (data) {
@@ -1091,7 +1090,7 @@ scraper.getFile = async function (url, dest) {
     progress.on("progress", (p) => {
         scraper.msg(
             `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${
-                p.rateh
+            p.rateh
             } - ${p.etah}`, "detail");
         scraper.progress(url.substring(url.lastIndexOf("/") + 1), Math.floor(p.progress * 100));
     });
@@ -1228,12 +1227,12 @@ Pdf.prototype.imagify = async function () {
             scraper.msg("  /" + im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-            /* scraper.url({
-                 url: imgpath
-             }); */
+            scraper.url({
+                url: imgpath
+            });
 
 
-            await scraper.wait(1);
+            await scraper.wait(7);
 
         }
         return Promise.resolve();
