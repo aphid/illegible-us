@@ -1230,7 +1230,7 @@ Pdf.prototype.imagify = async function () {
              }); 
 
 
-            await scraper.wait(7);
+            await scraper.wait(5);
 
         }
         return Promise.resolve();
@@ -1628,7 +1628,9 @@ scraper.getNewID = async function () {
         scraper.currentIP = ip;
         console.log("((((((((((", ip, "))))))))))");
     } catch (e) {
-        throw (e);
+	console.error("NEWNYM error ", e);
+	return this.getNewID();
+        //throw (e);
     }
 
 
@@ -1707,6 +1709,7 @@ scraper.screenshot = async function (url, filename) {
         scraper.msg(await response.status());
         var content = await scraper.page.content();
         if (content.includes("Denied")) {
+	    scraper.msg("Request denied", "err");
             data.status = "denied";
             data.filename = filename + "_denied";
         }
@@ -1906,9 +1909,9 @@ var intel = new Committee({
     committee: "Intelligence",
     chamber: "senate",
     url: "http://www.intelligence.senate.gov",
-    hearingIndex: "http://www.intelligence.senate.gov/hearings?keys=&cnum=All&page=",
+    hearingIndex: "http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=",
     shortname: "intel"
-});
+});  //change hearings/open? to hearings? for all
 
 if (scraper.minOverseers === 0) {
     intel.init();
