@@ -143,7 +143,7 @@ scraper.msg = function (thing, kind) {
 };
 
 scraper.progress = function (id, pct) {
-    id = id.replace(".", "_");
+    id = id.replace(/./g, "_");
     console.log(id, "at", pct);
     io.to("oversight").emit("progress", {
         id: id,
@@ -524,7 +524,7 @@ Video.prototype.transcodeToMP4 = function () {
 
         scraper.msg(acodec + " / " + vcodec);
 
-        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.#('flv', 'mp4');
         ffmpeg(input)
             .output(temp)
             .audioCodec(acodec)
@@ -1063,7 +1063,7 @@ var Pdf = function (options) {
         var url = options.url;
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
-        this.localName = (options.hear + "_" + this.remotefileName).replace("'", "").replace(/\s+/g, "_");
+        this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
     } else {
