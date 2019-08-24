@@ -51,8 +51,10 @@ var scraper = {
 };
 
 scraper.setup = async function () {
-    var launchObj = {args: scraper.scraperFlags}; 
-    if (process.arch === "arm64"){
+    var launchObj = {
+        args: scraper.scraperFlags
+    };
+    if (process.arch === "arm64") {
         launchObj.executablePath = "/usr/bin/chromium-browser";
     }
     scraper.browser = await puppeteer.launch(launchObj);
@@ -141,7 +143,7 @@ scraper.msg = function (thing, kind) {
 };
 
 scraper.progress = function (id, pct) {
-    id = id.replace(".", "_");
+    id = id.replace(/./g, "_");
     console.log(id, "at", pct);
     io.to("oversight").emit("progress", {
         id: id,
@@ -172,8 +174,8 @@ scraper.cleanupFrags = async function () {
         if (fs.existsSync("Cookies.txt")) {
             fs.unlinkSync("Cookies.txt");
         }
-    } catch(e){
-        throw(e);
+    } catch (e) {
+        throw (e);
     }
     return Promise.resolve();
 };
@@ -245,7 +247,7 @@ Video.prototype.getManifest = async function () {
     await scraper.wait(8);
     //scraper.msg("ADOBE HDS STREAM DETECTED");
     if (fs.existsSync(this.localPath)) {
-        scraper.msg("nevermind, file already exists");
+        scraper.msg("file already exists");
         return Promise.resolve();
     }
     scraper.msg("Getting remote info about " + vid.basename);
@@ -281,7 +283,7 @@ Video.prototype.getManifest = async function () {
                     console.log("FOUND IT", data);
                     resolve();
                 } else {
-                    if (rUrl.includes("apology")){
+                    if (rUrl.includes("apology")) {
                         interceptedRequest.abort();
                         scraper.page.removeAllListeners();
                         await scraper.getNewID();
@@ -311,7 +313,7 @@ Video.prototype.getManifest = async function () {
             scraper.msg("fulfilling manifest");
 
         } catch (e) {
-            scraper.msg("errored out with" + e,"err");
+            scraper.msg("errored out with" + e, "err");
             reject(e);
         }
     });
@@ -343,7 +345,7 @@ Video.prototype.fetch = async function (manifest) {
 
 
 
-    return new Promise(async function (fulfill, reject) {
+    return new Promise(async function (fulfill) {
 
         scraper.msg("TYPE: " + vid.type);
         if (vid.type === "flv" || vid.type === "mp4") {
@@ -378,7 +380,7 @@ Video.prototype.fetch = async function (manifest) {
                 shell: true
             }).fail(function (err) {
                 console.error("spawn error: ", err.stack || err, childargs);
-                reject(err);
+                //reject(err);
 
             })
                 .progress(async function (cP) {
@@ -393,7 +395,7 @@ Video.prototype.fetch = async function (manifest) {
                             var progress = data.toString().trim();
                             try {
                                 var pct = progress.split("  ")[1].split("%")[0];
-                            } catch(e) {
+                            } catch (e) {
                                 console.log(progress, "this failed the parse thing");
                             }
                             let now = new Date().getTime();
@@ -413,7 +415,7 @@ Video.prototype.fetch = async function (manifest) {
                         }
                     });
                     cP.stderr.on("data", function (data) {
-                        scraper.msg("[spawn] stderr: " + data.toString().trim());
+                        scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
                     });
                 })
 
@@ -425,11 +427,11 @@ Video.prototype.fetch = async function (manifest) {
                 })
                 .catch(async function (err) {
                     if (err.includes("urlopen error")) {
-                        scraper.msg("video scrape fail, retrying with manifest","err");
-                        await vid.fetch(manifest);
+                        scraper.msg("video scrape fail, retrying", "err");
+                        await vid.fetch();
                     } else {
                         scraper.msg("unknown video scrape error");
-                        await vid.fetch(manifest);
+                        await vid.fetch();
                     }
                 });
 
@@ -522,7 +524,7 @@ Video.prototype.transcodeToMP4 = function () {
 
         scraper.msg(acodec + " / " + vcodec);
 
-        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.replace('flv', 'mp4');
+        //var command = 'ffmpeg -i ' + vid.flv + ' -acodec copy -vcodec copy ' + vid.flv.#('flv', 'mp4');
         ffmpeg(input)
             .output(temp)
             .audioCodec(acodec)
@@ -612,7 +614,7 @@ Video.prototype.transcodeToOgg = async function () {
                     .run();
                 return asdf;
             } catch (err) {
-                scraper.msg(err,"err");
+                scraper.msg(err, "err");
                 throw (err);
             }
         });
@@ -780,7 +782,7 @@ Committee.prototype.scrapeRemote = async function (page) {
             curPage++;
         }
     } catch (err) {
-        scraper.msg(err,"err");
+        scraper.msg(err, "err");
         process.exit();
 
         return Promise.reject(err);
@@ -1061,7 +1063,7 @@ var Pdf = function (options) {
         var url = options.url;
         this.remoteUrl = url;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
-        this.localName = (options.hear + "_" + this.remotefileName).replace("'", "").replace(/\s+/g, "_");
+        this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
     } else {
@@ -1088,7 +1090,7 @@ scraper.getFile = async function (url, dest) {
     progress.on("progress", (p) => {
         scraper.msg(
             `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${
-                p.rateh
+            p.rateh
             } - ${p.etah}`, "detail");
         scraper.progress(url.substring(url.lastIndexOf("/") + 1), Math.floor(p.progress * 100));
     });
@@ -1225,9 +1227,9 @@ Pdf.prototype.imagify = async function () {
             scraper.msg("  /" + im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
-             scraper.url({
-                 url: imgpath
-             }); 
+            scraper.url({
+                url: imgpath
+            });
 
 
             await scraper.wait(5);
@@ -1479,7 +1481,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
         var resp = await fetch(url, scraper.fetchOptions);
         console.log("&&&&&&", resp.statusText);
         if (!resp.ok || resp.statusText === "Forbidden") {
-            scraper.msg("bad statuscode " + resp.statusText,"err");
+            scraper.msg("bad statuscode " + resp.statusText, "err");
             await scraper.getNewID();
             return await this.getHearingIndex(url, page);
         }
@@ -1609,7 +1611,7 @@ scraper.checkBlock = async function () {
 };
 
 scraper.getNewID = async function () {
-    if (!scraper.useTor){
+    if (!scraper.useTor) {
         scraper.msg("tor disabled, continuing...");
         return Promise.resolve();
     }
@@ -1670,14 +1672,17 @@ scraper.vidSS = async function (filename) {
                 filename: "tmp_screenshot.jpg",
                 folder: scraper.webshotDir,
             })
-            .on("end", function(){
+            .on("end", function () {
                 console.log("thumbnail saved");
-                scraper.url({ url: "tmp_screenshot", title: "download_thumbnail"} );
+                scraper.url({
+                    url: "tmp_screenshot",
+                    title: "download_thumbnail"
+                });
                 resolve();
             })
-            .on("error", function(e){
+            .on("error", function (e) {
                 //throw(e);
-                scraper.msg(e,"err");
+                scraper.msg(e, "err");
             });
     });
 };
@@ -1757,7 +1762,7 @@ Hearing.prototype.fetch = async function () {
     });
     if (hear.closed) {
         await scraper.wait(5);
-        scraper.msg("CLOSED HEARING");
+        scraper.msg("CLOSED HEARING", "err");
         return Promise.resolve();
     }
     scraper.msg("OPEN HEARING");
@@ -1938,7 +1943,7 @@ io.on("connect", async function (socket) {
 
     });
 
-    socket.on("error", function(err){
+    socket.on("error", function (err) {
         throw (err);
     });
 
@@ -1960,7 +1965,7 @@ io.on("connect", async function (socket) {
         //scraper.connections++;
         scraper.msg(scraper.connections + " active connections");
     });
-    
+
 
 });
 
