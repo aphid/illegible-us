@@ -52,6 +52,7 @@ var scraper = {
 
 scraper.setup = async function () {
     var launchObj = {
+        headless: true,
         args: scraper.scraperFlags
     };
     if (process.arch === "arm64") {
@@ -124,7 +125,10 @@ if (scraper.secure) {
 
 app.listen(9080);
 
-var io = require("socket.io")(app, { cookie: false, upgradeTimeout: 30000 });
+var io = require("socket.io")(app, {
+    cookie: false,
+    upgradeTimeout: 30000
+});
 
 
 //paths should have trailing slash
@@ -794,7 +798,6 @@ Committee.prototype.scrapeRemote = async function (page) {
 
 Committee.prototype.init = async function () {
     await scraper.setup();
-
     var comm = this;
     scraper.committee = this;
     scraper.busy = true;
@@ -1074,6 +1077,8 @@ var Pdf = function (options) {
         }
     }
 };
+
+
 
 
 scraper.getFile = async function (url, dest) {
@@ -1467,7 +1472,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
         opens = 0;
     var options = scraper.reqOptions;
     options.url = url;
-    scraper.msg("trying " + JSON.stringify(options));
+    //scraper.msg("trying " + JSON.stringify(options));
+    scraper.msg("trying hearing index " + page);
     let now = moment().format("YYMMDD");
     var imgname = "hearpage" + page + "_" + now;
     console.log("OK WHAT", now);
@@ -1544,7 +1550,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
     } catch (err) {
         console.dir(err);
-        if (err.statusCode === 403) {
+        if (err.statusCode && err.statusCode === 403) {
             await scraper.checkBlock();
             return await comm.getHearingIndex(url, page);
         }
@@ -1560,28 +1566,34 @@ Committee.prototype.testNode = async function () {
     console.log("))))))))))))))testNode");
     try {
         var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
-        scraper.blocked = false;
-        scraper.msg("Tor exit node is not blacklisted by Senate CDN. //");
-        return Promise.resolve("allowed");
-
-    } catch (err) {
-        console.log("err", err.statusCode);
-        console.dir(err);
-        if (err.statusCode === 403) {
+        var status = resp.status;
+        if (status === 403) {
             scraper.blocked = true;
-            scraper.msg(err.body, "detail");
-            scraper.msg("Access denied, Tor exit node has been blocked. //" + err.statusCode, "err");
-            scraper.recordBlocked();
+            scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
+            await scraper.recordBlocked();
+            await scraper.screenshot(intel.hearingIndex, "blockcheck");
+            scraper.url({
+                url: "blockcheck",
+                title: "blockcheck"
+            });
             return Promise.resolve("blocked");
-        } else if (err.statusCode === 503) {
+        } else if (status === 503) {
             scraper.blocked = true;
             scraper.msg("503 - Service Unavailable");
-            console.log(err.body);
             await scraper.wait(5);
-            scraper.msg("CheckBlock is throwing an error: " + err);
-            return Promise.resolve("blocked");
+            return await this.testNode();
+        } else if (status === 200){
+            scraper.blocked = false;
+            console.log("Tor not blocked");
+            return Promise.resolve("allowed");
+        } else {
+            console.msg("???" + status, "err");
+            return Promise.resolve(status);
         }
-        return Promise.resolve(resp);
+
+    
+    } catch (err) {
+        throw (err);
     }
 };
 
@@ -1630,8 +1642,8 @@ scraper.getNewID = async function () {
         scraper.currentIP = ip;
         console.log("((((((((((", ip, "))))))))))");
     } catch (e) {
-	console.error("NEWNYM error ", e);
-	return this.getNewID();
+        console.error("NEWNYM error ", e);
+        return this.getNewID();
         //throw (e);
     }
 
@@ -1647,11 +1659,11 @@ scraper.getNewID = async function () {
         await scraper.committee.testNode();
         //scraper.msg(result);
         if (result === "blocked") {
-            await scraper.getNewID();
-            Promise.resolve();
+            return await scraper.getNewID();
+            //Promise.resolve();
         } else {
             scraper.agent();
-            Promise.resolve();
+            return Promise.resolve();
 
         }
     } catch (err) {
@@ -1699,22 +1711,32 @@ scraper.screenshot = async function (url, filename) {
     console.log("looking for " + target);
     if (fs.existsSync(target)) {
         console.log("shot already exists at path", target, "for url:", url);
+        let size = fs.statSync(target).size;
+        console.log(size);
+        /* this doesn't load images if they exist
+        if (size > 9238){
+            await scraper.wait(3);
+            return Promise.resolve();
+        } */
 
-        await scraper.wait(3);
-        return Promise.resolve();
+        //console.log("Blank image");
+        //return await this.screenshot(url, filename);
     }
     var data = {};
     data.filename = filename;
+    var statusCode;
     console.log("capturing " + url + " to " + filename);
     try {
         var response = await scraper.page.goto(url, {
-            waitUntil: "networkidle0",
+            waitUntil: "networkidle2",
             timeout: 120000
         });
-        scraper.msg(await response.status());
+        statusCode = await response.status();
+        scraper.msg(statusCode);
         var content = await scraper.page.content();
+        console.log(content);
         if (content.includes("Denied")) {
-	    scraper.msg("Request denied", "err");
+            scraper.msg("Request denied", "err");
             data.status = "denied";
             data.filename = filename + "_denied";
         }
@@ -1727,18 +1749,24 @@ scraper.screenshot = async function (url, filename) {
             path: target,
             fullPage: true
         });
-
+        let size = fs.stat(target).size;
+        if (size >= 9238) {
+            console.log("blank image");
+            //console.log(content);
+            return await this.screenshot(url, filename);
+        }
     } catch (e) {
         data.status = "failure";
         throw (e);
     }
 
-    if (data.status === "denied") {
+    if (data.status === "denied" || statusCode == 403) {
         scraper.url({
             "url": data.filename
         });
         await scraper.checkBlock();
-        return Promise.resolve(data);
+        return await this.screenshot(url, filename);
+        //return Promise.resolve(data);
     } else if (data.status === "failure") {
         process.exit("screenshot failed");
     }
@@ -1746,7 +1774,21 @@ scraper.screenshot = async function (url, filename) {
     return Promise.resolve(data);
 };
 
+scraper.checkFetch = async function () {
+
+    let resp = await fetch("https://check.torproject.org/", scraper.fetchOptions);
+    resp = await resp.text();
+    if (resp.includes("Congratulations.")){
+        scraper.msg("fetching secure");
+    } else {
+        scraper.msg("scraper not secure", "err");
+        await scraper.getNewID();
+        return await scraper.checkFetch();
+    }
+};
+
 Hearing.prototype.fetch = async function () {
+    await scraper.checkFetch();
     console.log(">>>>>>>>>>>>>fetching hearing" + this.title);
     var hear = this;
     //TODO panel parsing?
@@ -1778,6 +1820,8 @@ Hearing.prototype.fetch = async function () {
             console.log(html);
         }
         console.log(data);
+
+
         //retune this for hooking up to other machines for installation
         /* if (scraper.mdocs) { 
             if (scraper.nextAct === "video") {
@@ -1916,7 +1960,7 @@ var intel = new Committee({
     url: "http://www.intelligence.senate.gov",
     hearingIndex: "http://www.intelligence.senate.gov/hearings/open?keys=&cnum=All&page=",
     shortname: "intel"
-});  //change hearings/open? to hearings? for all
+}); //change hearings/open? to hearings? for all
 
 if (scraper.minOverseers === 0) {
     intel.init();
