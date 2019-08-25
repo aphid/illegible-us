@@ -1229,15 +1229,17 @@ Pdf.prototype.imagify = async function () {
 
         this.pageImages = [];
         for (let im of fs.readdirSync(imgdir)) {
+            console.log("im", im);
             scraper.msg("  /" + im);
             let imgpath = scraper.txtPath + basename + "/" + im;
             this.pageImages.push(imgpath);
             scraper.url({
                 url: imgpath
             });
+            console.log(imgpath);
 
 
-            await scraper.wait(5);
+            await scraper.wait(10);
 
         }
         return Promise.resolve();
@@ -1370,13 +1372,13 @@ Pdf.prototype.fetch = async function () {
     try {
         var resp = await scraper.getFile(pdf.remoteUrl, incoming);
         console.log("RESP ", resp);
-        if (resp.location) {
+        /* if (resp.location) { uhh this doesn't work hope we don't need it.
             scraper.msg("Updating location due to REDIRECT");
             await scraper.wait(4);
             pdf.oldUrl = pdf.remoteUrl;
             pdf.remoteUrl = resp.location;
             await pdf.fetch();
-        }
+        } */
     } catch (err) {
         console.log(err);
     }
@@ -1571,18 +1573,15 @@ Committee.prototype.testNode = async function () {
             scraper.blocked = true;
             scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
             await scraper.recordBlocked();
-            await scraper.screenshot(intel.hearingIndex, "blockcheck");
-            scraper.url({
-                url: "blockcheck",
-                title: "blockcheck"
-            });
-            return Promise.resolve("blocked");
+
+            await scraper.getNewID();
+            return await this.testNode();
         } else if (status === 503) {
             scraper.blocked = true;
             scraper.msg("503 - Service Unavailable");
             await scraper.wait(5);
             return await this.testNode();
-        } else if (status === 200){
+        } else if (status === 200) {
             scraper.blocked = false;
             console.log("Tor not blocked");
             return Promise.resolve("allowed");
@@ -1591,7 +1590,7 @@ Committee.prototype.testNode = async function () {
             return Promise.resolve(status);
         }
 
-    
+
     } catch (err) {
         throw (err);
     }
@@ -1612,17 +1611,20 @@ scraper.checkBlock = async function () {
         if (resp === "allowed") {
             scraper.msg("No block detected.");
             return Promise.resolve();
+        } else if (resp === "blocked") {
+            scraper.msg("Attempting new identity...");
+            await scraper.getNewID();
+            return await scraper.checkBlock();
+        } else {
+            console.log("unexpected output", resp);
         }
-        scraper.msg("Attempting new identity...");
-        await scraper.getNewID();
-        return await scraper.checkBlock();
-
     } catch (err) {
         scraper.msg(err);
     }
 };
 
 scraper.getNewID = async function () {
+    scraper.msg("obtaining new IP");
     if (!scraper.useTor) {
         scraper.msg("tor disabled, continuing...");
         return Promise.resolve();
@@ -1653,7 +1655,7 @@ scraper.getNewID = async function () {
     console.log(cmd);
     try {
         var result = await cpp.exec(cmd);
-
+        await scraper.page._client.send('Network.clearBrowserCookies');
         scraper.msg("SIGNAL NEWNYM");
         //scraper.msg(result.stdout);
         await scraper.committee.testNode();
@@ -1701,6 +1703,7 @@ scraper.vidSS = async function (filename) {
 
 
 scraper.screenshot = async function (url, filename) {
+    await scraper.page._client.send('Network.clearBrowserCookies');
     console.log(filename);
     if (filename.includes("undefined")) {
         console.log("UNDEFINED");
@@ -1732,9 +1735,9 @@ scraper.screenshot = async function (url, filename) {
             timeout: 120000
         });
         statusCode = await response.status();
-        scraper.msg(statusCode);
+        //scraper.msg(statusCode);
         var content = await scraper.page.content();
-        console.log(content);
+        //console.log(content);
         if (content.includes("Denied")) {
             scraper.msg("Request denied", "err");
             data.status = "denied";
@@ -1750,11 +1753,14 @@ scraper.screenshot = async function (url, filename) {
             fullPage: true
         });
         let size = fs.stat(target).size;
-        if (size >= 9238) {
+        if (size <= 9238 || statusCode === 403) {
             console.log("blank image");
             //console.log(content);
+            await scraper.checkBlock();
             return await this.screenshot(url, filename);
+
         }
+        return Promise.resolve();
     } catch (e) {
         data.status = "failure";
         throw (e);
@@ -1778,7 +1784,7 @@ scraper.checkFetch = async function () {
 
     let resp = await fetch("https://check.torproject.org/", scraper.fetchOptions);
     resp = await resp.text();
-    if (resp.includes("Congratulations.")){
+    if (resp.includes("Congratulations.")) {
         scraper.msg("fetching secure");
     } else {
         scraper.msg("scraper not secure", "err");
