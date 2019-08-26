@@ -1,7 +1,3 @@
-/* eslint-disable no-console */
-/*jslint node: true */
-/*jshint -W105 */
-/*global __dirname,  process */
 //when you find a pdf or video, break of and analyze.
 //this should pause scrape.
 //in UI parse "[download] 8.0% of ~344.71MiB at 1.66MiB/s ETA 06:43"
@@ -167,20 +163,17 @@ scraper.url = function (url) {
 };
 //hopefully not needed anymore
 scraper.cleanupFrags = async function () {
-    try {
-        var files = await glob("*Frag*");
-        if (files.length) {
-            scraper.msg("deleting " + files.length + " temp fragments");
-        }
-        for (var file of files) {
-            fs.unlinkSync(file);
-        }
-        if (fs.existsSync("Cookies.txt")) {
-            fs.unlinkSync("Cookies.txt");
-        }
-    } catch (e) {
-        throw (e);
+    var files = await glob("*Frag*");
+    if (files.length) {
+        scraper.msg("deleting " + files.length + " temp fragments");
     }
+    for (var file of files) {
+        fs.unlinkSync(file);
+    }
+    if (fs.existsSync("Cookies.txt")) {
+        fs.unlinkSync("Cookies.txt");
+    }
+
     return Promise.resolve();
 };
 
@@ -1260,6 +1253,8 @@ Pdf.prototype.imagify = async function () {
             });
             if (scraper.mode === "live") {
                 await scraper.wait(5);
+            } else {
+                await scraper.wait(3);
             }
 
         }
@@ -1292,44 +1287,41 @@ Pdf.prototype.textify = async function () {
     scraper.msg("Attempting to create text: " + txtpath);
     console.log(dest);
     var pdftxt = new pdftotext(dest);
+    scraper.msg("Extracting text: " + dest);
     try {
-        scraper.msg("Extracting text: " + dest);
-        try {
-            var data = await pdftxt.getText();
-            console.log("*(*(*(*(*(*(**(*(*()))))))))", data);
-            if (data) {
-                console.log("DATA");
-                data = data.toString("utf8");
-            }
-        } catch (err) {
-            scraper.msg(err);
+        var data = await pdftxt.getText();
+        console.log("*(*(*(*(*(*(**(*(*()))))))))", data);
+        if (data) {
+            console.log("DATA");
+            data = data.toString("utf8");
         }
-        if (!data || data.length < 100) {
-            console.log(data);
-            scraper.msg("ILLEGIBLE DOCUMENT");
-            console.error("NO DATA");
-            pdf.needsScan = true;
-            return Promise.resolve();
-        }
-        scraper.msg("DATA");
-        if (data.length > 100) {
-            scraper.msg(data.substring(0, 80) + "...", "txt");
-        } else {
-            scraper.msg(data, "ILLEGIBLE DOCUMENT");
-            console.log(data);
-            pdf.needsScan = true;
-            return Promise.resolve();
-        }
-        fs.writeFileSync((txtpath), data, "utf8");
-        scraper.msg("writing file (" + data.length + ")");
-        scraper.msg("text extraction complete");
-        pdf.txtpath = txtpath;
-        pdf.needsScan = false;
-        return Promise.resolve();
-
     } catch (err) {
-        throw (err);
+        scraper.msg(err);
     }
+    if (!data || data.length < 100) {
+        console.log(data);
+        scraper.msg("ILLEGIBLE DOCUMENT");
+        console.error("NO DATA");
+        pdf.needsScan = true;
+        return Promise.resolve();
+    }
+    scraper.msg("DATA");
+    if (data.length > 100) {
+        scraper.msg(data.substring(0, 80) + "...", "txt");
+    } else {
+        scraper.msg(data, "ILLEGIBLE DOCUMENT");
+        console.log(data);
+        pdf.needsScan = true;
+        return Promise.resolve();
+    }
+    fs.writeFileSync((txtpath), data, "utf8");
+    scraper.msg("writing file (" + data.length + ")");
+    scraper.msg("text extraction complete");
+    pdf.txtpath = txtpath;
+    pdf.needsScan = false;
+    return Promise.resolve();
+
+
 };
 
 Committee.prototype.queuePdfs = async function () {
@@ -1566,34 +1558,26 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
 Committee.prototype.testNode = async function () {
     console.log("))))))))))))))testNode");
-    try {
-        var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
-        var status = resp.status;
-        if (status === 403) {
-            scraper.blocked = true;
-            scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
-            await scraper.recordBlocked();
-
-            await scraper.getNewID();
-            return await this.testNode();
-        } else if (status === 503) {
-            scraper.blocked = true;
-            scraper.msg("503 - Service Unavailable");
-            await scraper.wait(5);
-            return await this.testNode();
-        } else if (status === 200) {
-            scraper.blocked = false;
-            console.log("Tor not blocked");
-            return Promise.resolve("allowed");
-        } else {
-            console.msg("???" + status, "err");
-            return Promise.resolve(status);
-        }
-
-
-    } catch (err) {
-        throw (err);
+    var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
+    var status = resp.status;
+    if (status === 403) {
+        scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
+        await scraper.recordBlocked();
+        await scraper.getNewID();
+        return await this.testNode();
+    } else if (status === 503) {
+        scraper.blocked = true;
+        scraper.msg("503 - Service Unavailable");
+        await scraper.wait(5);
+        return await this.testNode();
+    } else if (status === 200) {
+        console.log("Tor not blocked");
+        return Promise.resolve("allowed");
+    } else {
+        console.msg("???" + status, "err");
+        return Promise.resolve(status);
     }
+
 };
 
 scraper.recordBlocked = function () {
@@ -1766,18 +1750,6 @@ scraper.screenshot = async function (url, filename) {
         throw (e);
     }
 
-    if (data.status === "denied" || statusCode == 403) {
-        scraper.url({
-            "url": data.filename
-        });
-        await scraper.checkBlock();
-        return await this.screenshot(url, filename);
-        //return Promise.resolve(data);
-    } else if (data.status === "failure") {
-        process.exit("screenshot failed");
-    }
-    console.log(data);
-    return Promise.resolve(data);
 };
 
 scraper.checkFetch = async function () {
