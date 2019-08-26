@@ -1608,11 +1608,38 @@ scraper.checkBlock = async function () {
 };
 
 scraper.getNewID = async function () {
+    await scraper.browser.close();
+    await scraper.setup();
     scraper.msg("obtaining new IP");
     if (!scraper.useTor) {
         scraper.msg("tor disabled, continuing...");
         return Promise.resolve();
     }
+
+    console.log("%%%%%%%%%%%%%%getNewID");
+    var cmd = "(echo AUTHENTICATE \\\"" + scraper.torPass.replace(/\n/g, "") + "\\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost " + scraper.torPort;
+    console.log(cmd);
+    try {
+        await scraper.page._client.send('Network.clearBrowserCookies');
+        var result = await cpp.exec(cmd);
+        console.log(result.stdout);
+        await scraper.testTor();
+
+        scraper.msg("SIGNAL NEWNYM");
+        //scraper.msg(result.stdout);
+        await scraper.committee.testNode();
+        scraper.agent();
+        return Promise.resolve();
+
+
+    } catch (err) {
+        console.log("ERROR IN GETNEWID");
+        scraper.msg(err);
+        return Promise.reject();
+    }
+}
+
+scraper.testTor = async function () {
     try {
         var response = await scraper.page.goto("https://check.torproject.org/", {
             waitUntil: "networkidle0",
@@ -1627,35 +1654,11 @@ scraper.getNewID = async function () {
         });
         scraper.currentIP = ip;
         console.log("((((((((((", ip, "))))))))))");
+        return Promise.resolve();
     } catch (e) {
         console.error("NEWNYM error ", e);
-        return this.getNewID();
+        return await this.getNewID();
         //throw (e);
-    }
-
-
-    console.log("%%%%%%%%%%%%%%getNewID");
-    var cmd = "(echo AUTHENTICATE \\\"" + scraper.torPass.replace(/\n/g, "") + "\\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost " + scraper.torPort;
-    console.log(cmd);
-    try {
-        var result = await cpp.exec(cmd);
-        await scraper.page._client.send('Network.clearBrowserCookies');
-        scraper.msg("SIGNAL NEWNYM");
-        //scraper.msg(result.stdout);
-        await scraper.committee.testNode();
-        //scraper.msg(result);
-        if (result === "blocked") {
-            return await scraper.getNewID();
-            //Promise.resolve();
-        } else {
-            scraper.agent();
-            return Promise.resolve();
-
-        }
-    } catch (err) {
-        console.log("ERROR IN GETNEWID");
-        scraper.msg(err);
-        return Promise.reject();
     }
 };
 
@@ -1753,7 +1756,6 @@ scraper.screenshot = async function (url, filename) {
 };
 
 scraper.checkFetch = async function () {
-
     let resp = await fetch("https://check.torproject.org/", scraper.fetchOptions);
     resp = await resp.text();
     if (resp.includes("Congratulations.")) {
@@ -1786,8 +1788,8 @@ Hearing.prototype.fetch = async function () {
         return Promise.resolve();
     }
     scraper.msg("OPEN HEARING");
-    console.dir(hear);
-    console.dir(options);
+    //console.dir(hear);
+    //console.dir(options);
     try {
         console.log("requesting " + options.url);
         var html = await fetch(options.url, options);
@@ -1999,7 +2001,7 @@ scraper.shutDown = async function () {
 };
 
 process.on("SIGINT", function () {
-    scraper.msg("CAUGHT INTERRUPT SIGNAL");
+    scraper.msg("CAUGHT INTERRUPT SIGNAL", "err");
     scraper.shutDown();
 });
 
