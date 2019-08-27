@@ -1107,7 +1107,13 @@ scraper.getFile = async function (url, dest) {
 };
 
 Pdf.prototype.checkOCR = async function () {
-    for (var i = 0; i < this.metadata.PageCount; i++) {
+    let pcount;
+    if (this.metadata.pageCount) {
+        pcount = this.metadata.pageCount;
+    } else {
+        pcount = this.metadata.PageCount;
+    }
+    for (var i = 0; i < pcount; i++) {
         scraper.load("/ocr/?title=" + this.shortName + "&page=" + i);
         console.log("loading", this.shortName);
         process.exit();
@@ -1216,37 +1222,39 @@ Pdf.prototype.imagify = async function () {
     }
     this.imgdir = imgdir;
     let pagenm;
-    if (this.metadata.pageCount){
-       pagenm = this.metadata.pageCount - 1;
-    } else if (this.metadata.PageCount){
-       pagenm = this.metadata.PageCount - 1;
-	//throw("no pagecount?")
+    if (this.metadata.pageCount) {
+        pagenm = this.metadata.pageCount - 1;
+    } else if (this.metadata.PageCount) {
+        pagenm = this.metadata.PageCount - 1;
+        //throw("no pagecount?")
     }
-    pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
-    console.log(pagenm);
-    var lastImg = imgdir + "/" + basename + "_" + pagenm;
-    console.log("checking for ", lastImg);
-    if (fs.existsSync(lastImg)) {
-        console.log("EXISTS");
+    if (pagenm) {
+        pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
+        console.log(pagenm);
+        var lastImg = imgdir + "/" + basename + "_" + pagenm;
+        console.log("checking for ", lastImg);
+        if (fs.existsSync(lastImg)) {
+            console.log("EXISTS");
 
-        this.pageImages = [];
-        for (let im of fs.readdirSync(imgdir)) {
-            console.log("im", im);
-            scraper.msg("  /" + im);
-            let imgpath = scraper.txtPath + basename + "/" + im;
-            this.pageImages.push(imgpath);
-            scraper.url({
-                url: imgpath
-            });
-            console.log(imgpath);
+            this.pageImages = [];
+            for (let im of fs.readdirSync(imgdir)) {
+                console.log("im", im);
+                scraper.msg("  /" + im);
+                let imgpath = scraper.txtPath + basename + "/" + im;
+                this.pageImages.push(imgpath);
+                scraper.url({
+                    url: imgpath
+                });
+                console.log(imgpath);
 
 
-            //await scraper.wait(10);
+                //await scraper.wait(10);
 
+            }
+            return Promise.resolve();
         }
-        return Promise.resolve();
     }
-    console.log("does not exist?");
+    console.log("does not exist or we don't know pagenums?");
 
     var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
     console.log(cmd);
@@ -1758,9 +1766,9 @@ scraper.screenshot = async function (url, filename) {
         }
         return Promise.resolve();
     } catch (e) {
-	scraper.msg(e, "err");
-	scraper.msg("Trying again.", "err");
-	return await this.screenshot(url, filename);
+        scraper.msg(e, "err");
+        scraper.msg("Trying again.", "err");
+        return await this.screenshot(url, filename);
         //data.status = "failure";
         //throw (e);
     }
