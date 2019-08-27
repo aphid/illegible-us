@@ -1215,7 +1215,16 @@ Pdf.prototype.imagify = async function () {
         scraper.msg("dir exists..." + e, "err");
     }
     this.imgdir = imgdir;
-    var lastImg = imgdir + "/" + basename + "_" + (this.metadata.PageCount - 1).toString().padStart(3, "0") + ".jpg";
+    let pagenm;
+    if (this.metadata.pageCount){
+       pagenm = this.metadata.pageCount - 1;
+    } else if (this.metadata.PageCount){
+       pagenm = this.metadata.PageCount - 1;
+	//throw("no pagecount?")
+    }
+    pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
+    console.log(pagenm);
+    var lastImg = imgdir + "/" + basename + "_" + pagenm;
     console.log("checking for ", lastImg);
     if (fs.existsSync(lastImg)) {
         console.log("EXISTS");
@@ -1232,7 +1241,7 @@ Pdf.prototype.imagify = async function () {
             console.log(imgpath);
 
 
-            await scraper.wait(10);
+            //await scraper.wait(10);
 
         }
         return Promise.resolve();
@@ -1252,9 +1261,9 @@ Pdf.prototype.imagify = async function () {
                 url: imgpath
             });
             if (scraper.mode === "live") {
-                await scraper.wait(5);
+                //await scraper.wait(1);
             } else {
-                await scraper.wait(3);
+                //await scraper.wait(3);
             }
 
         }
@@ -1543,7 +1552,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
 
     } catch (err) {
-        console.dir(err);
+        console.log(err);
         if (err.statusCode && err.statusCode === 403) {
             await scraper.checkBlock();
             return await comm.getHearingIndex(url, page);
@@ -1749,8 +1758,11 @@ scraper.screenshot = async function (url, filename) {
         }
         return Promise.resolve();
     } catch (e) {
-        data.status = "failure";
-        throw (e);
+	scraper.msg(e, "err");
+	scraper.msg("Trying again.", "err");
+	return await this.screenshot(url, filename);
+        //data.status = "failure";
+        //throw (e);
     }
 
 };
