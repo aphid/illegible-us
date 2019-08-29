@@ -252,68 +252,60 @@ Video.prototype.getManifest = async function () {
     //var url = "'" + vid.url + "'";
     var url = vid.url.replace("false", "true");
     let data = {};
-    return new Promise(async function (resolve, reject) {
-        try {
-            await scraper.page.setRequestInterception(true);
+    await scraper.page.setRequestInterception(true);
 
-            scraper.page.on("request", async interceptedRequest => {
-                //console.log(interceptedRequest);
-                //process.exit();
-                var rUrl = interceptedRequest.url();
-                if (rUrl.includes("mp4?")) {
-                    console.log("match", rUrl);
+    scraper.page.on("request", async interceptedRequest => {
+        var rUrl = interceptedRequest.url();
+        if (rUrl.includes("mp4?")) {
+            console.log("match", rUrl);
 
-                    vid.type = "mp4";
-                    vid.src = rUrl;
-                    interceptedRequest.abort();
-                    console.log("FOUND IT", data);
-                    scraper.page.removeAllListeners();
-                    resolve();
-                } else if (rUrl.includes("m3u8")) {
-                    console.log("match", rUrl);
+            vid.type = "mp4";
+            vid.src = rUrl;
+            interceptedRequest.abort();
+            console.log("FOUND IT", data);
+            scraper.page.removeAllListeners();
+            return Promise.resolve();
+        } else if (rUrl.includes("m3u8")) {
+            console.log("match", rUrl);
 
-                    vid.type = "m3u";
-                    vid.src = rUrl;
-                    interceptedRequest.abort();
-                    scraper.page.removeAllListeners();
+            vid.type = "m3u";
+            vid.src = rUrl;
+            interceptedRequest.abort();
+            scraper.page.removeAllListeners();
 
-                    console.log("FOUND IT", data);
-                    resolve();
-                } else {
-                    if (rUrl.includes("apology")) {
-                        interceptedRequest.abort();
-                        scraper.page.removeAllListeners();
-                        await scraper.getNewID();
-                        return await vid.getManifest();
-                    }
-                    console.log("nope", rUrl);
-                    interceptedRequest.continue();
-                }
-            });
-            await scraper.page.goto(url, {
-                timeout: 120000
-            });
-
-
-            var content = await scraper.page.content();
-            if (content.includes("Denied")) {
-                await scraper.checkBlock();
+            console.log("FOUND IT", data);
+            return Promise.resolve();
+        } else {
+            if (rUrl.includes("apology")) {
+                interceptedRequest.abort();
+                scraper.page.removeAllListeners();
+                await scraper.getNewID();
                 return await vid.getManifest();
             }
-
-            /*
-            if (response.type) {
-                scraper.msg("Video type: " + response.type);
-                vid.type = response.type;
-                vid.src = response.src;
-            }*/
-            scraper.msg("fulfilling manifest");
-
-        } catch (e) {
-            scraper.msg("errored out with" + e, "err");
-            reject(e);
+            console.log("nope", rUrl);
+            interceptedRequest.continue();
         }
     });
+    await scraper.page.goto(url, {
+        timeout: 120000
+    });
+
+
+    var content = await scraper.page.content();
+    if (content.includes("Denied")) {
+        await scraper.checkBlock();
+        return await vid.getManifest();
+    }
+
+    /*
+    if (response.type) {
+        scraper.msg("Video type: " + response.type);
+        vid.type = response.type;
+        vid.src = response.src;
+    }*/
+    scraper.msg("fulfilling manifest");
+
+
 };
 
 
@@ -341,135 +333,143 @@ Video.prototype.fetch = async function (manifest) {
     }
 
 
+    scraper.msg("TYPE: " + vid.type);
+    if (vid.type === "flv" || vid.type === "mp4") {
+        incoming = scraper.incomingDir + vid.basename + "." + vid.type;
+        output = scraper.videoDir + vid.basename + "." + vid.type;
 
-    return new Promise(async function (fulfill) {
+        scraper.msg("Will save to " + output);
+        await scraper.getFile(manifest.src, incoming)
+        fs.moveSync(incoming, output);
+        vid.localPath = output;
+        return Promise.resolve();
 
-        scraper.msg("TYPE: " + vid.type);
-        if (vid.type === "flv" || vid.type === "mp4") {
-            incoming = scraper.incomingDir + vid.basename + "." + vid.type;
-            output = scraper.videoDir + vid.basename + "." + vid.type;
+    } else if (vid.type === "m3u") {
+        vid.protocol = "m3u8";
+        incoming = scraper.incomingDir + vid.basename + ".mp4";
+        output = scraper.videoDir + vid.basename + ".mp4";
+        /* if (scraper.mode === "dev") {
+            console.log("writing placeholder to " + output);
+            fs.writeFileSync(output, "placeholder");
+            return fulfill();
+        }*/
+        incoming = scraper.incomingDir + vid.basename + ".mp4";
+        output = scraper.videoDir + vid.basename + ".mp4";
 
-            scraper.msg("Will save to " + output);
-            scraper.getFile(manifest.src, incoming).then(function () {
-                fs.moveSync(incoming, output);
-                vid.localPath = output;
-                return fulfill();
-            });
-        } else if (vid.type === "m3u") {
-            vid.protocol = "m3u8";
-            incoming = scraper.incomingDir + vid.basename + ".mp4";
-            output = scraper.videoDir + vid.basename + ".mp4";
-            /* if (scraper.mode === "dev") {
-                console.log("writing placeholder to " + output);
-                fs.writeFileSync(output, "placeholder");
-                return fulfill();
-            }*/
-            incoming = scraper.incomingDir + vid.basename + ".mp4";
-            output = scraper.videoDir + vid.basename + ".mp4";
+        var childargs = ["--hls-prefer-native", "-o", incoming, scraper.ytdlFlags, vid.src];
 
-            var childargs = ["--hls-prefer-native", "-o", incoming, scraper.ytdlFlags, vid.src];
+        console.log("youtube-dl " + childargs.join(" "));
+        scraper.msg("downloading VOD fragments");
+        try {
+            await scraper.spawn(childargs, incoming, output, vid.basename);
+            vid.localPath = output;
+            return Promise.resolve();
+        } catch (e) {
+            throw ("spawn failed");
 
-            console.log("youtube-dl " + childargs.join(" "));
-            scraper.msg("downloading VOD fragments");
-            var last = new Date().getTime();
-            var lastSS = new Date().getTime();
-            cpp.spawn("youtube-dl", childargs, {
-                shell: true
-            }).fail(function (err) {
-                console.error("spawn error: ", err.stack || err, childargs);
-                //reject(err);
-
-            })
-                .progress(async function (cP) {
-                    scraper.msg("[exec] childProcess.pid" + cP.pid);
-                    cP.stdout.on("data", function (data) {
-                        if (data.toString().includes("Connection refused")) {
-                            console.log("Blocked");
-                            throw ("blocked, deal with this");
-                            //todo: deal with this.
-                        }
-                        if (data.includes("[download]") && data.includes("ETA")) {
-                            var progress = data.toString().trim();
-                            try {
-                                var pct = progress.split("  ")[1].split("%")[0];
-                            } catch (e) {
-                                console.log(progress, "this failed the parse thing");
-                            }
-                            let now = new Date().getTime();
-                            if (now - last > 8135) {
-                                scraper.msg(progress, "detail");
-                                scraper.progress("hearing_" + vid.basename, parseFloat(pct));
-                                last = new Date().getTime();
-
-                                if (now - lastSS > 7575) {
-                                    scraper.vidSS(incoming);
-                                    lastSS = now;
-                                }
-
-                                //get an ffmpeg screenshot here?
-                            }
-
-                        }
-                    });
-                    cP.stderr.on("data", function (data) {
-                        scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
-                    });
-                })
-
-                .then(async function () {
-                    fs.moveSync(incoming, output);
-                    vid.localPath = output;
-                    //await vid.scenes();
-                    fulfill();
-                })
-                .catch(async function (err) {
-                    if (err.includes("urlopen error")) {
-                        scraper.msg("video scrape fail, retrying", "err");
-                        await vid.fetch();
-                    } else {
-                        scraper.msg("unknown video scrape error");
-                        await vid.fetch();
-                    }
-                });
-
-
-        } else if (vid.type === "hds") {
-            throw ("yikes HDS");
-            /*
-            incoming = scraper.incomingDir + vid.basename + ".flv";
-            output = scraper.videoDir + vid.basename + ".flv";
-            //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
-            var childArgs = [
-                path.join(__dirname, "lib/AdobeHDS.php"), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", manifest.manifest, "--auth", manifest.auth, "--outdir", scraper.incomingDir, "--outfile", vid.basename];
-            scraper.msg("Requesting HDS fragments with credentials:");
-            scraper.msg(" Authentication key: " + manifest.auth);
-            scraper.msg(" Manifest: " + manifest.manifest);
-            scraper.msg(childArgs);
-            cpp.spawn("php", childArgs).fail(function (err) {
-                console.error("SPAWN ERROR: ", (err.stack || err));
-                reject(err);
-            })
-                .progress(function (childProcess) {
-                    scraper.msg("[exec] childProcess.pid: ", childProcess.pid);
-                    childProcess.stdout.on("data", function (data) {
-                        scraper.msg(">>>>>>>> " + data.toString().trim());
-                    });
-                    childProcess.stderr.on("data", function (data) {
-                        scraper.msg("[spawn] stderr: " + data.toString().trim());
-                    });
-
-                }).then(function () {
-                    fse.moveSync(incoming, output);
-                    vid.localPath = output;
-                    scraper.cleanupFrags();
-                    scraper.cleanupTemp();
-
-                }).then(function () {
-                    return fulfill();
-                });
-                */
+            //or return await vid.fetch();
         }
 
+
+    } else if (vid.type === "hds") {
+        throw ("yikes HDS");
+        /*
+        incoming = scraper.incomingDir + vid.basename + ".flv";
+        output = scraper.videoDir + vid.basename + ".flv";
+        //var command = 'php lib/AdobeHDS.php --manifest "' + data.manifest + '" --auth "' + data.auth + '" --outdir ' + scraper.incomingDir + ' --outfile ' + vid.basename;
+        var childArgs = [
+            path.join(__dirname, "lib/AdobeHDS.php"), "--proxy", "socks5://localhost:9050", "--fproxy", "--manifest", manifest.manifest, "--auth", manifest.auth, "--outdir", scraper.incomingDir, "--outfile", vid.basename];
+        scraper.msg("Requesting HDS fragments with credentials:");
+        scraper.msg(" Authentication key: " + manifest.auth);
+        scraper.msg(" Manifest: " + manifest.manifest);
+        scraper.msg(childArgs);
+        cpp.spawn("php", childArgs).fail(function (err) {
+            console.error("SPAWN ERROR: ", (err.stack || err));
+            reject(err);
+        })
+            .progress(function (childProcess) {
+                scraper.msg("[exec] childProcess.pid: ", childProcess.pid);
+                childProcess.stdout.on("data", function (data) {
+                    scraper.msg(">>>>>>>> " + data.toString().trim());
+                });
+                childProcess.stderr.on("data", function (data) {
+                    scraper.msg("[spawn] stderr: " + data.toString().trim());
+                });
+
+            }).then(function () {
+                fse.moveSync(incoming, output);
+                vid.localPath = output;
+                scraper.cleanupFrags();
+                scraper.cleanupTemp();
+
+            }).then(function () {
+                return fulfill();
+            });
+            */
+    }
+
+
+};
+
+scraper.spawn = async function (childargs, incoming, output, basename) {
+    console.log("^^^^^^^^^^ s p a w n i n g ^^^^^^^^^^^");
+    return new Promise(function (resolve, reject) {
+        var last = new Date().getTime();
+        var lastSS = new Date().getTime();
+        cpp.spawn("youtube-dl", childargs, {
+            shell: true
+        }).fail(function (err) {
+            console.error("spawn error: ", err.stack || err, childargs);
+            //reject(err);
+
+        }).progress(async function (cP) {
+            scraper.msg("[exec] childProcess.pid" + cP.pid);
+            cP.stdout.on("data", function (data) {
+                if (data.toString().includes("Connection refused")) {
+                    console.log("Blocked");
+                    throw ("blocked, deal with this");
+                    //todo: deal with this.
+                }
+                if (data.includes("[download]") && data.includes("ETA")) {
+                    var progress = data.toString().trim();
+                    try {
+                        var pct = progress.split("  ")[1].split("%")[0];
+                    } catch (e) {
+                        console.log(progress, "this failed the parse thing");
+                    }
+                    let now = new Date().getTime();
+                    if (now - last > 8135) {
+                        scraper.msg(progress, "detail");
+                        scraper.progress("hearing_" + basename, parseFloat(pct));
+                        last = new Date().getTime();
+
+                        if (now - lastSS > 7575) {
+                            scraper.vidSS(incoming);
+                            lastSS = now;
+                        }
+
+                        //get an ffmpeg screenshot here?
+                    }
+
+                }
+            });
+            cP.stderr.on("data", function (data) {
+                scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
+            });
+        })
+            .then(function () {
+                fs.moveSync(incoming, output);
+                resolve();
+            })
+            .catch(function (err) {
+                if (err.includes("urlopen error")) {
+                    scraper.msg("video scrape fail, retrying", "err");
+                    reject();
+                } else {
+                    scraper.msg("unknown video scrape error");
+                    reject();
+                }
+            });
 
     });
 };
@@ -569,7 +569,7 @@ Video.prototype.transcodeToOgg = async function () {
     var vid = this;
     var lpct = 0;
     if (vid.mp4) {
-        return new Promise(async function (resolve, reject) {
+        return new Promise(function (resolve, reject) {
 
 
             var input = vid.localPath;
@@ -579,8 +579,7 @@ Video.prototype.transcodeToOgg = async function () {
                 scraper.msg("ogg already exists! " + output);
                 return resolve();
             }
-            try {
-                var asdf = await ffmpeg(input)
+                ffmpeg(input)
                     .output(temp)
                     .on("start", function (commandLine) {
                         scraper.msg("Spawned Ffmpeg with command: " + commandLine);
@@ -609,11 +608,7 @@ Video.prototype.transcodeToOgg = async function () {
                         reject(err);
                     })
                     .run();
-                return asdf;
-            } catch (err) {
-                scraper.msg(err, "err");
-                throw (err);
-            }
+      
         });
     } else {
         return Promise.reject("no vidtype?");
@@ -1391,16 +1386,22 @@ Pdf.prototype.fetch = async function () {
     } catch (err) {
         console.log(err);
     }
-    fs.moveSync(incoming, dest);
-    pdf.localPath = dest;
-    return Promise.resolve();
+    let size = await fs.stat(incoming).size;
+    if (size){
+        fs.moveSync(incoming, dest);
+        pdf.localPath = dest;
+        return Promise.resolve();
+    } else {
+       scraper.msg("Downloaded PDF is zero bytes, retrying");
+       return await this.fetch();
+    }
 
 };
 
 
 Hearing.prototype.addWitness = function (witness) {
     scraper.msg("adding " + witness.lastName);
-    if (!witness.isPrototypeOf(Witness)) {
+    if (!Object.prototype.hasOwnProperty.call(witness,Witness)) {
         var wit = new Witness(witness);
         this.witnesses.push(wit);
         return wit;
@@ -1768,6 +1769,8 @@ scraper.screenshot = async function (url, filename) {
     } catch (e) {
         scraper.msg(e, "err");
         scraper.msg("Trying again.", "err");
+        await scraper.browser.close();
+        await scraper.setup();
         return await this.screenshot(url, filename);
         //data.status = "failure";
         //throw (e);
