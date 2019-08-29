@@ -264,10 +264,11 @@ Video.prototype.getManifest = async function () {
             interceptedRequest.abort();
             console.log("FOUND IT", data);
             scraper.page.removeAllListeners();
+            scraper.msg("it's mp4");
             return Promise.resolve();
         } else if (rUrl.includes("m3u8")) {
             console.log("match", rUrl);
-
+            scraper.msg("it's m3u8");
             vid.type = "m3u";
             vid.src = rUrl;
             interceptedRequest.abort();
@@ -303,7 +304,7 @@ Video.prototype.getManifest = async function () {
         vid.type = response.type;
         vid.src = response.src;
     }*/
-    scraper.msg("fulfilling manifest");
+    //scraper.msg("fulfilling manifest");
 
 
 };
@@ -579,36 +580,36 @@ Video.prototype.transcodeToOgg = async function () {
                 scraper.msg("ogg already exists! " + output);
                 return resolve();
             }
-                ffmpeg(input)
-                    .output(temp)
-                    .on("start", function (commandLine) {
-                        scraper.msg("Spawned Ffmpeg with command: " + commandLine);
-                    })
-                    .on("progress", function (prog) {
-                        var mf = Math.floor(prog.percent);
+            ffmpeg(input)
+                .output(temp)
+                .on("start", function (commandLine) {
+                    scraper.msg("Spawned Ffmpeg with command: " + commandLine);
+                })
+                .on("progress", function (prog) {
+                    var mf = Math.floor(prog.percent);
 
-                        if (mf > lpct) {
-                            scraper.msg("Processing: " + mf + "% done", "detail");
-                            lpct = mf;
+                    if (mf > lpct) {
+                        scraper.msg("Processing: " + mf + "% done", "detail");
+                        lpct = mf;
 
-                        }
-                    })
-                    .audioCodec("libvorbis")
-                    .audioChannels(2)
-                    .noVideo()
-                    .on("end", function () {
-                        scraper.msg("ogg end fired?");
-                        scraper.msg("Processing Finished");
-                        fs.moveSync(temp, output);
-                        resolve();
-                    })
-                    .on("error", function (err, stdout, stderr) {
-                        scraper.msg(err.message);
-                        scraper.msg(stderr);
-                        reject(err);
-                    })
-                    .run();
-      
+                    }
+                })
+                .audioCodec("libvorbis")
+                .audioChannels(2)
+                .noVideo()
+                .on("end", function () {
+                    scraper.msg("ogg end fired?");
+                    scraper.msg("Processing Finished");
+                    fs.moveSync(temp, output);
+                    resolve();
+                })
+                .on("error", function (err, stdout, stderr) {
+                    scraper.msg(err.message);
+                    scraper.msg(stderr);
+                    reject(err);
+                })
+                .run();
+
         });
     } else {
         return Promise.reject("no vidtype?");
@@ -1372,6 +1373,9 @@ Pdf.prototype.fetch = async function () {
         pdf.localPath = dest;
         return Promise.resolve();
     }
+    if (fs.existsSync(incoming)) {
+        fs.unlinkSync(incoming);
+    }
     scraper.msg(incoming + " " + dest);
     try {
         var resp = await scraper.getFile(pdf.remoteUrl, incoming);
@@ -1386,14 +1390,14 @@ Pdf.prototype.fetch = async function () {
     } catch (err) {
         console.log(err);
     }
-    let size = await fs.stat(incoming).size;
-    if (size){
+    let size = await fs.statSync(incoming).size;
+    if (size) {
         fs.moveSync(incoming, dest);
         pdf.localPath = dest;
         return Promise.resolve();
     } else {
-       scraper.msg("Downloaded PDF is zero bytes, retrying");
-       return await this.fetch();
+        scraper.msg("Downloaded PDF is " + size + " bytes, retrying");
+        return await this.fetch();
     }
 
 };
@@ -1401,7 +1405,7 @@ Pdf.prototype.fetch = async function () {
 
 Hearing.prototype.addWitness = function (witness) {
     scraper.msg("adding " + witness.lastName);
-    if (!Object.prototype.hasOwnProperty.call(witness,Witness)) {
+    if (!Object.prototype.hasOwnProperty.call(witness, Witness)) {
         var wit = new Witness(witness);
         this.witnesses.push(wit);
         return wit;
