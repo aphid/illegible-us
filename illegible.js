@@ -143,7 +143,7 @@ scraper.msg = function (thing, kind) {
 };
 
 scraper.progress = function (id, pct) {
-    id = id.replace(/\./g, "_");
+    id = id.replace(/\./g, "_").replace(/%20/g, "_");
     console.log(id, "at", pct);
     io.to("oversight").emit("progress", {
         id: id,
