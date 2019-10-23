@@ -58,7 +58,7 @@ scraper.setup = async function () {
     scraper.page = await scraper.browser.newPage();
     await scraper.page.setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1");
     await scraper.page._client.send("Emulation.clearDeviceMetricsOverride");
-    scraper.page.setUserAgent(scraper.scraperAgent);
+    console.log("setting ua to ", scraper.scraperAgent);
 };
 
 
@@ -240,72 +240,87 @@ var Video = function (options) {
 
 Video.prototype.getManifest = async function () {
     var vid = this;
-    console.log("..........................................................");
-    await scraper.wait(8);
-    //scraper.msg("ADOBE HDS STREAM DETECTED");
-    if (fs.existsSync(this.localPath)) {
-        scraper.msg("file already exists");
-        return Promise.resolve();
-    }
-    scraper.msg("Getting remote info about " + vid.basename);
-    scraper.msg("Checking stream type");
-    //var url = "'" + vid.url + "'";
-    var url = vid.url.replace("false", "true");
-    let data = {};
-    await scraper.page.setRequestInterception(true);
-
-    scraper.page.on("request", async interceptedRequest => {
-        var rUrl = interceptedRequest.url();
-        if (rUrl.includes("mp4?")) {
-            console.log("match", rUrl);
-
-            vid.type = "mp4";
-            vid.src = rUrl;
-            interceptedRequest.abort();
-            console.log("FOUND IT", data);
-            scraper.page.removeAllListeners();
-            scraper.msg("it's mp4");
+    return new Promise(async function (resolve, reject) {
+        console.log("----getting manifest----");
+        console.log("..........................................................");
+        await scraper.wait(8);
+        //scraper.msg("ADOBE HDS STREAM DETECTED");
+        if (fs.existsSync(vid.localPath)) {
+            scraper.msg("file already exists");
             return Promise.resolve();
-        } else if (rUrl.includes("m3u8")) {
-            console.log("match", rUrl);
-            scraper.msg("it's m3u8");
-            vid.type = "m3u";
-            vid.src = rUrl;
-            interceptedRequest.abort();
-            scraper.page.removeAllListeners();
+        }
+        scraper.msg("Getting remote info about " + vid.basename);
+        scraper.msg("Checking stream type");
+        //var url = "'" + vid.url + "'";
+        var url = vid.url.replace("false", "true");
+        let data = {};
+        await scraper.page.setRequestInterception(true);
 
-            console.log("FOUND IT", data);
-            return Promise.resolve();
-        } else {
-            if (rUrl.includes("apology")) {
+        let testedUrls = [];
+        scraper.page.on("request", async interceptedRequest => {
+            var rUrl = interceptedRequest.url();
+            if (testedUrls.includes(rUrl)) {
+                console.log("tried this one already");
+            }
+            else if (rUrl.includes("mp4?")) {
+                console.log("match", rUrl);
+
+                vid.type = "mp4";
+                vid.src = rUrl;
+                interceptedRequest.abort();
+                console.log("FOUND IT", data);
+                scraper.page.removeAllListeners();
+                scraper.msg("it's mp4");
+                return resolve();
+            } else if (rUrl.includes("aster.m3u8") && rUrl.includes("ussenate")) {
+                console.log("match", rUrl);
+                scraper.msg("it's m3u8");
+                vid.type = "m3u";
+                vid.src = rUrl;
                 interceptedRequest.abort();
                 scraper.page.removeAllListeners();
-                await scraper.getNewID();
-                return await vid.getManifest();
+
+                console.log("FOUND IT", data);
+                return resolve();
+            } else {
+                if (rUrl.includes("apology")) {
+                    interceptedRequest.abort();
+                    scraper.page.removeAllListeners();
+                    await scraper.getNewID();
+                    return await vid.getManifest();
+                }
+                console.log("nope", rUrl);
+                testedUrls.push(rUrl);
+
+                interceptedRequest.continue();
             }
-            console.log("nope", rUrl);
-            interceptedRequest.continue();
+        });
+        await scraper.page.goto(url, {
+            timeout: 120000
+        });
+        try {
+            await scraper.page.waitForSelector("#amp-interactive");
+
+            await scraper.page.click('#amp-interactive');
+        } catch (e) {
+            console.log(e);
         }
+
+
+        var content = await scraper.page.content();
+        if (content.includes("Denied")) {
+            await scraper.checkBlock();
+            return await vid.getManifest();
+        }
+        console.log(scraper.page.url());
+        /*
+        if (response.type) {
+            scraper.msg("Video type: " + response.type);
+            vid.type = response.type;
+            vid.src = response.src;
+        }*/
+        //scraper.msg("fulfilling manifest");
     });
-    await scraper.page.goto(url, {
-        timeout: 120000
-    });
-
-
-    var content = await scraper.page.content();
-    if (content.includes("Denied")) {
-        await scraper.checkBlock();
-        return await vid.getManifest();
-    }
-
-    /*
-    if (response.type) {
-        scraper.msg("Video type: " + response.type);
-        vid.type = response.type;
-        vid.src = response.src;
-    }*/
-    //scraper.msg("fulfilling manifest");
-
 
 };
 
@@ -1217,14 +1232,11 @@ Pdf.prototype.imagify = async function () {
         scraper.msg("dir exists..." + e, "err");
     }
     this.imgdir = imgdir;
-    let pagenm;
-    if (this.metadata.pageCount) {
-        pagenm = this.metadata.pageCount - 1;
-    } else if (this.metadata.PageCount) {
-        pagenm = this.metadata.PageCount - 1;
-        //throw("no pagecount?")
-    }
+    let pagenm = false;
+    pagenm = this.metadata.pageCount || this.metadata.PageCount;
+    console.log("%%%", pagenm)
     if (pagenm) {
+        pagenm = pagenm - 1;
         pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
         console.log(pagenm);
         var lastImg = imgdir + "/" + basename + "_" + pagenm;
@@ -1249,9 +1261,11 @@ Pdf.prototype.imagify = async function () {
             }
             return Promise.resolve();
         }
+    } else {
+        console.log("does not exist or we don't know pagenums?");
+        console.log(this.metadata);
+        process.exit();
     }
-    console.log("does not exist or we don't know pagenums?");
-
     var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
     console.log(cmd);
     try {
@@ -1515,6 +1529,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             var hearing = {};
             hearing.dcDate = $(elem).find(".date-display-single").attr("content");
             hearing.hearingPage = "" + $(elem).find(".views-field-title").find("a").attr("href");
+            //find location here
             hearing.hearingPage = Url.resolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
             hearing.title = $(elem).find(".views-field-title").text().trim();
             var datefield = $(elem).find(".views-field-field-hearing-date").text().trim();
@@ -1553,7 +1568,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             }
         });
         for (let h of tempHearings) {
-            //if (h.title.includes("Haspel"))
+            //if (h.title.includes("Pompeo"))
             await comm.addHearing(h);
             scraper.msg("Processed hearing", h.title);
         }
@@ -1783,6 +1798,9 @@ scraper.screenshot = async function (url, filename) {
 };
 
 scraper.checkFetch = async function () {
+    if (!scraper.useTor) {
+        return Promise.resolve();
+    }
     let resp = await fetch("https://check.torproject.org/", scraper.fetchOptions);
     resp = await resp.text();
     if (resp.includes("Congratulations.")) {
@@ -1818,6 +1836,7 @@ Hearing.prototype.fetch = async function () {
     //console.dir(hear);
     //console.dir(options);
     try {
+        //need to trade this out for puppeteer just grabbing the pagecontent
         console.log("requesting " + options.url);
         var html = await fetch(options.url, options);
         html = await html.text();
@@ -1860,7 +1879,9 @@ Hearing.prototype.fetch = async function () {
         await hear.addVideo({
             url: data.video
         });
-
+        if (data.transcript) {
+            hear.transcript = data.transcript;
+        }
         console.log("ok this should resolve");
         scraper.msg("done with " + hear.title);
         return Promise.resolve();
@@ -1880,79 +1901,82 @@ Hearing.prototype.fetch = async function () {
 
 scraper.crunchHtml = function (html) {
     scraper.msg("Processing html: " + html.length);
-    return new Promise(function (resolve, reject) {
-        var result = {};
-        var witnesses = [];
-        var $ = cheerio.load(html);
-        //console.log($.html());
-        var target = $(".pane-node-field-hearing-video").find("iframe");
-        //console.log(target);
-        //scraper.msg(target.html() + " " + target.attr('src'), "detail");
-        if (target) {
-            result.video = decodeURIComponent(target.attr("src"));
-        }
-        scraper.msg("Video url found: " + target.attr("src"), "detail");
-        //var wits = $('.pane-node-field-hearing-witness');
-        var wits = $(".field-collection-item-field-hearing-witness"); // get ABOUT attr too, it is a witness ID
-        if (wits.length) {
-            scraper.msg(wits.find(".pane-title").html(), "detail");
-            wits.each(async function (k, v) {
-                var panel;
-                if ($(v).find(".field-name-field-witness-panel").length) {
-                    panel = $(v).find(".field-name-field-witness-panel").text().trim().replace(":", "");
-                }
-                var witness = {};
-                target = $(v).find(".field-name-field-witness-firstname");
-                scraper.msg(target.html(), "detail");
-                scraper.msg(target.text().trim(), "detail");
-                witness.firstName = target.text().trim();
-                target = $(v).find(".field-name-field-witness-lastname");
-                scraper.msg(target.html(), "detail");
-                scraper.msg(target.text().trim(), "detail");
-                witness.lastName = target.text().trim();
-                target = $(v).find(".field-name-field-witness-job");
-                scraper.msg(target.html(), "detail");
-                scraper.msg(target.text().trim(), "detail");
-                witness.title = target.text().trim();
-                target = $(v).find(".field-name-field-witness-organization");
-                scraper.msg(target.html(), "detail");
-                scraper.msg(target.text().trim(), "detail");
-                witness.id = $(v).attr("about");
-                witness.org = target.text().trim();
-                if (panel) {
-                    witness.group = panel;
-                }
-                witness.title = $(v).find(".field-name-field-witness-title").text().trim();
+    var result = {};
+    var witnesses = [];
+    var $ = cheerio.load(html);
+    //console.log($.html());
+    let fi = $(".file");
+    if (fi) {
+        result.transcript = fi.find("a").attr("href");
+    }
+    var target = $(".pane-node-field-hearing-video").find("iframe");
+    //console.log(target);
+    //scraper.msg(target.html() + " " + target.attr('src'), "detail");
+    if (target) {
+        result.video = decodeURIComponent(target.attr("src"));
+    }
+    scraper.msg("Video url found: " + target.attr("src"), "detail");
+    //var wits = $('.pane-node-field-hearing-witness');
+    var wits = $(".field-collection-item-field-hearing-witness"); // get ABOUT attr too, it is a witness ID
+    if (wits.length) {
+        scraper.msg(wits.find(".pane-title").html(), "detail");
+        wits.each(async function (k, v) {
+            var panel;
+            if ($(v).find(".field-name-field-witness-panel").length) {
+                panel = $(v).find(".field-name-field-witness-panel").text().trim().replace(":", "");
+            }
+            var witness = {};
+            target = $(v).find(".field-name-field-witness-firstname");
+            scraper.msg(target.html(), "detail");
+            scraper.msg(target.text().trim(), "detail");
+            witness.firstName = target.text().trim();
+            target = $(v).find(".field-name-field-witness-lastname");
+            scraper.msg(target.html(), "detail");
+            scraper.msg(target.text().trim(), "detail");
+            witness.lastName = target.text().trim();
+            target = $(v).find(".field-name-field-witness-job");
+            scraper.msg(target.html(), "detail");
+            scraper.msg(target.text().trim(), "detail");
+            witness.title = target.text().trim();
+            target = $(v).find(".field-name-field-witness-organization");
+            scraper.msg(target.html(), "detail");
+            scraper.msg(target.text().trim(), "detail");
+            witness.id = $(v).attr("about");
+            witness.org = target.text().trim();
+            if (panel) {
+                witness.group = panel;
+            }
+            witness.title = $(v).find(".field-name-field-witness-title").text().trim();
 
-                witnesses.push(witness);
-                scraper.msg(JSON.stringify(witness), "detail");
-                var pdfs = [];
-                if ($(v).find("li").length) {
-                    $(v).find("a").each(function (key, val) {
-                        scraper.msg($(val).html(), "detail");
-                        var pdf = {};
-                        pdf.name = $(val).text();
-                        pdf.url = $(val).attr("href");
-                        if (!pdf.url.includes("http://")) {
-                            pdf.url = intel.url + pdf.url;
-                        }
-                        scraper.msg(pdf, "detail");
-                        pdfs.push(pdf);
-                    });
-                }
-                witness.pdfs = pdfs;
+            witnesses.push(witness);
+            scraper.msg(JSON.stringify(witness), "detail");
+            var pdfs = [];
+            if ($(v).find("li").length) {
+                $(v).find("a").each(function (key, val) {
+                    scraper.msg($(val).html(), "detail");
+                    var pdf = {};
+                    pdf.name = $(val).text();
+                    pdf.url = $(val).attr("href");
+                    if (!pdf.url.includes("http://")) {
+                        pdf.url = intel.url + pdf.url;
+                    }
+                    scraper.msg(pdf, "detail");
+                    pdfs.push(pdf);
+                });
+            }
+            witness.pdfs = pdfs;
 
 
-            }); //end each
-        }
-        if (!target) {
-            return reject("no video");
-        }
-        //console.dir(result);
-        result.witnesses = witnesses;
-        console.log("RESOLVED");
-        return resolve(result);
-    });
+        }); //end each
+    }
+    //really?
+    if (!target) {
+        return Promise.reject("no video");
+    }
+    //console.dir(result);
+    result.witnesses = witnesses;
+    console.log("RESOLVED");
+    return Promise.resolve(result);
 };
 /*
 process.on('unhandledRejection', function (reason, p) {
