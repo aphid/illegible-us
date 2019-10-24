@@ -22,6 +22,14 @@ var ffmpeg = require("fluent-ffmpeg");
 var SPA = require("socks-proxy-agent");
 var glob = require("glob");
 //var fse = require("fs-extra");
+var PDFParser = require('pdf2json'); //to get pagecounts with
+var pdfParser = new PDFParser();
+
+
+
+
+
+
 var settings = fs.readFileSync(__dirname + "/settings.json").toString();
 settings = settings.replace(/\.\//g, __dirname + "/");
 settings = JSON.parse(settings);
@@ -33,7 +41,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 1,
+    minOverseers: 0,
     busy: false,
     connections: 0,
     started: false,
@@ -46,7 +54,33 @@ var scraper = {
     fetchOptions: {},
 };
 
+
+scraper.getPageCount = async function (path) {
+
+    console.log("parsing", path)
+    return new Promise(async function (resolve, reject) {
+        pdfParser.on("pdfParser_dataError", errData => console.error(errData.parserError));
+        pdfParser.on('pdfParser_dataReady', function (data) {
+
+            pdfParser.removeAllListeners();
+            console.log(data.formImage.Pages.length);
+            var doc = data.PDFJS && data.PDFJS.pdfDocument && data.PDFJS.pdfDocument.numPages;
+
+
+            resolve(doc);
+        });
+
+        pdfParser.loadPDF(path);
+
+    });
+
+}
+
+
+
 scraper.setup = async function () {
+
+
     var launchObj = {
         headless: true,
         args: scraper.scraperFlags
@@ -272,7 +306,8 @@ Video.prototype.getManifest = async function () {
                 scraper.page.removeAllListeners();
                 scraper.msg("it's mp4");
                 return resolve();
-            } else if (rUrl.includes("aster.m3u8") && rUrl.includes("ussenate")) {
+            } else if (rUrl.includes("aster.m3u8")) {
+                //removed test for rUrl.includes("ussenate")
                 console.log("match", rUrl);
                 scraper.msg("it's m3u8");
                 vid.type = "m3u";
@@ -1235,37 +1270,35 @@ Pdf.prototype.imagify = async function () {
     let pagenm = false;
     pagenm = this.metadata.pageCount || this.metadata.PageCount;
     console.log("%%%", pagenm)
-    if (pagenm) {
-        pagenm = pagenm - 1;
-        pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
-        console.log(pagenm);
-        var lastImg = imgdir + "/" + basename + "_" + pagenm;
-        console.log("checking for ", lastImg);
-        if (fs.existsSync(lastImg)) {
-            console.log("EXISTS");
-
-            this.pageImages = [];
-            for (let im of fs.readdirSync(imgdir)) {
-                console.log("im", im);
-                scraper.msg("  /" + im);
-                let imgpath = scraper.txtPath + basename + "/" + im;
-                this.pageImages.push(imgpath);
-                scraper.url({
-                    url: imgpath
-                });
-                console.log(imgpath);
-
-
-                //await scraper.wait(10);
-
-            }
-            return Promise.resolve();
-        }
-    } else {
-        console.log("does not exist or we don't know pagenums?");
-        console.log(this.metadata);
-        process.exit();
+    if (!pagenm) {
+        pagenm = await scraper.getPageCount(this.localPath);
     }
+    pagenm = pagenm - 1;
+    pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
+    console.log(pagenm);
+    var lastImg = imgdir + "/" + basename + "_" + pagenm;
+    console.log("checking for ", lastImg);
+    if (fs.existsSync(lastImg)) {
+        console.log("EXISTS");
+
+        this.pageImages = [];
+        for (let im of fs.readdirSync(imgdir)) {
+            console.log("im", im);
+            scraper.msg("  /" + im);
+            let imgpath = scraper.txtPath + basename + "/" + im;
+            this.pageImages.push(imgpath);
+            scraper.url({
+                url: imgpath
+            });
+            console.log(imgpath);
+
+
+            //await scraper.wait(10);
+
+        }
+        return Promise.resolve();
+    }
+
     var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
     console.log(cmd);
     try {
@@ -1597,6 +1630,7 @@ Committee.prototype.testNode = async function () {
     console.log("))))))))))))))testNode");
     var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
     var status = resp.status;
+    console.log(status);
     if (status === 403) {
         scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
         await scraper.recordBlocked();
