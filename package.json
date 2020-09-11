@@ -13,7 +13,7 @@
     "graceful-fs": "^4.1.15",
     "moment": "^2.24.0",
     "mz": "^2.7.0",
-    "node-fetch": "^2.3.0",
+    "node-fetch": "^2.6.1",
     "node-fetch-progress": "^1.0.2",
     "pdf2json": "^1.1.8",
     "pdftotextjs": "^0.5.1",
