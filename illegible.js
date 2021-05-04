@@ -41,7 +41,7 @@ var scraper = {
     mode: settings.mode,
     useTor: settings.useTor,
     slimerFlags: "",
-    minOverseers: 0,
+    minOverseers: 1,
     busy: false,
     connections: 0,
     started: false,
@@ -67,7 +67,7 @@ scraper.getPageCount = async function (path) {
             var doc = data.PDFJS && data.PDFJS.pdfDocument && data.PDFJS.pdfDocument.numPages;
 
 
-            resolve(doc);
+            return resolve(doc);
         });
 
         pdfParser.loadPDF(path);
@@ -146,17 +146,29 @@ scraper.setup();
 
 if (scraper.secure) {
     var app = require("https").createServer({
-        key: fs.readFileSync(__dirname + "/privkey.pem"),
-        cert: fs.readFileSync(__dirname + "/cert.pem")
+    key: fs.readFileSync( "/etc/letsencrypt/live/illegible.us/privkey.pem"),
+        cert: fs.readFileSync("/etc/letsencrypt/live/illegible.us/cert.pem")
     });
 } else {
-    app = require("http").createServer();
+    app = require("http").createServer(function(req,res){
+	res.setHeader('Access-Control-Allow-Origin', '*.*');
+	res.setHeader('Access-Control-Request-Method', '*.*');
+	res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
+	res.setHeader('Access-Control-Allow-Headers', '*');
+	if ( req.method === 'OPTIONS' ) {
+		res.writeHead(200);
+		res.end();
+		return;
+	}
+    });
 }
-
 app.listen(9080);
-
 var io = require("socket.io")(app, {
     cookie: false,
+    cors: {
+	 origins: '*:*',
+	 methods: ["GET", "POST"]
+    },
     upgradeTimeout: 30000
 });
 
@@ -244,6 +256,11 @@ scraper.cleanupTemp = function () {
 };
 
 var Hearing = function (options) {
+    this.title = "";
+    this.time = "";
+    this.dcDate = "";
+    this.parseDate = "";
+    this.hearingPage = "";
     this.video = {};
     this.witnesses = [];
 
@@ -510,7 +527,7 @@ scraper.spawn = async function (childargs, incoming, output, basename) {
         })
             .then(function () {
                 fs.moveSync(incoming, output);
-                resolve();
+                return resolve();
             })
             .catch(function (err) {
                 if (err.includes("urlopen error")) {
@@ -651,7 +668,7 @@ Video.prototype.transcodeToOgg = async function () {
                     scraper.msg("ogg end fired?");
                     scraper.msg("Processing Finished");
                     fs.moveSync(temp, output);
-                    resolve();
+                    return resolve();
                 })
                 .on("error", function (err, stdout, stderr) {
                     scraper.msg(err.message);
@@ -1312,9 +1329,9 @@ Pdf.prototype.imagify = async function () {
                 url: imgpath
             });
             if (scraper.mode === "live") {
-                //await scraper.wait(1);
+                await scraper.wait(1);
             } else {
-                //await scraper.wait(3);
+                await scraper.wait(3);
             }
 
         }
@@ -1497,7 +1514,7 @@ Witness.prototype.addPdf = async function (hear, data) {
     if (thepdf.needsScan) {
         console.log("needs scan");
         await thepdf.imagify();
-        //await thepdf.checkOCR();
+        await thepdf.checkOCR();
     }
     await thepdf.imagify();
     await scraper.wait(5);
