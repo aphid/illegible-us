@@ -6,7 +6,7 @@
   "dependencies": {
     "cheerio": "^0.22.0",
     "child-process-promise": "^1.1.0",
-    "exiftool-vendored": "^8.8.0",
+    "exiftool-vendored": "^14.3.0",
     "fluent-ffmpeg": "^2.0.1",
     "fs-extra": "^4.0.3",
     "glob": "^5.0.14",
