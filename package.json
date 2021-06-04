@@ -15,7 +15,7 @@
     "mz": "^2.7.0",
     "node-fetch": "^2.6.1",
     "node-fetch-progress": "^1.0.2",
-    "pdf2json": "^1.2.1",
+    "pdf2json": "^0.2.5",
     "pdftotextjs": "^0.5.1",
     "puppeteer": "^9.1.0",
     "request": "^2.88.2",
@@ -23,7 +23,8 @@
     "socks-proxy-agent": "^5.0.0"
   },
   "devDependencies": {
-    "eslint": "^7.25.0"
+    "eslint": "^7.25.0",
+    "minimist": "^1.2.5"
   },
   "scripts": {
     "test": "node app.js"
