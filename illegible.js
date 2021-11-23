@@ -1654,7 +1654,7 @@ Committee.prototype.testNode = async function() {
     var status = resp.status;
     console.log(status);
     if (status === 403) {
-        await scraper.screenshot(hear.hearingPage, hear.shortname);
+        await scraper.screenshot(hear.hearingPage, "hearingIndex");
 
         scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
         await scraper.recordBlocked();
