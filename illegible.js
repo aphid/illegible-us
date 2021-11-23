@@ -308,11 +308,14 @@ Video.prototype.getManifest = async function() {
         //var url = "'" + vid.url + "'";
         var url = vid.url.replace("false", "true");
         let data = {};
-        await scraper.page.setRequestInterception(true);
 
         let testedUrls = [];
-        scraper.page.on("request", async interceptedRequest => {
-            var rUrl = interceptedRequest.url();
+        scraper.page.on("response", async(request) => {
+            var rUrl = request.url();
+	    if (!request.ok()){
+               return false;
+	    }
+	    scraper.msg(request.status());
             if (testedUrls.includes(rUrl)) {
                 console.log("tried this one already");
             } else if (rUrl.includes("mp4?")) {
@@ -320,7 +323,6 @@ Video.prototype.getManifest = async function() {
 
                 vid.type = "mp4";
                 vid.src = rUrl;
-                interceptedRequest.abort();
                 console.log("FOUND IT", data);
                 scraper.page.removeAllListeners();
                 scraper.msg("it's mp4");
@@ -331,14 +333,12 @@ Video.prototype.getManifest = async function() {
                 scraper.msg("it's m3u8");
                 vid.type = "m3u";
                 vid.src = rUrl;
-                interceptedRequest.abort();
                 scraper.page.removeAllListeners();
 
                 console.log("FOUND IT", data);
                 return resolve();
             } else {
                 if (rUrl.includes("apology")) {
-                    interceptedRequest.abort();
                     scraper.page.removeAllListeners();
                     await scraper.getNewID();
                     return await vid.getManifest();
@@ -346,7 +346,6 @@ Video.prototype.getManifest = async function() {
                 console.log("nope", rUrl);
                 testedUrls.push(rUrl);
 
-                interceptedRequest.continue();
             }
         });
         await scraper.page.goto(url, {
