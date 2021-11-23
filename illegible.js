@@ -1820,10 +1820,16 @@ scraper.screenshot = async function(url, filename) {
         //scraper.msg(statusCode);
         var content = await scraper.page.content();
         //console.log(content);
-        if (content.includes("Denied")) {
+        if (content.includes("Denied") || content.includes("potential security risk")) {
             scraper.msg("Request denied", "err");
             data.status = "denied";
             data.filename = filename + "_denied";
+            await scraper.page.screenshot({
+                type: "jpeg",
+                path: target,
+                fullPage: true
+            });
+            await scraper.getNewID();
         }
         data.status = "success";
         target = scraper.webshotDir + data.filename + ".jpg";
