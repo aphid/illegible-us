@@ -1212,6 +1212,7 @@ Pdf.prototype.getMeta = async function() {
     } catch (e) {
         throw ("metadata error", e);
     }
+    fs.writeFileSync(jsonpath, JSON.stringify(tags, undefined, 2));
     return Promise.resolve();
 
 };
