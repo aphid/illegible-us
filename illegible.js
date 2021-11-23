@@ -310,12 +310,12 @@ Video.prototype.getManifest = async function() {
         let data = {};
 
         let testedUrls = [];
-        scraper.page.on("response", async(request) => {
+        scraper.page.on("response", async (request) => {
             var rUrl = request.url();
-	    if (!request.ok()){
-               return false;
-	    }
-	    scraper.msg(request.status());
+            if (!request.ok()) {
+                return false;
+            }
+            scraper.msg(request.status());
             if (testedUrls.includes(rUrl)) {
                 console.log("tried this one already");
             } else if (rUrl.includes("mp4?")) {
@@ -1674,6 +1674,8 @@ Committee.prototype.testNode = async function() {
 };
 
 scraper.recordBlocked = function() {
+    await scraper.screenshot(hear.hearingPage, hear.shortname + "_blocked");
+
     //save blocked ips here and maybe get a nslookup on them or something;
 
 };
