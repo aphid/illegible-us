@@ -54,13 +54,16 @@ var scraper = {
     fetchOptions: {},
 };
 
+if (scraper.mode === "dev") {
+    scraper.minOverseers = 0;
+}
 
-scraper.getPageCount = async function (path) {
+scraper.getPageCount = async function(path) {
 
     console.log("parsing", path)
-    return new Promise(async function (resolve, reject) {
+    return new Promise(async function(resolve, reject) {
         pdfParser.on("pdfParser_dataError", errData => console.error(errData.parserError));
-        pdfParser.on('pdfParser_dataReady', function (data) {
+        pdfParser.on('pdfParser_dataReady', function(data) {
 
             pdfParser.removeAllListeners();
             console.log(data.formImage.Pages.length);
@@ -78,7 +81,7 @@ scraper.getPageCount = async function (path) {
 
 
 
-scraper.setup = async function () {
+scraper.setup = async function() {
 
 
     var launchObj = {
@@ -96,7 +99,7 @@ scraper.setup = async function () {
 };
 
 
-scraper.agent = function () {
+scraper.agent = function() {
     this.scraperAgent = scraper.userAgents[Math.floor(Math.random() * scraper.userAgents.length)];
     this.reqOptions.headers = {
         "User-Agent": this.scraperAgent
@@ -146,28 +149,28 @@ scraper.setup();
 
 if (scraper.secure) {
     var app = require("https").createServer({
-    key: fs.readFileSync( "/etc/letsencrypt/live/illegible.us/privkey.pem"),
+        key: fs.readFileSync("/etc/letsencrypt/live/illegible.us/privkey.pem"),
         cert: fs.readFileSync("/etc/letsencrypt/live/illegible.us/cert.pem")
     });
 } else {
-    app = require("http").createServer(function(req,res){
-	res.setHeader('Access-Control-Allow-Origin', '*.*');
-	res.setHeader('Access-Control-Request-Method', '*.*');
-	res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
-	res.setHeader('Access-Control-Allow-Headers', '*');
-	if ( req.method === 'OPTIONS' ) {
-		res.writeHead(200);
-		res.end();
-		return;
-	}
+    app = require("http").createServer(function(req, res) {
+        res.setHeader('Access-Control-Allow-Origin', '*.*');
+        res.setHeader('Access-Control-Request-Method', '*.*');
+        res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, GET');
+        res.setHeader('Access-Control-Allow-Headers', '*');
+        if (req.method === 'OPTIONS') {
+            res.writeHead(200);
+            res.end();
+            return;
+        }
     });
 }
 app.listen(9080);
 var io = require("socket.io")(app, {
     cookie: false,
     cors: {
-	 origins: '*:*',
-	 methods: ["GET", "POST"]
+        origins: '*:*',
+        methods: ["GET", "POST"]
     },
     upgradeTimeout: 30000
 });
@@ -175,7 +178,7 @@ var io = require("socket.io")(app, {
 
 //paths should have trailing slash
 
-scraper.msg = function (thing, kind) {
+scraper.msg = function(thing, kind) {
     console.log(thing);
     if (!kind) {
         kind = "message";
@@ -188,7 +191,7 @@ scraper.msg = function (thing, kind) {
     }
 };
 
-scraper.progress = function (id, pct) {
+scraper.progress = function(id, pct) {
     id = id.replace(/\./g, "_").replace(/%20/g, "_");
     console.log(id, "at", pct);
     io.to("oversight").emit("progress", {
@@ -197,18 +200,18 @@ scraper.progress = function (id, pct) {
     });
 };
 
-scraper.load = function (url) {
+scraper.load = function(url) {
     console.log("sendingurl");
     io.to("oversight").emit("load", url);
 };
 
-scraper.url = function (url) {
+scraper.url = function(url) {
     console.log("sending url", url);
     console.log(JSON.stringify(url));
     io.to("oversight").emit("url", url);
 };
 //hopefully not needed anymore
-scraper.cleanupFrags = async function () {
+scraper.cleanupFrags = async function() {
     var files = await glob("*Frag*");
     if (files.length) {
         scraper.msg("deleting " + files.length + " temp fragments");
@@ -224,7 +227,7 @@ scraper.cleanupFrags = async function () {
 };
 
 
-scraper.cleanupTemp = function () {
+scraper.cleanupTemp = function() {
     var file;
     scraper.msg("CLEANING UP");
     var cwd = process.cwd();
@@ -255,7 +258,7 @@ scraper.cleanupTemp = function () {
     return Promise.resolve();
 };
 
-var Hearing = function (options) {
+var Hearing = function(options) {
     this.title = "";
     this.time = "";
     this.dcDate = "";
@@ -275,7 +278,7 @@ var Hearing = function (options) {
     this.shortname = this.shortdate + "_" + this.shorttime;
 };
 
-var Video = function (options) {
+var Video = function(options) {
     var fld;
     this.localPath = "";
     this.ogg = "";
@@ -289,9 +292,9 @@ var Video = function (options) {
 };
 
 
-Video.prototype.getManifest = async function () {
+Video.prototype.getManifest = async function() {
     var vid = this;
-    return new Promise(async function (resolve, reject) {
+    return new Promise(async function(resolve, reject) {
         console.log("----getting manifest----");
         console.log("..........................................................");
         await scraper.wait(8);
@@ -312,8 +315,7 @@ Video.prototype.getManifest = async function () {
             var rUrl = interceptedRequest.url();
             if (testedUrls.includes(rUrl)) {
                 console.log("tried this one already");
-            }
-            else if (rUrl.includes("mp4?")) {
+            } else if (rUrl.includes("mp4?")) {
                 console.log("match", rUrl);
 
                 vid.type = "mp4";
@@ -377,7 +379,7 @@ Video.prototype.getManifest = async function () {
 };
 
 
-Video.prototype.fetch = async function (manifest) {
+Video.prototype.fetch = async function(manifest) {
     //because we have probs if the spawn gets refused
     await scraper.checkBlock();
     var vid = this,
@@ -479,57 +481,57 @@ Video.prototype.fetch = async function (manifest) {
 
 };
 
-scraper.spawn = async function (childargs, incoming, output, basename) {
+scraper.spawn = async function(childargs, incoming, output, basename) {
     console.log("^^^^^^^^^^ s p a w n i n g ^^^^^^^^^^^");
-    return new Promise(function (resolve, reject) {
+    return new Promise(function(resolve, reject) {
         var last = new Date().getTime();
         var lastSS = new Date().getTime();
         cpp.spawn("youtube-dl", childargs, {
-            shell: true
-        }).fail(function (err) {
-            console.error("spawn error: ", err.stack || err, childargs);
-            //reject(err);
+                shell: true
+            }).fail(function(err) {
+                console.error("spawn error: ", err.stack || err, childargs);
+                //reject(err);
 
-        }).progress(async function (cP) {
-            scraper.msg("[exec] childProcess.pid" + cP.pid);
-            cP.stdout.on("data", function (data) {
-                if (data.toString().includes("Connection refused")) {
-                    console.log("Blocked");
-                    throw ("blocked, deal with this");
-                    //todo: deal with this.
-                }
-                if (data.includes("[download]") && data.includes("ETA")) {
-                    var progress = data.toString().trim();
-                    try {
-                        var pct = progress.split("  ")[1].split("%")[0];
-                    } catch (e) {
-                        console.log(progress, "this failed the parse thing");
+            }).progress(async function(cP) {
+                scraper.msg("[exec] childProcess.pid" + cP.pid);
+                cP.stdout.on("data", function(data) {
+                    if (data.toString().includes("Connection refused")) {
+                        console.log("Blocked");
+                        throw ("blocked, deal with this");
+                        //todo: deal with this.
                     }
-                    let now = new Date().getTime();
-                    if (now - last > 8135) {
-                        scraper.msg(progress, "detail");
-                        scraper.progress("hearing_" + basename, parseFloat(pct));
-                        last = new Date().getTime();
+                    if (data.includes("[download]") && data.includes("ETA")) {
+                        var progress = data.toString().trim();
+                        try {
+                            var pct = progress.split("  ")[1].split("%")[0];
+                        } catch (e) {
+                            console.log(progress, "this failed the parse thing");
+                        }
+                        let now = new Date().getTime();
+                        if (now - last > 8135) {
+                            scraper.msg(progress, "detail");
+                            scraper.progress("hearing_" + basename, parseFloat(pct));
+                            last = new Date().getTime();
 
-                        if (now - lastSS > 7575) {
-                            scraper.vidSS(incoming);
-                            lastSS = now;
+                            if (now - lastSS > 7575) {
+                                scraper.vidSS(incoming);
+                                lastSS = now;
+                            }
+
+                            //get an ffmpeg screenshot here?
                         }
 
-                        //get an ffmpeg screenshot here?
                     }
-
-                }
-            });
-            cP.stderr.on("data", function (data) {
-                scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
-            });
-        })
-            .then(function () {
+                });
+                cP.stderr.on("data", function(data) {
+                    scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
+                });
+            })
+            .then(function() {
                 fs.moveSync(incoming, output);
                 return resolve();
             })
-            .catch(function (err) {
+            .catch(function(err) {
                 if (err.includes("urlopen error")) {
                     scraper.msg("video scrape fail, retrying", "err");
                     reject();
@@ -542,19 +544,19 @@ scraper.spawn = async function (childargs, incoming, output, basename) {
     });
 };
 
-Video.prototype.scenes = async function () {
+Video.prototype.scenes = async function() {
     console.log(this);
     scraper.load("/smallest-procedural-utterance/?v=" + this.basename);
 };
 
-Video.prototype.transcodeToMP4 = function () {
+Video.prototype.transcodeToMP4 = function() {
 
     scraper.msg("TRANSCODING TO MP4");
     var vid = this,
         input, temp, output, acodec, vcodec, lpct = 0;
 
 
-    return new Promise(function (fulfill, reject) {
+    return new Promise(function(fulfill, reject) {
         scraper.msg(vid);
         input = vid.localPath;
         //transcodes to temp dir rather than destination, copies when transcode is complete so we don't end up with phantom half-finshed files.
@@ -595,10 +597,10 @@ Video.prototype.transcodeToMP4 = function () {
             .audioCodec(acodec)
             .videoCodec(vcodec)
             .audioChannels(2)
-            .on("start", function (commandLine) {
+            .on("start", function(commandLine) {
                 scraper.msg("Spawned Ffmpeg with command: " + commandLine);
             })
-            .on("progress", function (prog) {
+            .on("progress", function(prog) {
                 var mf = Math.floor(prog.percent);
 
                 if (mf > lpct) {
@@ -607,12 +609,12 @@ Video.prototype.transcodeToMP4 = function () {
                     scraper.progress(vid.basename, mf, "detail");
                 }
             })
-            .on("end", function () {
+            .on("end", function() {
                 //scraper.msg('Processing Finished');
                 fs.moveSync(temp, output);
                 return fulfill();
             })
-            .on("error", function (err, stdout, stderr) {
+            .on("error", function(err, stdout, stderr) {
                 scraper.msg(err);
                 scraper.msg(stderr);
                 return reject(err);
@@ -626,18 +628,18 @@ Video.prototype.transcodeToMP4 = function () {
 
 
 
-Video.prototype.transcode = async function () {
+Video.prototype.transcode = async function() {
     await this.transcodeToOgg();
     return Promise.resolve();
 };
 
 
-Video.prototype.transcodeToOgg = async function () {
+Video.prototype.transcodeToOgg = async function() {
     scraper.msg("TRANSCODING TO OGG VORBIS AUDIO");
     var vid = this;
     var lpct = 0;
     if (vid.mp4) {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function(resolve, reject) {
 
 
             var input = vid.localPath;
@@ -649,10 +651,10 @@ Video.prototype.transcodeToOgg = async function () {
             }
             ffmpeg(input)
                 .output(temp)
-                .on("start", function (commandLine) {
+                .on("start", function(commandLine) {
                     scraper.msg("Spawned Ffmpeg with command: " + commandLine);
                 })
-                .on("progress", function (prog) {
+                .on("progress", function(prog) {
                     var mf = Math.floor(prog.percent);
 
                     if (mf > lpct) {
@@ -664,13 +666,13 @@ Video.prototype.transcodeToOgg = async function () {
                 .audioCodec("libvorbis")
                 .audioChannels(2)
                 .noVideo()
-                .on("end", function () {
+                .on("end", function() {
                     scraper.msg("ogg end fired?");
                     scraper.msg("Processing Finished");
                     fs.moveSync(temp, output);
                     return resolve();
                 })
-                .on("error", function (err, stdout, stderr) {
+                .on("error", function(err, stdout, stderr) {
                     scraper.msg(err.message);
                     scraper.msg(stderr);
                     reject(err);
@@ -686,12 +688,12 @@ Video.prototype.transcodeToOgg = async function () {
 };
 
 
-Video.prototype.transcodeToWebm = function () {
+Video.prototype.transcodeToWebm = function() {
     scraper.msg("TRANSCODING TO WEBM (VP8/VORBIS)");
     var vid = this;
     var lpct = 0;
 
-    return new Promise(function (fulfill, reject) {
+    return new Promise(function(fulfill, reject) {
         if (vid.type) {
             var input = vid.localPath;
             var temp = scraper.tempDir + vid.basename + ".webm";
@@ -703,10 +705,10 @@ Video.prototype.transcodeToWebm = function () {
 
             ffmpeg(input)
                 .output(temp)
-                .on("start", function (commandLine) {
+                .on("start", function(commandLine) {
                     scraper.msg("Spawned Ffmpeg with command: " + commandLine);
                 })
-                .on("progress", function (prog) {
+                .on("progress", function(prog) {
                     var mf = Math.floor(prog.percent);
 
                     if (mf > lpct) {
@@ -718,13 +720,13 @@ Video.prototype.transcodeToWebm = function () {
                 .audioCodec("libvorbis")
                 .audioChannels(2)
                 .videoCodec("libvpx")
-                .on("end", function () {
+                .on("end", function() {
                     scraper.msg("webm end fired?");
                     scraper.msg("Processing Finished");
                     fs.moveSync(temp, output);
                     return fulfill();
                 })
-                .on("error", function (err, stdout, stderr) {
+                .on("error", function(err, stdout, stderr) {
                     scraper.msg(err.message);
                     scraper.msg(stderr);
                     reject(err);
@@ -738,7 +740,7 @@ Video.prototype.transcodeToWebm = function () {
 };
 
 
-var Committee = function (options) {
+var Committee = function(options) {
     for (var fld in options) {
         if (options[fld]) {
             this[fld] = options[fld];
@@ -750,7 +752,7 @@ var Committee = function (options) {
     return this;
 };
 
-var Witness = function (options) {
+var Witness = function(options) {
     for (var fld in options) {
         if (options[fld]) {
             this[fld] = options[fld];
@@ -763,7 +765,7 @@ var Witness = function (options) {
 
 
 
-Committee.prototype.addHearing = async function (options) {
+Committee.prototype.addHearing = async function(options) {
     options.baseUrl = this.url;
     var hearing = new Hearing(options);
     for (var hear of this.hearings) {
@@ -779,20 +781,20 @@ Committee.prototype.addHearing = async function (options) {
     return Promise.resolve(hearing);
 };
 
-scraper.hearing = function (hearing) {
+scraper.hearing = function(hearing) {
     io.to("oversight").emit("hearing", hearing);
 };
 
-scraper.wait = function (sec) {
+scraper.wait = function(sec) {
     if (scraper.mode === "live") {
-        return new Promise(function (resolve) {
-            setTimeout(function () {
+        return new Promise(function(resolve) {
+            setTimeout(function() {
                 resolve();
             }, sec * 1000);
         });
     } else {
-        return new Promise(function (resolve) {
-            setTimeout(function () {
+        return new Promise(function(resolve) {
+            setTimeout(function() {
                 resolve();
             }, sec * 300);
         });
@@ -800,7 +802,7 @@ scraper.wait = function (sec) {
 };
 
 //this gets all of the pages
-Committee.prototype.scrapeRemote = async function (page) {
+Committee.prototype.scrapeRemote = async function(page) {
     var comm = this;
     var curPage = page || 0;
     var finished = false;
@@ -852,7 +854,7 @@ Committee.prototype.scrapeRemote = async function (page) {
 
 
 
-Committee.prototype.init = async function () {
+Committee.prototype.init = async function() {
     await scraper.setup();
     var comm = this;
     scraper.committee = this;
@@ -907,7 +909,7 @@ Committee.prototype.init = async function () {
 };
 
 
-Committee.prototype.transcodeVideos = async function () {
+Committee.prototype.transcodeVideos = async function() {
     scraper.msg("//////////////////////transcooooode");
 
     for (var hear of this.hearings) {
@@ -930,7 +932,7 @@ Committee.prototype.transcodeVideos = async function () {
 };
 
 
-Committee.prototype.getVidMeta = async function () {
+Committee.prototype.getVidMeta = async function() {
     scraper.msg("##META META META##");
     for (var hear of this.hearings) {
         var vid = hear.video;
@@ -989,7 +991,7 @@ Committee.prototype.getVideos = async function () {
 };*/
 
 
-Committee.prototype.readLocal = async function () {
+Committee.prototype.readLocal = async function() {
     var comm = this;
     var json = scraper.dataDir + "data.json";
     var data = fs.readFileSync(json, "utf-8");
@@ -1019,7 +1021,7 @@ Committee.prototype.readLocal = async function () {
 };
 
 
-Committee.prototype.write = async function (filename) {
+Committee.prototype.write = async function(filename) {
     if (!filename) {
         filename = "data.json";
     }
@@ -1036,7 +1038,7 @@ Committee.prototype.write = async function (filename) {
 };
 
 
-Committee.prototype.textifyPdfs = async function () {
+Committee.prototype.textifyPdfs = async function() {
 
     for (let hear of this.hearings) {
         for (let wit of hear.witnesses) {
@@ -1052,10 +1054,10 @@ Committee.prototype.textifyPdfs = async function () {
 
 };
 
-Committee.prototype.validateLocal = function () {
+Committee.prototype.validateLocal = function() {
     scraper.msg("#VALIDATION#");
     var dirs = [scraper.mediaDir, scraper.tempDir, scraper.dataDir, scraper.incomingDir, scraper.metaDir, scraper.videoDir, scraper.textDir, scraper.transcodedDir, scraper.webshotDir];
-    dirs.map(function (dir) {
+    dirs.map(function(dir) {
 
         try {
             fs.mkdirSync(dir);
@@ -1083,7 +1085,7 @@ Committee.prototype.validateLocal = function () {
 
 };
 
-Hearing.prototype.addVideo = async function (video) {
+Hearing.prototype.addVideo = async function(video) {
     var hear = this;
 
     if (!video.url || video.url === "undefined") {
@@ -1117,7 +1119,7 @@ Hearing.prototype.addVideo = async function (video) {
 
 };
 
-var Pdf = function (options) {
+var Pdf = function(options) {
     if (options.url && options.hear) {
         var url = options.url;
         this.remoteUrl = url;
@@ -1137,7 +1139,7 @@ var Pdf = function (options) {
 
 
 
-scraper.getFile = async function (url, dest) {
+scraper.getFile = async function(url, dest) {
     console.log("Getting", url, "to", dest);
     if (fs.existsSync(dest)) {
         return Promise.resolve("file here already");
@@ -1162,14 +1164,14 @@ scraper.getFile = async function (url, dest) {
         resp.body.on("error", (err) => {
             reject(err);
         });
-        fileStream.on("finish", function () {
+        fileStream.on("finish", function() {
             scraper.msg("file's done!");
             resolve();
         });
     });
 };
 
-Pdf.prototype.checkOCR = async function () {
+Pdf.prototype.checkOCR = async function() {
     let pcount;
     if (this.metadata.pageCount) {
         pcount = this.metadata.pageCount;
@@ -1184,7 +1186,7 @@ Pdf.prototype.checkOCR = async function () {
     }
 };
 
-Pdf.prototype.getMeta = async function () {
+Pdf.prototype.getMeta = async function() {
     var pdf = this;
     var input = this.localPath;
     var jsonpath = scraper.textDir + pdf.localName + ".json";
@@ -1214,7 +1216,7 @@ Pdf.prototype.getMeta = async function () {
 
 };
 
-Video.prototype.getMeta = async function () {
+Video.prototype.getMeta = async function() {
     await scraper.wait(10);
     var vid = this;
     var input = this.localPath;
@@ -1260,7 +1262,7 @@ Video.prototype.getMeta = async function () {
 
 
 //TODO make promisified metadata function based on input file.
-scraper.metadata = async function (input) {
+scraper.metadata = async function(input) {
 
     try {
         var tags = await exif.read(input);
@@ -1272,7 +1274,7 @@ scraper.metadata = async function (input) {
 
 };
 
-Pdf.prototype.imagify = async function () {
+Pdf.prototype.imagify = async function() {
     console.log("#################MAKING IMAGES################");
     await scraper.wait(6);
     console.log(this);
@@ -1344,7 +1346,7 @@ Pdf.prototype.imagify = async function () {
 
 };
 
-Pdf.prototype.textify = async function () {
+Pdf.prototype.textify = async function() {
     console.log("@@@@@@@@@@textify@@@@@@@@");
     var pdf = this;
     var dest = this.localPath;
@@ -1401,7 +1403,7 @@ Pdf.prototype.textify = async function () {
 
 };
 
-Committee.prototype.queuePdfs = async function () {
+Committee.prototype.queuePdfs = async function() {
     for (var hear of this.hearings) {
         scraper.msg(hear.title + ": ");
 
@@ -1425,7 +1427,7 @@ Committee.prototype.queuePdfs = async function () {
 
 
 
-Pdf.prototype.fetch = async function () {
+Pdf.prototype.fetch = async function() {
     console.log("^^^^^^^^PDFFETCH^^^^^^^^^^");
     scraper.msg("getting " + this.localName);
     var pdf = this;
@@ -1467,7 +1469,7 @@ Pdf.prototype.fetch = async function () {
 };
 
 
-Hearing.prototype.addWitness = function (witness) {
+Hearing.prototype.addWitness = function(witness) {
     scraper.msg("adding " + witness.lastName);
     if (!Object.prototype.hasOwnProperty.call(witness, Witness)) {
         var wit = new Witness(witness);
@@ -1483,7 +1485,7 @@ Hearing.prototype.addWitness = function (witness) {
 
 
 //from scrape
-Witness.prototype.addPdf = async function (hear, data) {
+Witness.prototype.addPdf = async function(hear, data) {
     console.log("adding pdfs");
     for (var pdf of this.pdfs) {
         if (data.url === pdf.remoteUrl) {
@@ -1523,7 +1525,7 @@ Witness.prototype.addPdf = async function (hear, data) {
 };
 
 //from file
-Witness.prototype.readPdf = function (options) {
+Witness.prototype.readPdf = function(options) {
     var pdf = new Pdf(options);
     this.pdfs.push(pdf);
     return pdf;
@@ -1531,21 +1533,21 @@ Witness.prototype.readPdf = function (options) {
 
 
 
-Committee.prototype.getPages = async function (pages) {
+Committee.prototype.getPages = async function(pages) {
     var comm = this;
-    return Promise.all(pages.map(async function (a) {
+    return Promise.all(pages.map(async function(a) {
         return await comm.getHearingIndex(a);
     }));
 };
 
-Committee.prototype.fetchAll = async function () {
+Committee.prototype.fetchAll = async function() {
     for (var hear of this.hearings) {
         await hear.fetch();
     }
     return Promise.resolve();
 };
 
-Committee.prototype.getHearingIndex = async function (url, page) {
+Committee.prototype.getHearingIndex = async function(url, page) {
     var pageHearings = [];
     var comm = this;
     var closeds = 0,
@@ -1575,7 +1577,8 @@ Committee.prototype.getHearingIndex = async function (url, page) {
         console.log("resp is ", resp.length);
         var $ = cheerio.load(resp);
         var tempHearings = [];
-        $(".views-row").each(async function (i, elem) {
+
+        $(".views-row").each(async function(i, elem) {
             var hearing = {};
             hearing.dcDate = $(elem).find(".date-display-single").attr("content");
             hearing.hearingPage = "" + $(elem).find(".views-field-title").find("a").attr("href");
@@ -1584,8 +1587,11 @@ Committee.prototype.getHearingIndex = async function (url, page) {
             hearing.title = $(elem).find(".views-field-title").text().trim();
             var datefield = $(elem).find(".views-field-field-hearing-date").text().trim();
             var datesplit = datefield.split(" - ");
+
             hearing.date = datesplit[0];
             hearing.time = datesplit[1];
+
+
             if (!hearing.date) {
                 var olddate = hearing.title.match(/(?:\()([^)]*)(?:\))/gm).map(m => m.slice(1, m.length - 1)).pop();
                 olddate = olddate.replace("(", "").replace(")", "");
@@ -1643,7 +1649,7 @@ Committee.prototype.getHearingIndex = async function (url, page) {
 
 };
 
-Committee.prototype.testNode = async function () {
+Committee.prototype.testNode = async function() {
     console.log("))))))))))))))testNode");
     var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
     var status = resp.status;
@@ -1668,12 +1674,12 @@ Committee.prototype.testNode = async function () {
 
 };
 
-scraper.recordBlocked = function () {
+scraper.recordBlocked = function() {
     //save blocked ips here and maybe get a nslookup on them or something;
 
 };
 
-scraper.checkBlock = async function () {
+scraper.checkBlock = async function() {
     console.log("((((((checkblock");
     var scrape = this;
     scraper.msg("Testing for CDN block");
@@ -1695,7 +1701,7 @@ scraper.checkBlock = async function () {
     }
 };
 
-scraper.getNewID = async function () {
+scraper.getNewID = async function() {
     await scraper.browser.close();
     await scraper.setup();
     scraper.msg("obtaining new IP");
@@ -1727,7 +1733,7 @@ scraper.getNewID = async function () {
     }
 }
 
-scraper.testTor = async function () {
+scraper.testTor = async function() {
     try {
         var response = await scraper.page.goto("https://check.torproject.org/", {
             waitUntil: "networkidle0",
@@ -1750,18 +1756,18 @@ scraper.testTor = async function () {
     }
 };
 
-scraper.vidSS = async function (filename) {
+scraper.vidSS = async function(filename) {
     filename = filename + ".part";
 
     console.log("attempting to ss", filename);
-    return new Promise(function (resolve) {
+    return new Promise(function(resolve) {
         ffmpeg(filename)
             .screenshot({
                 timestamps: ["98%"],
                 filename: "tmp_screenshot.jpg",
                 folder: scraper.webshotDir,
             })
-            .on("end", function () {
+            .on("end", function() {
                 console.log("thumbnail saved");
                 scraper.url({
                     url: "tmp_screenshot",
@@ -1769,7 +1775,7 @@ scraper.vidSS = async function (filename) {
                 });
                 resolve();
             })
-            .on("error", function (e) {
+            .on("error", function(e) {
                 //throw(e);
                 scraper.msg(e, "err");
             });
@@ -1777,7 +1783,7 @@ scraper.vidSS = async function (filename) {
 };
 
 
-scraper.screenshot = async function (url, filename) {
+scraper.screenshot = async function(url, filename) {
     await scraper.page._client.send('Network.clearBrowserCookies');
     console.log(filename);
     if (filename.includes("undefined")) {
@@ -1848,7 +1854,7 @@ scraper.screenshot = async function (url, filename) {
 
 };
 
-scraper.checkFetch = async function () {
+scraper.checkFetch = async function() {
     if (!scraper.useTor) {
         return Promise.resolve();
     }
@@ -1863,7 +1869,7 @@ scraper.checkFetch = async function () {
     }
 };
 
-Hearing.prototype.fetch = async function () {
+Hearing.prototype.fetch = async function() {
     await scraper.checkFetch();
     console.log(">>>>>>>>>>>>>fetching hearing" + this.title);
     var hear = this;
@@ -1896,6 +1902,7 @@ Hearing.prototype.fetch = async function () {
             console.msg("PARSE FAILED");
             console.log(html);
         }
+        hear.location = data.location;
         console.log(data);
 
 
@@ -1950,7 +1957,7 @@ Hearing.prototype.fetch = async function () {
 
 };
 
-scraper.crunchHtml = function (html) {
+scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
     var result = {};
     var witnesses = [];
@@ -1968,10 +1975,23 @@ scraper.crunchHtml = function (html) {
     }
     scraper.msg("Video url found: " + target.attr("src"), "detail");
     //var wits = $('.pane-node-field-hearing-witness');
+    $('.field-items')
+        .each((index, elem) => {
+            if ($(elem).prev().text().includes("Location")) {
+                let prev = $(elem).prev();
+                result.location = prev.text();
+                console.log("Location", prev.text());
+            } else {
+                console.log("nope");
+            }
+        })
+
+
+
     var wits = $(".field-collection-item-field-hearing-witness"); // get ABOUT attr too, it is a witness ID
     if (wits.length) {
         scraper.msg(wits.find(".pane-title").html(), "detail");
-        wits.each(async function (k, v) {
+        wits.each(async function(k, v) {
             var panel;
             if ($(v).find(".field-name-field-witness-panel").length) {
                 panel = $(v).find(".field-name-field-witness-panel").text().trim().replace(":", "");
@@ -2003,7 +2023,7 @@ scraper.crunchHtml = function (html) {
             scraper.msg(JSON.stringify(witness), "detail");
             var pdfs = [];
             if ($(v).find("li").length) {
-                $(v).find("a").each(function (key, val) {
+                $(v).find("a").each(function(key, val) {
                     scraper.msg($(val).html(), "detail");
                     var pdf = {};
                     pdf.name = $(val).text();
@@ -2049,13 +2069,13 @@ if (scraper.minOverseers === 0) {
 }
 
 
-io.on("connect", async function (socket) {
+io.on("connect", async function(socket) {
     scraper.connections++;
     scraper.started = true;
     console.log("the eyes have it");
 
 
-    socket.once("disconnect", async function (reason) {
+    socket.once("disconnect", async function(reason) {
         console.log("DISCONNECT", reason);
         await scraper.wait(10);
         scraper.connections--;
@@ -2069,7 +2089,7 @@ io.on("connect", async function (socket) {
 
     });
 
-    socket.on("error", function (err) {
+    socket.on("error", function(err) {
         throw (err);
     });
 
@@ -2087,7 +2107,7 @@ io.on("connect", async function (socket) {
         await scraper.wait(8);
         await intel.init();
     }
-    socket.on("reconnect", function () {
+    socket.on("reconnect", function() {
         //scraper.connections++;
         scraper.msg(scraper.connections + " active connections");
     });
@@ -2095,19 +2115,19 @@ io.on("connect", async function (socket) {
 
 });
 
-scraper.shutDown = async function () {
+scraper.shutDown = async function() {
     console.log("SHUTTING DOWN");
     await scraper.cleanupTemp();
     //await scraper.cleanupFrags();
     return process.exit(1);
 };
 
-process.on("SIGINT", function () {
+process.on("SIGINT", function() {
     scraper.msg("CAUGHT INTERRUPT SIGNAL", "err");
     scraper.shutDown();
 });
 
-setInterval(function () {
+setInterval(function() {
     console.log(scraper.busy + " " + scraper.connections);
     if (!scraper.connections && scraper.started) {
         scraper.msg("no quorum");
