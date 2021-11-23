@@ -524,7 +524,9 @@ scraper.spawn = async function(childargs, incoming, output, basename) {
                 });
                 cP.stderr.on("data", function(data) {
                     scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
-                    throw (data.toString);
+                    if (!data.toString().includes("HEAD request"){
+			    throw (data.toString);
+		    }
                 });
             })
             .then(function() {
