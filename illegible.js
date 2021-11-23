@@ -531,6 +531,7 @@ scraper.spawn = async function(childargs, incoming, output, basename) {
                 return resolve();
             })
             .catch(function(err) {
+                console.error(err);
                 if (err.includes("urlopen error")) {
                     scraper.msg("video scrape fail, retrying", "err");
                     reject();
@@ -1654,8 +1655,6 @@ Committee.prototype.testNode = async function() {
     var status = resp.status;
     console.log(status);
     if (status === 403) {
-        await scraper.screenshot(intel.hearingIndex, "hearingIndex");
-
         scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
         await scraper.recordBlocked();
         return await scraper.getNewID();
@@ -1786,7 +1785,7 @@ scraper.vidSS = async function(filename) {
 
 scraper.screenshot = async function(url, filename) {
     await scraper.page._client.send('Network.clearBrowserCookies');
-    console.log("screenshotting", filename);
+    console.log(filename);
     if (filename.includes("undefined")) {
         console.log("UNDEFINED");
         process.exit();
@@ -1838,8 +1837,8 @@ scraper.screenshot = async function(url, filename) {
         if (size <= 9238 || statusCode === 403) {
             console.log("blank image");
             //console.log(content);
-            await scraper.checkBlock();
-            return await this.screenshot(url, filename);
+            //await scraper.checkBlock();
+            //return await this.screenshot(url, filename);
 
         }
         return Promise.resolve();
