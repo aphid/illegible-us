@@ -1987,8 +1987,8 @@ scraper.crunchHtml = function(html) {
         .each((index, elem) => {
             if ($(elem).prev().text().includes("Location")) {
                 let prev = $(elem).prev();
-                result.location = prev.text();
-                console.log("Location", prev.text());
+                result.location = $(elem).text();
+                console.log("Location", $(elem).text());
             } else {
                 console.log("nope");
             }
