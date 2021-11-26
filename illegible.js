@@ -524,9 +524,9 @@ scraper.spawn = async function(childargs, incoming, output, basename) {
                 });
                 cP.stderr.on("data", function(data) {
                     scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
-                    if (!data.toString().includes("HEAD request")){
-			    throw (data.toString);
-		    }
+                    if (!data.toString().includes("HEAD request")) {
+                        throw (data.toString);
+                    }
                 });
             })
             .then(function() {
@@ -1126,6 +1126,7 @@ var Pdf = function(options) {
     if (options.url && options.hear) {
         var url = options.url;
         this.remoteUrl = url;
+        this.retries = 0;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
@@ -1461,6 +1462,10 @@ Pdf.prototype.fetch = async function() {
         console.log(err);
     }
     let size = await fs.statSync(incoming).size;
+    this.retries++;
+    if (this.retries > 5) {
+        await scraper.checkBlock();
+    }
     if (size) {
         fs.moveSync(incoming, dest);
         pdf.localPath = dest;
@@ -1823,6 +1828,9 @@ scraper.screenshot = async function(url, filename) {
         //scraper.msg(statusCode);
         var content = await scraper.page.content();
         //console.log(content);
+        let meta = {
+            AppInfoItemURI: target
+        }
         if (content.includes("Denied") || content.includes("potential security risk")) {
             scraper.msg("Request denied", "err");
             data.status = "denied";
@@ -1832,6 +1840,9 @@ scraper.screenshot = async function(url, filename) {
                 path: target,
                 fullPage: true
             });
+
+            let ex = await exif.write(out, meta, ['-overwrite_original', '-n']);
+
             await scraper.getNewID();
         }
         data.status = "success";
