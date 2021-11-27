@@ -1182,10 +1182,12 @@ Pdf.prototype.checkOCR = async function() {
     } else {
         pcount = this.metadata.PageCount;
     }
+    /*
     for (var i = 0; i < pcount; i++) {
         scraper.load("/ocr/?title=" + this.shortName + "&page=" + i);
         console.log("loading", this.shortName);
     }
+    */
 };
 
 Pdf.prototype.getMeta = async function() {
