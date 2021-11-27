@@ -638,7 +638,7 @@ Video.prototype.transcode = async function() {
 
 
 Video.prototype.transcodeToOgg = async function() {
-    scraper.msg("TRANSCODING TO OGG VORBIS AUDIO");
+    scraper.msg("TRANSCODING TO OPUS AUDIO");
     var vid = this;
     var lpct = 0;
     if (vid.mp4) {
@@ -666,7 +666,7 @@ Video.prototype.transcodeToOgg = async function() {
 
                     }
                 })
-                .audioCodec("libvorbis")
+                .audioCodec("libopus")
                 .audioChannels(2)
                 .noVideo()
                 .on("end", function() {
