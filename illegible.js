@@ -1918,7 +1918,12 @@ Hearing.prototype.fetch = async function() {
         console.log("requesting " + options.url);
         var html = await fetch(options.url, options);
         html = await html.text();
-        var data = await scraper.crunchHtml(html);
+        try {
+            var data = await scraper.crunchHtml(html);
+        } catch (e) {
+            scraper.msg("no data");
+            return await this.fetch();
+        }
         if (!data) {
             console.msg("PARSE FAILED");
             console.log(html);
@@ -1980,6 +1985,9 @@ Hearing.prototype.fetch = async function() {
 
 scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
+    if (!length) {
+        Promise.reject();
+    }
     var result = {};
     var witnesses = [];
     var $ = cheerio.load(html);
