@@ -1185,8 +1185,6 @@ Pdf.prototype.checkOCR = async function() {
     for (var i = 0; i < pcount; i++) {
         scraper.load("/ocr/?title=" + this.shortName + "&page=" + i);
         console.log("loading", this.shortName);
-        process.exit();
-
     }
 };
 
