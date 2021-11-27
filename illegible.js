@@ -1990,7 +1990,8 @@ Hearing.prototype.fetch = async function() {
 
 scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
-    if (!length) {
+    if (!html.length) {
+
         Promise.reject({
             reason: "empty"
         });
