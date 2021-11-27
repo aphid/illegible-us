@@ -1921,8 +1921,13 @@ Hearing.prototype.fetch = async function() {
         try {
             var data = await scraper.crunchHtml(html);
         } catch (e) {
+            if (e.reason && e.reason == "empty") {
+                await scraper.getNewID();
+            }
+            if (e.reason && e.reason == "no video") {
+                scraper.msg("no video, future or very recent hearing");
+            }
             scraper.msg("no data");
-            return await this.fetch();
         }
         if (!data) {
             console.msg("PARSE FAILED");
@@ -1986,7 +1991,9 @@ Hearing.prototype.fetch = async function() {
 scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
     if (!length) {
-        Promise.reject();
+        Promise.reject({
+            reason: "empty"
+        });
     }
     var result = {};
     var witnesses = [];
@@ -2071,7 +2078,9 @@ scraper.crunchHtml = function(html) {
     }
     //really?
     if (!target) {
-        return Promise.reject("no video");
+        return Promise.reject({
+            reason: "no video"
+        });
     }
     //console.dir(result);
     result.witnesses = witnesses;
