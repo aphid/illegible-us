@@ -1634,7 +1634,12 @@ Committee.prototype.getHearingIndex = async function(url, page) {
         });
         for (let h of tempHearings) {
             //if (h.title.includes("Pompeo"))
-            await comm.addHearing(h);
+            try {
+                await comm.addHearing(h);
+            } catch (e) {
+                console.log(e);
+                throw (e);
+            }
             scraper.msg("Processed hearing", h.title);
         }
         console.log("Open: ", opens, " Closed: ", closeds);
