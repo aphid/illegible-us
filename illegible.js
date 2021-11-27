@@ -1676,7 +1676,7 @@ Committee.prototype.testNode = async function() {
         console.log("Tor not blocked");
         return Promise.resolve("allowed");
     } else {
-        console.msg("???" + status, "err");
+        scraper.msg("???" + status, "err");
         return Promise.resolve(status);
     }
 
@@ -1930,7 +1930,7 @@ Hearing.prototype.fetch = async function() {
             scraper.msg("no data");
         }
         if (!data) {
-            console.msg("PARSE FAILED");
+            scraper.msg("PARSE FAILED");
             console.log(html);
         }
         hear.location = data.location;
