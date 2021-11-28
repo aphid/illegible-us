@@ -1846,7 +1846,7 @@ scraper.screenshot = async function(url, filename) {
                 fullPage: true
             });
 
-            let ex = await exif.write(out, meta, ['-overwrite_original', '-n']);
+            let ex = await exif.write(target, meta, ['-overwrite_original', '-n']);
 
             await scraper.getNewID();
         }
