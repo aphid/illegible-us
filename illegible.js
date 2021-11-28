@@ -1218,12 +1218,6 @@ Pdf.prototype.getMeta = async function() {
     } catch (e) {
         throw ("metadata error", e);
     }
-
-    let info = pdfinfo(input);
-    info.info(function(err, meta) {
-        if (err) throw err;
-        pdf.metadata.pdfinfo = meta;
-    })
     fs.writeFileSync(jsonpath, JSON.stringify(tags, undefined, 2));
     return Promise.resolve();
 
