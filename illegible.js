@@ -67,7 +67,7 @@ scraper.getPageCount = async function(path) {
         pdfParser.on('pdfParser_dataReady', function(data) {
 
             pdfParser.removeAllListeners();
-            //console.log(data.formImage.Pages.length);
+            console.log(data.formImage.Pages.length);
             var doc = data.PDFJS && data.PDFJS.pdfDocument && data.PDFJS.pdfDocument.numPages;
 
 
@@ -639,7 +639,7 @@ Video.prototype.transcode = async function() {
 
 
 Video.prototype.transcodeToOgg = async function() {
-    scraper.msg("TRANSCODING TO OPUS AUDIO");
+    scraper.msg("TRANSCODING TO OGG VORBIS AUDIO");
     var vid = this;
     var lpct = 0;
     if (vid.mp4) {
@@ -667,7 +667,7 @@ Video.prototype.transcodeToOgg = async function() {
 
                     }
                 })
-                .audioCodec("libopus")
+                .audioCodec("libvorbis")
                 .audioChannels(2)
                 .noVideo()
                 .on("end", function() {
@@ -794,7 +794,7 @@ scraper.wait = function(sec) {
         return new Promise(function(resolve) {
             setTimeout(function() {
                 resolve();
-            }, sec * 1);
+            }, sec * 1000);
         });
     } else {
         return new Promise(function(resolve) {
@@ -1127,7 +1127,6 @@ var Pdf = function(options) {
     if (options.url && options.hear) {
         var url = options.url;
         this.remoteUrl = url;
-        this.retries = 0;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
@@ -1157,7 +1156,8 @@ scraper.getFile = async function(url, dest) {
     });
     progress.on("progress", (p) => {
         scraper.msg(
-            `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${p.rateh
+            `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${
+            p.rateh
             } - ${p.etah}`, "detail");
         scraper.progress(url.substring(url.lastIndexOf("/") + 1), Math.floor(p.progress * 100));
     });
@@ -1182,12 +1182,12 @@ Pdf.prototype.checkOCR = async function() {
     } else {
         pcount = this.metadata.PageCount;
     }
-    /*
     for (var i = 0; i < pcount; i++) {
         scraper.load("/ocr/?title=" + this.shortName + "&page=" + i);
         console.log("loading", this.shortName);
+        process.exit();
+
     }
-    */
 };
 
 Pdf.prototype.getMeta = async function() {
@@ -1216,12 +1216,6 @@ Pdf.prototype.getMeta = async function() {
     } catch (e) {
         throw ("metadata error", e);
     }
-
-    let info = pdfinfo(input);
-    info.info(function(err, meta) {
-        if (err) throw err;
-        pdf.metadata.pdfinfo = meta;
-    })
     fs.writeFileSync(jsonpath, JSON.stringify(tags, undefined, 2));
     return Promise.resolve();
 
@@ -1298,12 +1292,11 @@ Pdf.prototype.imagify = async function() {
     }
     this.imgdir = imgdir;
     let pagenm = false;
-    pagenm = this.metadata.pdfinfo.pages;
-    //pagenm = this.metadata.pageCount || this.metadata.PageCount;
+    pagenm = this.metadata.pageCount || this.metadata.PageCount || this.metadata.pdfinfo.pages;
     console.log("%%%", pagenm)
-    /* if (!pagenm) {
+    if (!pagenm) {
         pagenm = await scraper.getPageCount(this.localPath);
-    }*/
+    }
     pagenm = pagenm - 1;
     pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
     console.log(pagenm);
@@ -1469,10 +1462,6 @@ Pdf.prototype.fetch = async function() {
         console.log(err);
     }
     let size = await fs.statSync(incoming).size;
-    this.retries++;
-    if (this.retries > 5) {
-        await scraper.checkBlock();
-    }
     if (size) {
         fs.moveSync(incoming, dest);
         pdf.localPath = dest;
@@ -1641,12 +1630,7 @@ Committee.prototype.getHearingIndex = async function(url, page) {
         });
         for (let h of tempHearings) {
             //if (h.title.includes("Pompeo"))
-            try {
-                await comm.addHearing(h);
-            } catch (e) {
-                console.log(e);
-                throw (e);
-            }
+            await comm.addHearing(h);
             scraper.msg("Processed hearing", h.title);
         }
         console.log("Open: ", opens, " Closed: ", closeds);
@@ -1688,7 +1672,7 @@ Committee.prototype.testNode = async function() {
         console.log("Tor not blocked");
         return Promise.resolve("allowed");
     } else {
-        scraper.msg("???" + status, "err");
+        console.msg("???" + status, "err");
         return Promise.resolve(status);
     }
 
@@ -1841,7 +1825,7 @@ scraper.screenshot = async function(url, filename) {
         var content = await scraper.page.content();
         //console.log(content);
         let meta = {
-            AppInfoItemURI: target
+            AppInfoItemURI: url
         }
         if (content.includes("Denied") || content.includes("potential security risk")) {
             scraper.msg("Request denied", "err");
@@ -1853,7 +1837,7 @@ scraper.screenshot = async function(url, filename) {
                 fullPage: true
             });
 
-            let ex = await exif.write(target, meta, ['-overwrite_original', '-n']);
+            let ex = await exif.write(out, meta, ['-overwrite_original', '-n']);
 
             await scraper.getNewID();
         }
@@ -1930,19 +1914,9 @@ Hearing.prototype.fetch = async function() {
         console.log("requesting " + options.url);
         var html = await fetch(options.url, options);
         html = await html.text();
-        try {
-            var data = await scraper.crunchHtml(html);
-        } catch (e) {
-            if (e.reason && e.reason == "empty") {
-                await scraper.getNewID();
-            }
-            if (e.reason && e.reason == "no video") {
-                scraper.msg("no video, future or very recent hearing");
-            }
-            scraper.msg("no data");
-        }
+        var data = await scraper.crunchHtml(html);
         if (!data) {
-            scraper.msg("PARSE FAILED");
+            console.msg("PARSE FAILED");
             console.log(html);
         }
         hear.location = data.location;
@@ -2002,12 +1976,6 @@ Hearing.prototype.fetch = async function() {
 
 scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
-    if (!html.length) {
-
-        Promise.reject({
-            reason: "empty"
-        });
-    }
     var result = {};
     var witnesses = [];
     var $ = cheerio.load(html);
@@ -2091,9 +2059,7 @@ scraper.crunchHtml = function(html) {
     }
     //really?
     if (!target) {
-        return Promise.reject({
-            reason: "no video"
-        });
+        return Promise.reject("no video");
     }
     //console.dir(result);
     result.witnesses = witnesses;
