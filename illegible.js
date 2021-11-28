@@ -67,7 +67,7 @@ scraper.getPageCount = async function(path) {
         pdfParser.on('pdfParser_dataReady', function(data) {
 
             pdfParser.removeAllListeners();
-            console.log(data.formImage.Pages.length);
+            //console.log(data.formImage.Pages.length);
             var doc = data.PDFJS && data.PDFJS.pdfDocument && data.PDFJS.pdfDocument.numPages;
 
 
@@ -794,7 +794,7 @@ scraper.wait = function(sec) {
         return new Promise(function(resolve) {
             setTimeout(function() {
                 resolve();
-            }, sec * 1000);
+            }, sec * 1);
         });
     } else {
         return new Promise(function(resolve) {
@@ -1298,12 +1298,12 @@ Pdf.prototype.imagify = async function() {
     }
     this.imgdir = imgdir;
     let pagenm = false;
-    pagenm = this.metadata.pdfinfo.Pages;
+    pagenm = this.metadata.pdfinfo.pages;
     //pagenm = this.metadata.pageCount || this.metadata.PageCount;
     console.log("%%%", pagenm)
-    if (!pagenm) {
+    /* if (!pagenm) {
         pagenm = await scraper.getPageCount(this.localPath);
-    }
+    }*/
     pagenm = pagenm - 1;
     pagenm = ("" + pagenm).padStart(3, "0") + ".jpg";
     console.log(pagenm);
