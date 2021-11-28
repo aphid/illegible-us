@@ -1156,8 +1156,7 @@ scraper.getFile = async function(url, dest) {
     });
     progress.on("progress", (p) => {
         scraper.msg(
-            `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${
-            p.rateh
+            `${Math.floor(p.progress * 100)}% - ${p.doneh}/${p.totalh} - ${p.rateh
             } - ${p.etah}`, "detail");
         scraper.progress(url.substring(url.lastIndexOf("/") + 1), Math.floor(p.progress * 100));
     });
@@ -1216,6 +1215,12 @@ Pdf.prototype.getMeta = async function() {
     } catch (e) {
         throw ("metadata error", e);
     }
+
+    let info = pdfinfo(input);
+    info.info(function(err, meta) {
+        if (err) throw err;
+        pdf.metadata.pdfinfo = meta;
+    })
     fs.writeFileSync(jsonpath, JSON.stringify(tags, undefined, 2));
     return Promise.resolve();
 
@@ -1292,7 +1297,8 @@ Pdf.prototype.imagify = async function() {
     }
     this.imgdir = imgdir;
     let pagenm = false;
-    pagenm = this.metadata.pageCount || this.metadata.PageCount;
+    pagenm = this.metadata.pdfinfo.Pages;
+    //pagenm = this.metadata.pageCount || this.metadata.PageCount;
     console.log("%%%", pagenm)
     if (!pagenm) {
         pagenm = await scraper.getPageCount(this.localPath);
