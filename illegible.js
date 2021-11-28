@@ -1213,6 +1213,8 @@ Pdf.prototype.getMeta = async function() {
         var tags = await exif.read(input);
         console.log(JSON.stringify(tags, undefined, 2));
         pdf.metadata = tags;
+        let info = await this.getInfo();
+        console.log(info);
     } catch (e) {
         throw ("metadata error", e);
     }
@@ -1298,6 +1300,7 @@ Pdf.prototype.imagify = async function() {
     }
     this.imgdir = imgdir;
     let pagenm = false;
+    console.log(this.metadata.pdfinfo);
     pagenm = this.metadata.pdfinfo.pages;
     //pagenm = this.metadata.pageCount || this.metadata.PageCount;
     console.log("%%%", pagenm)
@@ -1357,6 +1360,19 @@ Pdf.prototype.imagify = async function() {
     }
 
 };
+
+Pdf.prototype.getInfo = async function() {
+    return new Promise(function(resolve, reject) {
+        let info = pdfinfo(this.localPath);
+        info.info(function(err, meta) {
+            if (err) {
+                reject("bad pdfinfo")
+            };
+            pdf.metadata.pdfinfo = meta;
+            resolve();
+        });
+    });
+}
 
 Pdf.prototype.textify = async function() {
     console.log("@@@@@@@@@@textify@@@@@@@@");
