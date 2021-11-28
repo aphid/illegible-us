@@ -1214,6 +1214,7 @@ Pdf.prototype.getMeta = async function() {
         console.log(JSON.stringify(tags, undefined, 2));
         pdf.metadata = tags;
         let info = await this.getInfo();
+        pdf.pdfinfo = info;
         console.log(info);
     } catch (e) {
         throw ("metadata error", e);
@@ -1363,7 +1364,7 @@ Pdf.prototype.getInfo = async function() {
                 reject("bad pdfinfo")
             };
             pdf.metadata.pdfinfo = meta;
-            resolve();
+            resolve(meta);
         });
     });
 }
