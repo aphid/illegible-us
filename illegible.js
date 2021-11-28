@@ -1357,8 +1357,9 @@ Pdf.prototype.imagify = async function() {
 };
 
 Pdf.prototype.getInfo = async function() {
+    let pdf = this;
     return new Promise(function(resolve, reject) {
-        let info = pdfinfo(this.localPath);
+        let info = pdfinfo(pdf.localPath);
         info.info(function(err, meta) {
             if (err) {
                 reject("bad pdfinfo")
