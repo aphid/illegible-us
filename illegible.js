@@ -14,6 +14,7 @@ var moment = require("moment");
 var Url = require("url");
 //var fs = require("graceful-fs");
 var fs = require("fs-extra");
+var pdfinfo = require("pdfinfo");
 var path = require("path");
 var exif = require("exiftool-vendored").exiftool;
 var pdftotext = require("pdftotextjs");
