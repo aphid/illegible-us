@@ -2016,7 +2016,7 @@ scraper.crunchHtml = function(html) {
     scraper.msg("Processing html: " + html.length);
     if (!html.length) {
 
-        Promise.reject({
+        return Promise.reject({
             reason: "empty"
         });
     }
@@ -2033,6 +2033,11 @@ scraper.crunchHtml = function(html) {
     //scraper.msg(target.html() + " " + target.attr('src'), "detail");
     if (target) {
         result.video = decodeURIComponent(target.attr("src"));
+    }
+    if (!result.video) {
+        return Promise.reject({
+            reason: "empty"
+        });
     }
     scraper.msg("Video url found: " + target.attr("src"), "detail");
     //var wits = $('.pane-node-field-hearing-witness');
