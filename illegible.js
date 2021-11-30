@@ -1962,7 +1962,7 @@ Hearing.prototype.fetch = async function() {
         if (data.location) {
             hear.location = data.location;
         }
-        console.log(data);*
+        console.log(data);
 
 
         //retune this for hooking up to other machines for installation
