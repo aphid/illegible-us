@@ -1956,9 +1956,13 @@ Hearing.prototype.fetch = async function() {
         if (!data) {
             scraper.msg("PARSE FAILED");
             console.log(html);
+            await scraper.getNewID();
+            return this.fetch();
         }
-        hear.location = data.location;
-        console.log(data);
+        if (data.location) {
+            hear.location = data.location;
+        }
+        console.log(data);*
 
 
         //retune this for hooking up to other machines for installation
