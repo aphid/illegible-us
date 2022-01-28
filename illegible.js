@@ -7,7 +7,7 @@
 "use strict";
 
 var puppeteer = require("puppeteer");
-var fetch = require("node-fetch");
+var fetch = import("node-fetch");
 var Progress = require("node-fetch-progress");
 var cheerio = require("cheerio");
 var moment = require("moment");
