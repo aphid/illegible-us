@@ -15,7 +15,7 @@
     "mz": "^2.7.0",
     "node-fetch": "^3.2.3",
     "node-fetch-progress": "^1.0.2",
-    "pdf2json": "^2.0.0",
+    "pdf2json": "^2.1.0",
     "pdfinfo": "^0.0.3",
     "pdftotextjs": "^0.5.1",
     "puppeteer": "^13.5.2",
