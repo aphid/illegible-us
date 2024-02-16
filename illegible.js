@@ -6,25 +6,38 @@
 
 "use strict";
 
-var puppeteer = require("puppeteer");
-var fetch = import("node-fetch");
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+
+const __dirname = path.dirname(__filename);
+
+import fetch from "node-fetch"
+
+import puppeteer from 'puppeteer-core';
+import * as cheerio from 'cheerio';
+import moment from 'moment';
+import { URL } from "url";
 var Progress = require("node-fetch-progress");
-var cheerio = require("cheerio");
-var moment = require("moment");
-var Url = require("url");
 //var fs = require("graceful-fs");
 var fs = require("fs-extra");
 var pdfinfo = require("pdfinfo");
-var path = require("path");
 var exif = require("exiftool-vendored").exiftool;
 var pdftotext = require("pdftotextjs");
 var cpp = require("child-process-promise");
 var ffmpeg = require("fluent-ffmpeg");
-var SPA = require("socks-proxy-agent");
+import https from 'https';
+import { SocksProxyAgent } from 'socks-proxy-agent';
+
 var glob = require("glob");
 //var fse = require("fs-extra");
-var PDFParser = require('pdf2json'); //to get pagecounts with
-var pdfParser = new PDFParser();
+//var PDFParser = require('pdf2json'); //to get pagecounts with
+//import PDFParser from "node_modules/pdf2json/pdfparser.js";
+import PDFParser from "pdf2json";
+const pdfParser = new PDFParser();
 
 
 
@@ -84,9 +97,10 @@ scraper.getPageCount = async function(path) {
 
 scraper.setup = async function() {
 
-
+    console.log("Launching with " + scraper.scraperFlags);
     var launchObj = {
         headless: true,
+	defaultViewport: null,
         args: scraper.scraperFlags
     };
     if (process.arch === "arm64") {
@@ -95,7 +109,6 @@ scraper.setup = async function() {
     scraper.browser = await puppeteer.launch(launchObj);
     scraper.page = await scraper.browser.newPage();
     await scraper.page.setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1");
-    await scraper.page._client.send("Emulation.clearDeviceMetricsOverride");
     console.log("setting ua to ", scraper.scraperAgent);
 };
 
@@ -132,7 +145,8 @@ if (scraper.useTor === true) {
     scraper.torPass = fs.readFileSync(__dirname + "/torpass.txt", "utf8");
     scraper.torPort = 9051; //control
 
-    scraper.Agent = new SPA("socks5://localhost:9050");
+    scraper.Agent = new SocksProxyAgent("socks5://localhost:9050");
+
     scraper.fetchOptions = {
         agent: scraper.Agent
     };
@@ -147,6 +161,8 @@ scraper.agent();
 
 
 scraper.setup();
+
+
 
 if (scraper.secure) {
     var app = require("https").createServer({
@@ -1126,9 +1142,10 @@ Hearing.prototype.addVideo = async function(video) {
 var Pdf = function(options) {
     if (options.url && options.hear) {
         var url = options.url;
+	let turl = new URL(url);
         this.remoteUrl = url;
         this.retries = 0;
-        this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(Url.parse(url).pathname)).split("/").pop();
+        this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(turl.pathname)).split("/").pop();
         this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
@@ -1598,6 +1615,7 @@ Committee.prototype.getHearingIndex = async function(url, page) {
         console.log("&&&&&&", resp.statusText);
         if (!resp.ok || resp.statusText === "Forbidden") {
             scraper.msg("bad statuscode " + resp.statusText, "err");
+	    scraper.msg(await resp.text());
             await scraper.getNewID();
             return await this.getHearingIndex(url, page);
         }
@@ -1611,7 +1629,7 @@ Committee.prototype.getHearingIndex = async function(url, page) {
             hearing.dcDate = $(elem).find(".date-display-single").attr("content");
             hearing.hearingPage = "" + $(elem).find(".views-field-title").find("a").attr("href");
             //find location here
-            hearing.hearingPage = Url.resolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
+            hearing.hearingPage = urlresolve("http://www.intelligence.senate.gov/", hearing.hearingPage);
             hearing.title = $(elem).find(".views-field-title").text().trim();
             var datefield = $(elem).find(".views-field-field-hearing-date").text().trim();
             var datesplit = datefield.split(" - ");
@@ -1689,6 +1707,7 @@ Committee.prototype.testNode = async function() {
     console.log(status);
     if (status === 403) {
         scraper.msg("Access denied, Tor exit node has been blocked. Status code: " + status, "err");
+	scraper.msg(await resp.text());
         await scraper.recordBlocked();
         return await scraper.getNewID();
     } else if (status === 503) {
@@ -1747,7 +1766,7 @@ scraper.getNewID = async function() {
     var cmd = "(echo AUTHENTICATE \\\"" + scraper.torPass.replace(/\n/g, "") + "\\\"; echo SIGNAL NEWNYM; echo quit) | nc localhost " + scraper.torPort;
     console.log(cmd);
     try {
-        await scraper.page._client.send('Network.clearBrowserCookies');
+        //await scraper.page._client.send('Network.clearBrowserCookies');
         var result = await cpp.exec(cmd);
         console.log(result.stdout);
         await scraper.testTor();
@@ -1768,13 +1787,35 @@ scraper.getNewID = async function() {
 
 scraper.testTor = async function() {
     try {
-        var response = await scraper.page.goto("https://check.torproject.org/", {
+
+	const c = new AbortController();
+        const timeoutId = setTimeout(() => c.abort(), 50000);
+	scraper.fetchOptions.signal = c.signal;
+        const response = await fetch("https://check.torproject.org/api/ip", scraper.fetchOptions);
+        console.log(response.status);
+        let content = (await response.json());
+
+        /*
+        var response = await scraper.page.goto("https://check.torproject.org/api/ip", {
             waitUntil: "networkidle0",
-            timeout: 190000
+            timeout: 1900000
         });
         scraper.msg("new id status..." + await response.status());
-        await scraper.page.waitForSelector("strong");
-        //var content = await scraper.page.content();
+        //await scraper.page.waitForSelector("strong");
+        var content = await scraper.page.content();
+	content =  await scraper.page.evaluate(() =>  {
+           return JSON.parse(document.querySelector("body").innerText); 
+        });
+	*/
+	console.log(content);
+	if (content.IsTor === true){
+         console.log("IS TOR");
+	 return("TOR");
+	} else {
+	  console.log("NOT TOR");
+		process.exit();
+		return("NOT TOR");
+	}
         var ip = await scraper.page.evaluate(() => {
             console.log("evaluating");
             return document.querySelector("strong").textContent;
@@ -1817,7 +1858,7 @@ scraper.vidSS = async function(filename) {
 
 
 scraper.screenshot = async function(url, filename) {
-    await scraper.page._client.send('Network.clearBrowserCookies');
+    //await scraper.page._client.send('Network.clearBrowserCookies');
     console.log(filename);
     if (filename.includes("undefined")) {
         console.log("UNDEFINED");
@@ -1903,15 +1944,40 @@ scraper.checkFetch = async function() {
     if (!scraper.useTor) {
         return Promise.resolve();
     }
-    let resp = await fetch("https://check.torproject.org/", scraper.fetchOptions);
-    resp = await resp.text();
+    console.log(scraper.fetchOptions);
+
+    var response = await scraper.page.goto("https://check.torproject.org/api/ip", {
+            waitUntil: "networkidle0",
+            timeout: 1900000
+        });
+        scraper.msg("new id status..." + await response.status());
+        //await scraper.page.waitForSelector("strong");
+        var content = await scraper.page.content();
+        content =  await scraper.page.evaluate(() =>  {
+           return JSON.parse(document.querySelector("body").innerText);
+        });
+        console.log(content);
+    let resp = content;
+    /*let resp = await fetch("https://check.torproject.org/api/ip", scraper.fetchOptions);
+    resp = await resp.json();
+    console.log(resp);
+    */
+    if (resp.IsTor === true){
+	scraper.msg("fetching secure");
+        return Promise.resolve();
+    } else {
+	scraper.msg("scraper not secure", "err");
+        await scraper.getNewID();
+        return await scraper.checkFetch();
+    }
+    /*
     if (resp.includes("Congratulations.")) {
         scraper.msg("fetching secure");
     } else {
         scraper.msg("scraper not secure", "err");
         await scraper.getNewID();
         return await scraper.checkFetch();
-    }
+    }*/
 };
 
 Hearing.prototype.fetch = async function() {
@@ -1942,10 +2008,12 @@ Hearing.prototype.fetch = async function() {
         console.log("requesting " + options.url);
         var html = await fetch(options.url, options);
         html = await html.text();
+	console.log("HTML" + html);
         try {
             var data = await scraper.crunchHtml(html);
         } catch (e) {
             if (e.reason && e.reason == "empty") {
+		scraper.msg("empty html");
                 await scraper.getNewID();
             }
             if (e.reason && e.reason == "no video") {
@@ -2206,3 +2274,14 @@ setInterval(function() {
         scraper.shutDown();
     }
 }, 15000);
+
+
+function urlresolve(from, to) {
+  const resolvedUrl = new URL(to, new URL(from, 'resolve://'));
+  if (resolvedUrl.protocol === 'resolve:') {
+    // `from` is a relative URL.
+    const { pathname, search, hash } = resolvedUrl;
+    return pathname + search + hash;
+  }
+  return resolvedUrl.toString();
+}
