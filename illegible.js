@@ -325,17 +325,21 @@ Video.prototype.getManifest = async function() {
         //var url = "'" + vid.url + "'";
         var url = vid.url.replace("false", "true");
         let data = {};
-
         let testedUrls = [];
         scraper.page.on("response", async (request) => {
             var rUrl = request.url();
+	    if (!request.ok && request.url.includes("m3u8")){
+		console.log("BROKEN M3u8", request.url);
+                return reject();
+
+	    }
             if (!request.ok()) {
                 return false;
             }
             scraper.msg(request.status());
             if (testedUrls.includes(rUrl)) {
                 console.log("tried this one already");
-            } else if (rUrl.includes("mp4?")) {
+	    } else if (rUrl.includes("mp4?")) {
                 console.log("match", rUrl);
 
                 vid.type = "mp4";
@@ -441,10 +445,10 @@ Video.prototype.fetch = async function(manifest) {
         }*/
         incoming = scraper.incomingDir + vid.basename + ".mp4";
         output = scraper.videoDir + vid.basename + ".mp4";
+        //"--hls-prefer-native"
+        var childargs = ["-o", incoming, scraper.ytdlFlags, vid.src];
 
-        var childargs = ["--hls-prefer-native", "-o", incoming, scraper.ytdlFlags, vid.src];
-
-        console.log("youtube-dl " + childargs.join(" "));
+        console.log("yt-dlp " + childargs.join(" "));
         scraper.msg("downloading VOD fragments");
         try {
             await scraper.spawn(childargs, incoming, output, vid.basename);
@@ -502,7 +506,7 @@ scraper.spawn = async function(childargs, incoming, output, basename) {
     return new Promise(function(resolve, reject) {
         var last = new Date().getTime();
         var lastSS = new Date().getTime();
-        cpp.spawn("youtube-dl", childargs, {
+        cpp.spawn("yt-dlp", childargs, {
                 shell: true
             }).fail(function(err) {
                 console.error("spawn error: ", err.stack || err, childargs);
@@ -541,9 +545,10 @@ scraper.spawn = async function(childargs, incoming, output, basename) {
                 });
                 cP.stderr.on("data", function(data) {
                     scraper.msg("[spawn] stderr: " + data.toString().trim(), "err");
-                    if (!data.toString().includes("HEAD request")) {
-                        throw (data.toString);
-                    }
+		    console.log(data.toString());
+                    //if (!data.toString().includes("HEAD request")) {
+                    //    throw (data.toString);
+                    //}
                 });
             })
             .then(function() {
@@ -1050,12 +1055,38 @@ Committee.prototype.write = async function(filename) {
     var comm = this;
     comm.processed = moment().format();
     var json = JSON.stringify(comm, undefined, 2);
-    var resp = fs.writeFileSync((scraper.dataDir + filename), json);
-    resp = fs.writeFileSync((archive), json);
+    //make sure data.json is longer than archive.... or actually do it hearing by hearing.
+    //var resp = fs.writeFileSync((scraper.dataDir + filename), json);
+    var resp = fs.writeFileSync(archive, json);
     console.log("writing: ", scraper.dataDir + filename);
+    await this.updateData();
     await scraper.wait(5);
     return resp;
 };
+
+Committee.prototype.updateData = async function() {
+    let comm = this;
+    var json = scraper.dataDir + "data.json";
+    var data = fs.readFileSync(json, "utf-8");
+    data = JSON.parse(data);
+    for (let [h,v] of this.hearings.entries()){
+        let d = h.shortdate;
+        let found = false;
+        for (let [hr,va] of data.hearings.entries()){
+           if (hr.shortdate === d){
+              hr = h;
+              found = true;
+           }
+        }
+        if (!found) {
+            data.hearings.push(h);
+            //sort data.hearings by date...
+            data.hearings.sort((a,b) => a.shortdate > b.shortdate);
+        }
+    }
+    fs.writeFileSync(scraper.dataDir + "data.json", JSON.stringify(data, undefined, 2));
+
+}
 
 
 Committee.prototype.textifyPdfs = async function() {
@@ -1702,6 +1733,9 @@ Committee.prototype.getHearingIndex = async function(url, page) {
 
 Committee.prototype.testNode = async function() {
     console.log("))))))))))))))testNode");
+    if (!scraper.useTor){
+      return Promise.resolve("no tor");
+    }
     var resp = await fetch(intel.hearingIndex, scraper.fetchOptions);
     var status = resp.status;
     console.log(status);
@@ -1754,6 +1788,9 @@ scraper.checkBlock = async function() {
 };
 
 scraper.getNewID = async function() {
+    if (!this.useTor){
+	return Promise.resolve();
+    }
     await scraper.browser.close();
     await scraper.setup();
     scraper.msg("obtaining new IP");
@@ -1786,6 +1823,9 @@ scraper.getNewID = async function() {
 }
 
 scraper.testTor = async function() {
+    if (!scraper.useTor){
+       return Promise.resolve("no tor");
+    }
     try {
 
 	const c = new AbortController();
