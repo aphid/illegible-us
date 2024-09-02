@@ -320,6 +320,12 @@ Video.prototype.getManifest = async function() {
             scraper.msg("file already exists");
             return Promise.resolve();
         }
+	console.log(vid.url);
+	if (vid.url.includes("040622")){
+	    console.log("broken hearing");
+	    vid.type = false;
+	    return Promise.resolve();
+	}
         scraper.msg("Getting remote info about " + vid.basename);
         scraper.msg("Checking stream type");
         //var url = "'" + vid.url + "'";
@@ -332,13 +338,16 @@ Video.prototype.getManifest = async function() {
 		console.log("BROKEN M3u8", request.url);
                 return reject();
 
+	    } else if (request.ok && request.url.includes("m3u8") && request.response === "Not found"){
+		console.log("BROKEN m3u8", request.url)
+                return reject();
 	    }
             if (!request.ok()) {
                 return false;
             }
-            scraper.msg(request.status());
+            scraper.msg(request.status(), rUrl);
             if (testedUrls.includes(rUrl)) {
-                console.log("tried this one already");
+                console.log("tried this one already", rUrl);
 	    } else if (rUrl.includes("mp4?")) {
                 console.log("match", rUrl);
 
@@ -415,7 +424,12 @@ Video.prototype.fetch = async function(manifest) {
         //await this.scenes();
         return Promise.resolve();
     }
-    await this.getManifest();
+    if (this.url.includes("040622")){
+	this.fail = true;
+	return Promise.resolve();
+    } else {
+	await this.getManifest();
+    }
     if (!this.type) {
         this.fail = true;
         console.dir(this);
@@ -1051,14 +1065,11 @@ Committee.prototype.write = async function(filename) {
         filename = "data.json";
     }
     var archive = scraper.dataDir + moment().format("YYMMDD_hh") + ".json";
-
     var comm = this;
     comm.processed = moment().format();
     var json = JSON.stringify(comm, undefined, 2);
     //make sure data.json is longer than archive.... or actually do it hearing by hearing.
-    //var resp = fs.writeFileSync((scraper.dataDir + filename), json);
-    var resp = fs.writeFileSync(archive, json);
-    console.log("writing: ", scraper.dataDir + filename);
+    var resp = fs.writeFileSync((scraper.dataDir + filename), json);
     await this.updateData();
     await scraper.wait(5);
     return resp;
@@ -1066,8 +1077,8 @@ Committee.prototype.write = async function(filename) {
 
 Committee.prototype.updateData = async function() {
     let comm = this;
-    var json = scraper.dataDir + "data.json";
-    var data = fs.readFileSync(json, "utf-8");
+    let json = scraper.dataDir + "data.json";
+    let data = fs.readFileSync(json, "utf-8");
     data = JSON.parse(data);
     for (let [h,v] of this.hearings.entries()){
         let d = h.shortdate;
@@ -1084,8 +1095,15 @@ Committee.prototype.updateData = async function() {
             data.hearings.sort((a,b) => a.shortdate > b.shortdate);
         }
     }
-    fs.writeFileSync(scraper.dataDir + "data.json", JSON.stringify(data, undefined, 2));
-
+    let archive = scraper.dataDir + moment().format("YYMMDD_hh") + ".json";
+    let resp = fs.writeFileSync(archive, json);
+    let archivesz = fs.statSync(archive).size;
+    let dsz = fs.statSync(json).size;
+    console.log(archivesz, dsz);
+    fs.writeFileSync(archive, JSON.stringify(data, undefined, 2)); 
+    if (dsz < archivesz) {
+        fs.writeFileSync(scraper.dataDir + "data.json", JSON.stringify(data, undefined, 2));
+    }
 }
 
 
@@ -1177,7 +1195,7 @@ var Pdf = function(options) {
         this.remoteUrl = url;
         this.retries = 0;
         this.remotefileName = decodeURIComponent(scraper.textDir + path.basename(turl.pathname)).split("/").pop();
-        this.localName = (options.hear + "_" + this.remotefileName).replace(/'/g, "").replace(/\s+/g, "_");
+        this.localName = (options.hear + "_" + this.remotefileName).replace("PDF", "pdf").replace(/'/g, "").replace(/\s+/g, "_");
         this.shortName = this.localName.replace(".PDF", "").replace(".pdf", "");
         this.title = options.name || options.title;
     } else {
@@ -1410,7 +1428,8 @@ Pdf.prototype.getInfo = async function() {
         let info = pdfinfo(pdf.localPath);
         info.info(function(err, meta) {
             if (err) {
-                reject("bad pdfinfo")
+                reject("bad pdfinfo", err);
+		process.exit();
             };
             pdf.metadata.pdfinfo = meta;
             resolve(meta);
