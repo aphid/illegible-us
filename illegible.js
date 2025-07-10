@@ -136,6 +136,7 @@ scraper.webshotDir = settings[settings.mode + "Paths"].webshotDir;
 
 scraper.tempDir = settings[settings.mode + "Paths"].tempDir;
 scraper.txtPath = settings[settings.mode + "Paths"].txtPath;
+scraper.vidPath = settings[settings.mode + "Paths"].vidPath;
 scraper.scraperFlags = ["--window-size=1270,1116", "--no-sandbox"];
 scraper.ytdlFlag = "";
 
@@ -334,12 +335,14 @@ Video.prototype.getManifest = async function() {
         let testedUrls = [];
         scraper.page.on("response", async (request) => {
             var rUrl = request.url();
-	    if (!request.ok && request.url.includes("m3u8")){
-		console.log("BROKEN M3u8", request.url);
+	    console.log("rUrl", rUrl);
+	    console.log("req.url", request.url);
+	    if (!request.ok && rUrl.includes("m3u8")){
+		console.log("BROKEN M3u8", rUrl);
                 return reject();
 
-	    } else if (request.ok && request.url.includes("m3u8") && request.response === "Not found"){
-		console.log("BROKEN m3u8", request.url)
+	    } else if (request.ok && rUrl.includes("m3u8") && request.response === "Not found"){
+		console.log("BROKEN m3u8", rUrl)
                 return reject();
 	    }
             if (!request.ok()) {
@@ -419,6 +422,7 @@ Video.prototype.fetch = async function(manifest) {
     if (fs.existsSync(scraper.videoDir + vid.basename + ".flv") || fs.existsSync(scraper.videoDir + vid.basename + ".mp4")) {
         scraper.msg("video " + vid.basename + " on local disk");
         this.localPath = scraper.videoDir + vid.basename + ".mp4";
+	this.vidurl = scraper.vidPath + vid.basename + ".mp4";
         this.type = "mp4";
         await this.getMeta();
         //await this.scenes();
@@ -446,6 +450,8 @@ Video.prototype.fetch = async function(manifest) {
         await scraper.getFile(manifest.src, incoming)
         fs.moveSync(incoming, output);
         vid.localPath = output;
+        this.vidurl = scraper.vidurl + vid.basename + ".mp4";
+
         return Promise.resolve();
 
     } else if (vid.type === "m3u") {
@@ -605,6 +611,7 @@ Video.prototype.transcodeToMP4 = function() {
         if (fs.existsSync(output)) {
             scraper.msg("Video file already exists " + output);
             vid.localPath = output;
+	    vid.url = scraper.vidPath + vid.basename + ".mp4";
             return fulfill();
         }
         scraper.msg(vid.type + " --> " + input);
@@ -1277,6 +1284,12 @@ Pdf.prototype.getMeta = async function() {
     scraper.msg("creating metadata...");
     try {
         var tags = await exif.read(input);
+	delete tags.SourceFile;
+	delete tags.Directory;
+	delete tags.FileModifyDate;
+	delete tags.FileAccessDate;
+	delete tags.FileInodeChangeDate;
+	    
         console.log(JSON.stringify(tags, undefined, 2));
         pdf.metadata = tags;
         let info = await this.getInfo();
@@ -1340,6 +1353,12 @@ scraper.metadata = async function(input) {
 
     try {
         var tags = await exif.read(input);
+	delete tags.SourceFile;
+        delete tags.Directory;
+        delete tags.FileModifyDate;
+        delete tags.FileAccessDate;
+        delete tags.FileInodeChangeDate;
+
         scraper.msg(JSON.stringify(tags, undefined, 2));
         return Promise.resolve(tags);
     } catch (e) {
@@ -1394,7 +1413,7 @@ Pdf.prototype.imagify = async function() {
         return Promise.resolve();
     }
 
-    var cmd = "convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
+    var cmd = "magick convert -colorspace sRGB -density 300 '" + scraper.textDir + this.localName + "' -quality 100 '" + imgdir + "/" + basename + "_%03d.jpg'";
     console.log(cmd);
     try {
         await cpp.exec(cmd);
@@ -1528,6 +1547,7 @@ Pdf.prototype.fetch = async function() {
     if (fs.existsSync(dest)) {
         console.log("file exists");
         pdf.localPath = dest;
+	pdf.pdfurl = scraper.txtPath + pdf.localName;
         return Promise.resolve();
     }
     if (fs.existsSync(incoming)) {
@@ -1555,6 +1575,7 @@ Pdf.prototype.fetch = async function() {
     if (size) {
         fs.moveSync(incoming, dest);
         pdf.localPath = dest;
+	pdf.pdfurl = scraper.txtPath + pdf.localName;
         return Promise.resolve();
     } else {
         scraper.msg("Downloaded PDF is " + size + " bytes, retrying");
