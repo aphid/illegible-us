@@ -99,6 +99,7 @@ scraper.setup = async function() {
 
     console.log("Launching with " + scraper.scraperFlags);
     var launchObj = {
+	executablePath: "/snap/bin/chromium",
         headless: true,
 	defaultViewport: null,
         args: scraper.scraperFlags
