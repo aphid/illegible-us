@@ -54,7 +54,6 @@ var scraper = {
     secure: settings.secure,
     mode: settings.mode,
     useTor: settings.useTor,
-    slimerFlags: "",
     minOverseers: 1,
     busy: false,
     connections: 0,

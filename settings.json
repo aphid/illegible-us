@@ -1,33 +1,34 @@
 {
-    "useTor": true,
+    "useTor": false,
     "secure": true,
     "mode": "live",
-    "slimerPath": "/home/aphid/slimer1/slimerjs",
     "userAgents": ["Mozilla/5.0 (Windows NT 6.1, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36", "Mozilla/5.0 (Windows NT 6.1, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36", "Mozilla/5.0 (Windows NT 6.1, WOW64, rv:42.0) Gecko/20100101 Firefox/42.0", "Mozilla/5.0 (Macintosh, Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9", "Mozilla/5.0 (Windows NT 10.0, WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36"],
     "devPaths": {
         "dataDir": "./data/",
         "mediaDir": "./media/",
         "hearingDir": "./data/hearings/",
-        "textDir": "/var/www/html/oversee/media/text/",
+        "textDir": "/var/www/html/overSSCIght/media/text/",
         "incomingDir": "./media/incoming/",
-        "metaDir": "/var/www/html/oversee/media/metadata/",
+        "metaDir": "/var/www/html/overSSCIght/media/metadata/",
         "videoDir": "./media/video/",
-        "transcodedDir": "/var/www/html/oversee/media/transcoded/",
-        "webshotDir": "/var/www/html/oversee/images/",
+        "transcodedDir": "/var/www/html/overSSCIght/media/transcoded/",
+        "webshotDir": "/var/www/html/overSSCIght/images/",
         "tempDir": "./media/temp/",
-        "txtPath": "http://localhost/oversee/media/text/"
+        "txtPath": "http://localhost/overSSCIght/media/text/"
     },
     "livePaths": {
-        "dataDir": "/var/www/oversightmachin.es/html/oversee/data/",
-        "mediaDir": "/var/www/oversightmachin.es/html/oversee/media/",
+        "dataDir": "/mnt/findings/oversee/overSSCIght/data/",
+        "mediaDir": "/mnt/findings/oversee/overSSCIght/media/",
         "hearingDir": "./data/hearings/",
-        "textDir": "/var/www/oversightmachin.es/html/oversee/media/text/",
+        "textDir": "/mnt/findings/oversee/overSSCIght/media/text/",
         "incomingDir": "./media/incoming/",
-        "metaDir": "/var/www/oversightmachin.es/html/oversee/media/metadata/",
-        "videoDir": "/var/www/oversightmachin.es/html/oversee/media/video/",
-        "transcodedDir": "/var/www/oversightmachin.es/html/oversee/media/transcoded/",
-        "webshotDir": "/var/www/oversightmachin.es/html/oversee/images/",
-        "tempDir": "./media/temp/",
-        "txtPath": "https://oversightmachin.es/oversee/media/text/"
+        "metaDir": "/mnt/findings/oversee/overSSCIght/media/metadata/",
+        "videoDir": "/mnt/findings/oversee/overSSCIght/media/video/",
+        "transcodedDir": "/mnt/findings/oversee/overSSCIght/media/transcoded/",
+        "webshotDir": "/mnt/findings/oversee/overSSCIght/images/",
+        "tempDir": "./temp/",
+        "txtPath": "https://oversightmachin.es/overSSCIght/media/text/",
+	"vidPath": "https://oversightmachin.es/overSSCIght/media/video/"
+
     }
 }
