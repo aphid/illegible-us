@@ -27,7 +27,7 @@ var fs = require("fs-extra");
 var pdfinfo = require("pdfinfo");
 var exif = require("exiftool-vendored").exiftool;
 var pdftotext = require("pdftotextjs");
-var cpp = require("child-process-promise");
+var cpp = require("fs").promises;
 var ffmpeg = require("fluent-ffmpeg");
 import https from 'https';
 import { SocksProxyAgent } from 'socks-proxy-agent';
