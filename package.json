@@ -6,7 +6,7 @@
   "type": "module",
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "exiftool-vendored": "^18.2.0",
+    "exiftool-vendored": "^36.1.0",
     "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^10.0.0",
     "glob": "^8.0.3",
